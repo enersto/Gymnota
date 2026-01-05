@@ -1,3 +1,67 @@
 <resources>
-    <string name="app_name">myfit</string>
+    <string name="app_name">myFit</string>
+
+    <string name="tab_home">打卡</string>
+    <string name="tab_history">历史</string>
+    <string name="tab_settings">设置</string>
+
+    <string name="btn_add">添加</string>
+    <string name="btn_save">保存</string>
+    <string name="btn_cancel">取消</string>
+    <string name="btn_delete">删除</string>
+    <string name="btn_done">已完成</string>
+    <string name="btn_check">打卡</string>
+
+    <string name="no_plan">今日暂无安排</string>
+    <string name="apply_routine">应用今日周计划</string>
+    <string name="click_add">或点击右下角 + 号</string>
+    <string name="log_weight">记录体重</string>
+    <string name="add_to_today">添加动作到今日</string>
+    <string name="new_manage_lib">新建 / 管理动作库</string>
+    <string name="dialog_weight_title">记录体重</string>
+
+    <string name="history_title">历史记录</string>
+    <string name="no_history">暂无记录，快去锻炼吧！</string>
+    <string name="history_no_train">（当日无训练记录）</string>
+
+    <string name="settings_advanced">高级功能</string>
+    <string name="settings_language">语言设置 / Language</string>
+    <string name="export_csv">导出历史 CSV</string>
+    <string name="import_plan">导入计划</string>
+    <string name="weekly_plan">周度方案 (详细规划)</string>
+    <string name="manage_lib">管理动作库</string>
+    <string name="theme_style">主题风格</string>
+    <string name="schedule_type_title">周计划 (类型设置)</string>
+    <string name="about">关于</string>
+
+    <string name="import_dialog_title">粘贴 CSV 内容</string>
+    <string name="import_dialog_hint">格式：星期(1-7),动作名,类型,目标</string>
+    <string name="import_btn">导入</string>
+
+    <string name="week_1">周一</string>
+    <string name="week_2">周二</string>
+    <string name="week_3">周三</string>
+    <string name="week_4">周四</string>
+    <string name="week_5">周五</string>
+    <string name="week_6">周六</string>
+    <string name="week_7">周日</string>
+
+    <string name="type_core">核心训练日</string>
+    <string name="type_active">动态恢复日</string>
+    <string name="type_light">轻松活动日</string>
+    <string name="type_rest">休息日</string>
+
+    <string name="title_manage_exercises">动作库管理</string>
+    <string name="title_new_exercise">新建动作</string>
+    <string name="title_edit_exercise">编辑动作</string>
+    <string name="label_name">动作名称</string>
+    <string name="label_target">默认目标</string>
+    <string name="hint_target">例如：3组12次 或 30分钟</string>
+    <string name="label_category">类别</string>
+    <string name="category_strength">力量</string>
+    <string name="category_cardio">有氧</string>
+    <string name="confirm_delete">确认删除</string>
+
+    <string name="about_version_format">myFit %1$s</string>
+    <string name="about_credit">由enersto &amp; 哈吉米设计开发 </string>
 </resources>

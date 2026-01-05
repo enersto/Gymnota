@@ -1,0 +1,67 @@
+<resources>
+    <string name="app_name">myFit</string>
+
+    <string name="tab_home">記録</string>
+    <string name="tab_history">履歴</string>
+    <string name="tab_settings">設定</string>
+
+    <string name="btn_add">追加</string>
+    <string name="btn_save">保存</string>
+    <string name="btn_cancel">キャンセル</string>
+    <string name="btn_delete">削除</string>
+    <string name="btn_done">完了</string>
+    <string name="btn_check">チェック</string>
+
+    <string name="no_plan">今日の予定なし</string>
+    <string name="apply_routine">今日の計画を適用</string>
+    <string name="click_add">または + をタップ</string>
+    <string name="log_weight">体重を記録</string>
+    <string name="add_to_today">今日に追加</string>
+    <string name="new_manage_lib">ライブラリ管理</string>
+    <string name="dialog_weight_title">体重記録</string>
+
+    <string name="history_title">履歴記録</string>
+    <string name="no_history">記録なし。運動しましょう！</string>
+    <string name="history_no_train">（トレーニング記録なし）</string>
+
+    <string name="settings_advanced">高度な機能</string>
+    <string name="settings_language">言語 / Language</string>
+    <string name="export_csv">CSV出力</string>
+    <string name="import_plan">計画をインポート</string>
+    <string name="weekly_plan">週間計画ツール</string>
+    <string name="manage_lib">種目ライブラリ</string>
+    <string name="theme_style">テーマ</string>
+    <string name="schedule_type_title">スケジュール設定</string>
+    <string name="about">アプリについて</string>
+
+    <string name="import_dialog_title">CSVを貼り付け</string>
+    <string name="import_dialog_hint">形式: 曜日(1-7),名前,タイプ,目標</string>
+    <string name="import_btn">インポート</string>
+
+    <string name="week_1">月-</string>
+    <string name="week_2">火-</string>
+    <string name="week_3">水-</string>
+    <string name="week_4">木-</string>
+    <string name="week_5">金-</string>
+    <string name="week_6">土-</string>
+    <string name="week_7">日-</string>
+
+    <string name="type_core">コアトレーニング</string>
+    <string name="type_active">アクティブレスト</string>
+    <string name="type_light">軽い運動</string>
+    <string name="type_rest">休息日</string>
+
+    <string name="title_manage_exercises">種目管理</string>
+    <string name="title_new_exercise">新規種目</string>
+    <string name="title_edit_exercise">種目を編集</string>
+    <string name="label_name">種目名</string>
+    <string name="label_target">デフォルト目標</string>
+    <string name="hint_target">例: 3セットx12回, 30分</string>
+    <string name="label_category">カテゴリー</string>
+    <string name="category_strength">筋力</string>
+    <string name="category_cardio">有酸素</string>
+    <string name="confirm_delete">削除確認</string>
+
+    <string name="about_version_format">myFit %1$s</string>
+    <string name="about_credit">Designed &amp; Built by enersto and Gemini</string>
+</resources>

@@ -3,19 +3,21 @@ package com.example.myfit.model
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
-// ... (AppSetting, ExerciseTemplate, ScheduleConfig 保持不变) ...
+// 修改了 AppSetting，增加 languageCode
 @Entity(tableName = "app_settings")
 data class AppSetting(
     @PrimaryKey val id: Int = 0,
-    val themeId: Int = 0
+    val themeId: Int = 0,
+    val languageCode: String = "zh" // 默认为中文
 )
 
+// 其他实体保持不变
 @Entity(tableName = "exercise_templates")
 data class ExerciseTemplate(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val name: String,
     val defaultTarget: String,
-    val category: String,
+    val category: String, // "STRENGTH" or "CARDIO"
     val isDeleted: Boolean = false
 )
 
@@ -25,19 +27,6 @@ data class ScheduleConfig(
     val dayType: DayType
 )
 
-// ▼▼▼ V4.0 新增：周度方案明细表 ▼▼▼
-@Entity(tableName = "weekly_routine")
-data class WeeklyRoutineItem(
-    @PrimaryKey(autoGenerate = true) val id: Long = 0,
-    val dayOfWeek: Int, // 1=周一, 7=周日
-    val templateId: Long, // 关联动作库ID
-    val name: String,     // 冗余存储，方便导出
-    val target: String,
-    val category: String
-)
-// ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
-
-// ... (WorkoutTask, WeightRecord, DayType, AppTheme 保持不变) ...
 @Entity(tableName = "workout_tasks")
 data class WorkoutTask(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
@@ -57,19 +46,30 @@ data class WeightRecord(
     val weight: Float
 )
 
-enum class DayType(val label: String, val colorHex: Long) {
-    CORE("核心训练日", 0xFFFF5722),
-    ACTIVE_REST("动态恢复日", 0xFF4CAF50),
-    LIGHT("轻松活动日", 0xFF03A9F4),
-    REST("休息日", 0xFF9E9E9E)
+@Entity(tableName = "weekly_routine")
+data class WeeklyRoutineItem(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val dayOfWeek: Int,
+    val templateId: Long,
+    val name: String,
+    val target: String,
+    val category: String
+)
+
+enum class DayType(val labelResId: Int, val colorHex: Long) {
+    // 这里做了一个关键修改：把 hardcode 的 string 换成了 R.string 资源ID
+    CORE(com.example.myfit.R.string.type_core, 0xFFFF5722),
+    ACTIVE_REST(com.example.myfit.R.string.type_active, 0xFF4CAF50),
+    LIGHT(com.example.myfit.R.string.type_light, 0xFF03A9F4),
+    REST(com.example.myfit.R.string.type_rest, 0xFF9E9E9E)
 }
 
-enum class AppTheme(val id: Int, val label: String, val primary: Long, val background: Long, val onBackground: Long) {
-    DARK(0, "硬核深色", 0xFFFF5722, 0xFF121212, 0xFFFFFFFF),
-    GREEN(1, "清新浅绿", 0xFF4CAF50, 0xFFF1F8E9, 0xFF1B5E20),
-    BLUE(2, "宁静浅蓝", 0xFF2196F3, 0xFFE3F2FD, 0xFF0D47A1),
-    YELLOW(3, "活力浅黄", 0xFFFFC107, 0xFFFFFDE7, 0xFFBF360C),
-    GREY(4, "极简商务", 0xFF607D8B, 0xFFECEFF1, 0xFF263238);
+enum class AppTheme(val id: Int, val primary: Long, val background: Long, val onBackground: Long) {
+    DARK(0, 0xFFFF5722, 0xFF121212, 0xFFFFFFFF),
+    GREEN(1, 0xFF4CAF50, 0xFFF1F8E9, 0xFF1B5E20),
+    BLUE(2, 0xFF2196F3, 0xFFE3F2FD, 0xFF0D47A1),
+    YELLOW(3, 0xFFFFC107, 0xFFFFFDE7, 0xFFBF360C),
+    GREY(4, 0xFF607D8B, 0xFFECEFF1, 0xFF263238);
 
     companion object {
         fun fromId(id: Int): AppTheme = values().find { it.id == id } ?: DARK

@@ -10,6 +10,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
+// Version 6: Updated AppSetting with languageCode
 @Database(
     entities = [
         WorkoutTask::class,
@@ -19,7 +20,7 @@ import kotlinx.coroutines.launch
         AppSetting::class,
         WeeklyRoutineItem::class
     ],
-    version = 5, // 升级版本号以触发重建，确保数据找回
+    version = 6, // 升级版本号
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -30,7 +31,7 @@ abstract class AppDatabase : RoomDatabase() {
 
         fun getDatabase(context: Context): AppDatabase {
             return instance ?: synchronized(this) {
-                Room.databaseBuilder(context, AppDatabase::class.java, "myfit_v5.db")
+                Room.databaseBuilder(context, AppDatabase::class.java, "myfit_v6.db")
                     .fallbackToDestructiveMigration()
                     .addCallback(PrepopulateCallback())
                     .build().also { instance = it }
@@ -44,17 +45,14 @@ abstract class AppDatabase : RoomDatabase() {
             instance?.let { database ->
                 CoroutineScope(Dispatchers.IO).launch {
                     val dao = database.workoutDao()
+                    // 初始化设置，默认为中文 "zh"
+                    dao.saveAppSettings(AppSetting(themeId = 0, languageCode = "zh"))
 
-                    // 1. 初始化设置
-                    dao.saveAppSettings(AppSetting(themeId = 0))
-
-                    // 2. 初始化周类型配置
                     if (dao.getScheduleCount() == 0) {
                         val types = listOf(DayType.CORE, DayType.CORE, DayType.ACTIVE_REST, DayType.CORE, DayType.CORE, DayType.LIGHT, DayType.REST)
                         types.forEachIndexed { index, type -> dao.insertSchedule(ScheduleConfig(index + 1, type)) }
                     }
 
-                    // 3. 找回动作库 (如果没有数据则写入)
                     if (dao.getTemplateCount() == 0) {
                         val defaults = listOf(
                             ExerciseTemplate(name = "坐姿推胸", defaultTarget = "3组x12次", category = "STRENGTH"),

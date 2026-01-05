@@ -1,0 +1,62 @@
+<resources>
+    <string name="app_name">myFit</string>
+
+    <string name="tab_home">Check-in</string>
+    <string name="tab_history">History</string>
+    <string name="tab_settings">Settings</string>
+
+    <string name="btn_add">Add</string>
+    <string name="btn_save">Save</string>
+    <string name="btn_cancel">Cancel</string>
+    <string name="btn_delete">Delete</string>
+    <string name="btn_done">Done</string>
+    <string name="btn_check">Check</string>
+
+    <string name="no_plan">No plan for today</string>
+    <string name="apply_routine">Apply Routine</string>
+    <string name="click_add">Or click + button</string>
+    <string name="log_weight">Log Weight</string>
+    <string name="add_to_today">Add to Today</string>
+    <string name="new_manage_lib">Manage Library</string>
+    <string name="dialog_weight_title">Record Weight</string>
+
+    <string name="history_title">History Records</string>
+    <string name="no_history">No records yet, go workout!</string>
+
+    <string name="settings_advanced">Advanced</string>
+    <string name="settings_language">Language</string>
+    <string name="export_csv">Export CSV</string>
+    <string name="import_plan">Import Plan</string>
+    <string name="weekly_plan">Weekly Routine Plan</string>
+    <string name="manage_lib">Exercise Library</string>
+    <string name="theme_style">Theme</string>
+    <string name="schedule_type_title">Schedule Types</string>
+    <string name="about">About</string>
+
+    <string name="week_1">Mon-</string>
+    <string name="week_2">Tue-</string>
+    <string name="week_3">Wed-</string>
+    <string name="week_4">Thu-</string>
+    <string name="week_5">Fri-</string>
+    <string name="week_6">Sat-</string>
+    <string name="week_7">Sun-</string>
+
+    <string name="type_core">Core Day</string>
+    <string name="type_active">Active Rest</string>
+    <string name="type_light">Light Day</string>
+    <string name="type_rest">Rest Day</string>
+
+    <string name="title_manage_exercises">Manage Exercises</string>
+    <string name="title_new_exercise">New Exercise</string>
+    <string name="title_edit_exercise">Edit Exercise</string>
+    <string name="label_name">Exercise Name</string>
+    <string name="label_target">Default Target</string>
+    <string name="hint_target">e.g. 3x12 or 30 mins</string>
+    <string name="label_category">Category</string>
+    <string name="category_strength">Strength</string>
+    <string name="category_cardio">Cardio</string>
+    <string name="confirm_delete">Confirm Delete</string>
+
+    <string name="about_version_format">myFit %1$s</string>
+    <string name="about_credit">Designed &amp; Built by enersto and Gemini</string>
+</resources>

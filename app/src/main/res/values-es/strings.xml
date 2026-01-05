@@ -1,0 +1,67 @@
+<resources>
+    <string name="app_name">myFit</string>
+
+    <string name="tab_home">Inicio</string>
+    <string name="tab_history">Historial</string>
+    <string name="tab_settings">Ajustes</string>
+
+    <string name="btn_add">Añadir</string>
+    <string name="btn_save">Guardar</string>
+    <string name="btn_cancel">Cancelar</string>
+    <string name="btn_delete">Eliminar</string>
+    <string name="btn_done">Hecho</string>
+    <string name="btn_check">Marcar</string>
+
+    <string name="no_plan">Sin planes para hoy</string>
+    <string name="apply_routine">Aplicar Rutina</string>
+    <string name="click_add">O haz clic en +</string>
+    <string name="log_weight">Registrar Peso</string>
+    <string name="add_to_today">Añadir a hoy</string>
+    <string name="new_manage_lib">Gestionar Biblioteca</string>
+    <string name="dialog_weight_title">Registrar Peso</string>
+
+    <string name="history_title">Registros Históricos</string>
+    <string name="no_history">Sin registros, ¡a entrenar!</string>
+    <string name="history_no_train">（Sin entrenamiento）</string>
+
+    <string name="settings_advanced">Avanzado</string>
+    <string name="settings_language">Idioma / Language</string>
+    <string name="export_csv">Exportar CSV</string>
+    <string name="import_plan">Importar Plan</string>
+    <string name="weekly_plan">Planificador Semanal</string>
+    <string name="manage_lib">Biblioteca de Ejercicios</string>
+    <string name="theme_style">Tema</string>
+    <string name="schedule_type_title">Tipos de Horario</string>
+    <string name="about">Acerca de</string>
+
+    <string name="import_dialog_title">Pegar CSV</string>
+    <string name="import_dialog_hint">Fto: Día(1-7),Nombre,Tipo,Objetivo</string>
+    <string name="import_btn">Importar</string>
+
+    <string name="week_1">Lun-</string>
+    <string name="week_2">Mar-</string>
+    <string name="week_3">Mié-</string>
+    <string name="week_4">Jue-</string>
+    <string name="week_5">Vie-</string>
+    <string name="week_6">Sáb-</string>
+    <string name="week_7">Dom-</string>
+
+    <string name="type_core">Día Núcleo</string>
+    <string name="type_active">Descanso Activo</string>
+    <string name="type_light">Día Ligero</string>
+    <string name="type_rest">Día de Descanso</string>
+
+    <string name="title_manage_exercises">Gestionar Ejercicios</string>
+    <string name="title_new_exercise">Nuevo Ejercicio</string>
+    <string name="title_edit_exercise">Editar Ejercicio</string>
+    <string name="label_name">Nombre del Ejercicio</string>
+    <string name="label_target">Objetivo Predet.</string>
+    <string name="hint_target">ej. 3x12 o 30 min</string>
+    <string name="label_category">Categoría</string>
+    <string name="category_strength">Fuerza</string>
+    <string name="category_cardio">Cardio</string>
+    <string name="confirm_delete">Confirmar Eliminación</string>
+
+    <string name="about_version_format">myFit %1$s</string>
+    <string name="about_credit">Designed &amp; Built by enersto and Gemini</string>
+</resources>

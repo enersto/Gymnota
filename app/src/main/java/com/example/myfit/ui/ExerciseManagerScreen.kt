@@ -7,21 +7,21 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource // 关键引用
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.example.myfit.R // 关键引用
 import com.example.myfit.model.ExerciseTemplate
 import com.example.myfit.viewmodel.MainViewModel
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ExerciseManagerScreen(navController: NavController, viewModel: MainViewModel) {
     val templates by viewModel.allTemplates.collectAsState(initial = emptyList())
@@ -30,19 +30,24 @@ fun ExerciseManagerScreen(navController: NavController, viewModel: MainViewModel
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("动作库管理") },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
-                    titleContentColor = MaterialTheme.colorScheme.onBackground,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onBackground
+            // 顶部导航栏
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(MaterialTheme.colorScheme.surface)
+                    .padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(onClick = { navController.popBackStack() }) {
+                    Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = stringResource(R.string.title_manage_exercises), // 国际化标题
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
-            )
+            }
         },
         floatingActionButton = {
             FloatingActionButton(
@@ -54,15 +59,19 @@ fun ExerciseManagerScreen(navController: NavController, viewModel: MainViewModel
             ) {
                 Icon(Icons.Default.Add, contentDescription = "Add", tint = Color.White)
             }
-        },
-        containerColor = MaterialTheme.colorScheme.background
+        }
     ) { padding ->
         LazyColumn(
-            modifier = Modifier.padding(padding).padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            modifier = Modifier
+                .padding(padding)
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             items(templates) { template ->
-                TemplateItem(template,
+                ExerciseItemCard(
+                    template = template,
                     onEdit = {
                         editingTemplate = template
                         showDialog = true
@@ -74,11 +83,11 @@ fun ExerciseManagerScreen(navController: NavController, viewModel: MainViewModel
     }
 
     if (showDialog) {
-        EditTemplateDialog(
+        ExerciseEditDialog(
             template = editingTemplate,
             onDismiss = { showDialog = false },
-            onSave = {
-                viewModel.saveTemplate(it)
+            onSave = { temp ->
+                viewModel.saveTemplate(temp)
                 showDialog = false
             }
         )
@@ -86,35 +95,65 @@ fun ExerciseManagerScreen(navController: NavController, viewModel: MainViewModel
 }
 
 @Composable
-fun TemplateItem(template: ExerciseTemplate, onEdit: () -> Unit, onDelete: () -> Unit) {
+fun ExerciseItemCard(
+    template: ExerciseTemplate,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit
+) {
+    // 将数据库的英文类别转换为多语言显示
+    val categoryLabel = when (template.category) {
+        "STRENGTH" -> stringResource(R.string.category_strength)
+        "CARDIO" -> stringResource(R.string.category_cardio)
+        else -> template.category
+    }
+
     Card(
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        modifier = Modifier.fillMaxWidth().clickable { onEdit() },
         shape = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(2.dp)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Row(
-            modifier = Modifier.padding(16.dp).fillMaxWidth(),
+            modifier = Modifier.padding(16.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                Text(template.name, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onBackground)
                 Text(
-                    "${if (template.category == "STRENGTH") "力量" else "有氧"} | 默认: ${template.defaultTarget}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color.Gray
+                    text = template.name,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
                 )
+                Spacer(modifier = Modifier.height(4.dp))
+                Row {
+                    // 类别标签
+                    Surface(
+                        color = MaterialTheme.colorScheme.primaryContainer,
+                        shape = RoundedCornerShape(4.dp)
+                    ) {
+                        Text(
+                            text = categoryLabel,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = template.defaultTarget,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.Gray
+                    )
+                }
             }
-            Row {
-                IconButton(onClick = onEdit) { Icon(Icons.Default.Edit, null, tint = MaterialTheme.colorScheme.primary) }
-                IconButton(onClick = onDelete) { Icon(Icons.Default.Delete, null, tint = Color.Gray) }
+            IconButton(onClick = onDelete) {
+                Icon(Icons.Default.Delete, null, tint = Color.Red.copy(alpha = 0.5f))
             }
         }
     }
 }
 
 @Composable
-fun EditTemplateDialog(
+fun ExerciseEditDialog(
     template: ExerciseTemplate?,
     onDismiss: () -> Unit,
     onSave: (ExerciseTemplate) -> Unit
@@ -125,42 +164,52 @@ fun EditTemplateDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (template == null) "新建动作" else "编辑动作") },
+        title = {
+            Text(
+                if (template == null) stringResource(R.string.title_new_exercise)
+                else stringResource(R.string.title_edit_exercise)
+            )
+        },
         text = {
             Column {
-                OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("动作名称") }, singleLine = true)
+                // 名称输入
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text(stringResource(R.string.label_name)) },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // 类别选择
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("类别:", style = MaterialTheme.typography.bodyMedium)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    FilterChip(
-                        selected = category == "STRENGTH",
-                        onClick = { category = "STRENGTH" },
-                        label = { Text("力量") }
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    FilterChip(
-                        selected = category == "CARDIO",
-                        onClick = { category = "CARDIO" },
-                        label = { Text("有氧") }
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
+                // 目标输入
                 OutlinedTextField(
                     value = target,
                     onValueChange = { target = it },
-                    label = { Text(if (category == "STRENGTH") "默认目标 (如: 3组x12次)" else "默认目标 (如: 30分钟)") },
+                    label = { Text(stringResource(R.string.label_target)) },
+                    placeholder = { Text(stringResource(R.string.hint_target)) },
+                    modifier = Modifier.fillMaxWidth(),
                     singleLine = true
                 )
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // 类别选择
+                Text(stringResource(R.string.label_category), style = MaterialTheme.typography.bodyMedium)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    RadioButton(selected = category == "STRENGTH", onClick = { category = "STRENGTH" })
+                    Text(stringResource(R.string.category_strength), modifier = Modifier.clickable { category = "STRENGTH" })
+
+                    Spacer(modifier = Modifier.width(16.dp))
+
+                    RadioButton(selected = category == "CARDIO", onClick = { category = "CARDIO" })
+                    Text(stringResource(R.string.category_cardio), modifier = Modifier.clickable { category = "CARDIO" })
+                }
             }
         },
         confirmButton = {
             Button(
                 onClick = {
-                    if (name.isNotEmpty()) {
+                    if (name.isNotBlank()) {
                         onSave(ExerciseTemplate(
                             id = template?.id ?: 0,
                             name = name,
@@ -169,12 +218,14 @@ fun EditTemplateDialog(
                         ))
                     }
                 }
-            ) { Text("保存") }
+            ) {
+                Text(stringResource(R.string.btn_save))
+            }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("取消") } },
-        containerColor = MaterialTheme.colorScheme.surface,
-        titleContentColor = MaterialTheme.colorScheme.onBackground,
-        textContentColor = MaterialTheme.colorScheme.onBackground
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.btn_cancel))
+            }
+        }
     )
 }
-

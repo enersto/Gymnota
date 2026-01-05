@@ -24,26 +24,35 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         .map { AppTheme.fromId(it) }
         .stateIn(viewModelScope, SharingStarted.Lazily, AppTheme.DARK)
 
+    // 新增：当前语言，默认为 "zh"
+    val currentLanguage = dao.getAppSettings()
+        .map { it?.languageCode ?: "zh" }
+        .stateIn(viewModelScope, SharingStarted.Lazily, "zh")
+
     val todayScheduleType = combine(_selectedDate, dao.getAllSchedules()) { date, schedules ->
         val dayOfWeek = date.dayOfWeek.value
         schedules.find { it.dayOfWeek == dayOfWeek }?.dayType ?: DayType.REST
     }.stateIn(viewModelScope, SharingStarted.Lazily, DayType.REST)
 
     val todayTasks = _selectedDate.flatMapLatest { dao.getTasksForDate(it.toString()) }
-
     val historyRecords = dao.getHistoryRecords()
-
-    // ▼▼▼ V4.2 新增：暴露所有体重记录 ▼▼▼
     val weightHistory = dao.getAllWeights()
-    // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
-
     val allTemplates = dao.getAllTemplates()
 
     val showWeightAlert = dao.getLatestWeight().map { record ->
         if (record == null) true else ChronoUnit.DAYS.between(LocalDate.parse(record.date), LocalDate.now()) > 7
     }.stateIn(viewModelScope, SharingStarted.Lazily, false)
 
-    // --- V4.1 功能保持不变 ---
+    // --- 语言切换 ---
+    fun switchLanguage(code: String) {
+        viewModelScope.launch {
+            val currentSetting = dao.getAppSettings().firstOrNull()
+            val themeId = currentSetting?.themeId ?: 0
+            dao.saveAppSettings(AppSetting(id = 0, themeId = themeId, languageCode = code))
+        }
+    }
+
+    // --- 其他原有方法 ---
     fun addRoutineItem(dayOfWeek: Int, template: ExerciseTemplate) {
         viewModelScope.launch {
             dao.insertRoutineItem(WeeklyRoutineItem(dayOfWeek = dayOfWeek, templateId = template.id, name = template.name, target = template.defaultTarget, category = template.category))
@@ -56,13 +65,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val date = _selectedDate.value
             val routineItems = dao.getRoutineForDay(date.dayOfWeek.value)
             if (routineItems.isEmpty()) {
-                Toast.makeText(getApplication(), "今日暂无预设方案", Toast.LENGTH_SHORT).show()
+                // 注意：Toast 里的文字如果想多语言，需要用 context.getString，这里暂略
+                Toast.makeText(getApplication(), "No Routine Found", Toast.LENGTH_SHORT).show()
                 return@launch
             }
             routineItems.forEach { item ->
                 dao.insertTask(WorkoutTask(date = date.toString(), templateId = item.templateId, name = item.name, target = item.target, type = item.category))
             }
-            Toast.makeText(getApplication(), "已应用今日方案", Toast.LENGTH_SHORT).show()
+            Toast.makeText(getApplication(), "Routine Applied", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -82,25 +92,30 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         }
                     }
                 }
-                Toast.makeText(getApplication(), "成功导入 $count 条", Toast.LENGTH_SHORT).show()
-            } catch (e: Exception) { Toast.makeText(getApplication(), "失败: ${e.message}", Toast.LENGTH_SHORT).show() }
+                Toast.makeText(getApplication(), "Imported $count items", Toast.LENGTH_SHORT).show()
+            } catch (e: Exception) { Toast.makeText(getApplication(), "Error: ${e.message}", Toast.LENGTH_SHORT).show() }
         }
     }
 
     fun exportHistoryToCsv(context: Context) {
         viewModelScope.launch {
             val records = dao.getHistoryRecordsSync()
-            val sb = StringBuilder().append("日期,动作,目标,实测,类型\n")
+            val sb = StringBuilder().append("Date,Name,Target,Weight,Type\n")
             records.forEach { sb.append("${it.date},${it.name},${it.target},${it.actualWeight},${it.type}\n") }
             val intent = Intent(Intent.ACTION_SEND).apply {
-                putExtra(Intent.EXTRA_TEXT, sb.toString()); type = "text/plain"; putExtra(Intent.EXTRA_TITLE, "历史.csv")
+                putExtra(Intent.EXTRA_TEXT, sb.toString()); type = "text/plain"; putExtra(Intent.EXTRA_TITLE, "history.csv")
             }
-            context.startActivity(Intent.createChooser(intent, "导出CSV"))
+            context.startActivity(Intent.createChooser(intent, "Export CSV"))
         }
     }
 
-    // 原有基础方法
-    fun switchTheme(theme: AppTheme) = viewModelScope.launch { dao.saveAppSettings(AppSetting(themeId = theme.id)) }
+    // 切换主题时保持语言
+    fun switchTheme(theme: AppTheme) = viewModelScope.launch {
+        val currentSetting = dao.getAppSettings().firstOrNull()
+        val lang = currentSetting?.languageCode ?: "zh"
+        dao.saveAppSettings(AppSetting(id = 0, themeId = theme.id, languageCode = lang))
+    }
+
     fun saveTemplate(t: ExerciseTemplate) = viewModelScope.launch { if (t.id == 0L) dao.insertTemplate(t) else dao.updateTemplate(t) }
     fun deleteTemplate(id: Long) = viewModelScope.launch { dao.softDeleteTemplate(id) }
     fun addTaskFromTemplate(t: ExerciseTemplate) = viewModelScope.launch { dao.insertTask(WorkoutTask(date = _selectedDate.value.toString(), templateId = t.id, name = t.name, target = t.defaultTarget, type = t.category)) }
