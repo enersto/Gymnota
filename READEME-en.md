@@ -1,12 +1,7 @@
-Here is the full English version of the `README.md` file for **myFit V4.5**. You can copy and paste this directly into your project.
+# myFit - Personal Workout Tracker & Memo (V4.1)
+**myFit** is a personal fitness tracking and memo application built with Android Jetpack Compose. It is designed to help users plan weekly training routines, log daily check-ins, and track workout and weight changes through visualized history records.
 
----
-
-# myFit - Personal Workout Tracker (V4.1)
-
-**myFit** is a modern personal fitness tracking application built with Android Jetpack Compose. It is designed to help users plan weekly workout routines, track daily check-ins, and visualize training progress along with weight trends.
-
-🚀 **New in V4.1**: Full support for 5 languages, visual weekly routine planning, and deep integration of weight data.
+🚀 **New in V4.1**: Full support for 5 languages, visual weekly routine scheduling, and deep integration of weight data.
 
 ---
 
@@ -125,5 +120,6 @@ If you wish to batch import a routine, please prepare your CSV text in the follo
 * **Author**: Designed & Built by enersto
 
 ---
+
 
 > **Note**: This project is for personal tracking and learning purposes. Data is stored locally on your device.
