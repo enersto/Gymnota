@@ -20,7 +20,7 @@ import kotlinx.coroutines.launch
         AppSetting::class,
         WeeklyRoutineItem::class
     ],
-    version = 6, // 升级版本号
+    version = 7, // 升级版本号
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -55,14 +55,14 @@ abstract class AppDatabase : RoomDatabase() {
 
                     if (dao.getTemplateCount() == 0) {
                         val defaults = listOf(
-                            ExerciseTemplate(name = "坐姿推胸", defaultTarget = "3组x12次", category = "STRENGTH"),
-                            ExerciseTemplate(name = "高位下拉", defaultTarget = "3组x12次", category = "STRENGTH"),
-                            ExerciseTemplate(name = "深蹲", defaultTarget = "4组x10次", category = "STRENGTH"),
-                            ExerciseTemplate(name = "硬拉", defaultTarget = "4组x8次", category = "STRENGTH"),
-                            ExerciseTemplate(name = "哑铃侧平举", defaultTarget = "4组x15次", category = "STRENGTH"),
-                            ExerciseTemplate(name = "慢跑", defaultTarget = "30分钟", category = "CARDIO"),
-                            ExerciseTemplate(name = "椭圆仪", defaultTarget = "20分钟", category = "CARDIO"),
-                            ExerciseTemplate(name = "划船机", defaultTarget = "15分钟", category = "CARDIO")
+                            ExerciseTemplate(name = "坐姿推胸", defaultTarget = "3组x12次", category = "力量"),
+                            ExerciseTemplate(name = "高位下拉", defaultTarget = "3组x12次", category = "力量"),
+                            ExerciseTemplate(name = "深蹲", defaultTarget = "4组x10次", category = "力量"),
+                            ExerciseTemplate(name = "硬拉", defaultTarget = "4组x8次", category = "力量"),
+                            ExerciseTemplate(name = "哑铃侧平举", defaultTarget = "4组x15次", category = "力量"),
+                            ExerciseTemplate(name = "热身跑", defaultTarget = "5分钟", category = "有氧"),
+                            ExerciseTemplate(name = "椭圆仪", defaultTarget = "30分钟", category = "有氧"),
+                            ExerciseTemplate(name = "长跑", defaultTarget = "20分钟", category = "有氧")
                         )
                         defaults.forEach { dao.insertTemplate(it) }
                     }
