@@ -35,7 +35,7 @@
     <string name="about">Acerca de</string>
 
     <string name="import_dialog_title">Pegar CSV</string>
-    <string name="import_dialog_hint">Fto: Día(1-7),Nombre,Tipo,Objetivo</string>
+    <string name="import_dialog_hint">Fto: Día(1-7), Nombre, Categoría, Objetivo, ParteCuerpoKey, EquipoKey</string>
     <string name="import_btn">Importar</string>
 
     <string name="week_1">Lun. </string>
@@ -46,7 +46,7 @@
     <string name="week_6">Sáb. </string>
     <string name="week_7">Dom. </string>
 
-    <string name="type_core">Día Núcleo</string>
+    <string name="type_core">Día Fuerte</string>
     <string name="type_active">Descanso Activo</string>
     <string name="type_light">Día Ligero</string>
     <string name="type_rest">Día de Descanso</string>
@@ -140,4 +140,10 @@
 
     <string name="import_csv_template">Día, Nombre, Categoría, Objetivo, ParteCuerpoKey, EquipoKey\n1, Press de banca, STRENGTH, 4x8, part_chest, equip_barbell\n1, Aperturas en máquina, STRENGTH, 4x12, part_chest, equip_machine\n2, Correr, CARDIO, 30min, part_cardio, equip_cardio_machine\n3, Plancha, CORE, 3x60s, part_abs, equip_bodyweight</string>
 
+    <string name="settings_help_reference">Ayuda y Referencia</string>
+    <string name="help_dialog_title">Referencia de claves CSV</string>
+    <string name="help_dialog_subtitle">Toque un elemento para copiar su clave al portapapeles.</string>
+    <string name="section_body_part">Partes del cuerpo</string>
+    <string name="section_equipment">Equipamiento</string>
+    <string name="msg_copied">Copiado: %1$s</string>
 </resources>

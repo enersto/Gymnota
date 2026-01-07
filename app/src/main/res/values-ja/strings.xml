@@ -35,7 +35,7 @@
     <string name="about">アプリについて</string>
 
     <string name="import_dialog_title">CSVを貼り付け</string>
-    <string name="import_dialog_hint">形式: 曜日(1-7),名前,タイプ,目標</string>
+    <string name="import_dialog_hint">形式: 曜日, 名前, カテゴリ, 目標, 部位Key, 器具Key</string>
     <string name="import_btn">インポート</string>
 
     <string name="week_1">月曜日</string>
@@ -46,7 +46,7 @@
     <string name="week_6">土曜日</string>
     <string name="week_7">日曜日</string>
 
-    <string name="type_core">コアトレーニング</string>
+    <string name="type_core">メイン日</string>
     <string name="type_active">アクティブレスト</string>
     <string name="type_light">軽い運動</string>
     <string name="type_rest">休息日</string>
@@ -139,5 +139,12 @@
     <string name="val_default_equipment">equip_other</string>
 
     <string name="import_csv_template">曜日, 名前, カテゴリ, 目標, 部位Key, 器具Key\n1, バーベルベンチプレス, STRENGTH, 4x8, part_chest, equip_barbell\n1, バタフライマシン, STRENGTH, 4x12, part_chest, equip_machine\n2, ランニング, CARDIO, 30min, part_cardio, equip_cardio_machine\n3, プランク, CORE, 3x60s, part_abs, equip_bodyweight</string>
+
+    <string name="settings_help_reference">ヘルプと参照</string>
+    <string name="help_dialog_title">CSV キー参照</string>
+    <string name="help_dialog_subtitle">項目をタップすると、CSV編集用のキーがクリップボードにコピーされます。</string>
+    <string name="section_body_part">トレーニング部位</string>
+    <string name="section_equipment">使用器具</string>
+    <string name="msg_copied">コピーしました: %1$s</string>
 
 </resources>

@@ -2,6 +2,7 @@ package com.example.myfit.ui
 
 import android.app.Activity
 import android.content.Context
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -20,8 +21,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -44,6 +47,8 @@ fun ScheduleScreen(navController: NavController, viewModel: MainViewModel) {
 
     var showImportDialog by remember { mutableStateOf(false) }
     var showManualRoutineDialog by remember { mutableStateOf(false) }
+    // V5.4 新增：帮助弹窗状态
+    var showHelpDialog by remember { mutableStateOf(false) }
 
     // File pickers for backup/restore
     val createBackupLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/x-sqlite3")) { uri ->
@@ -84,7 +89,7 @@ fun ScheduleScreen(navController: NavController, viewModel: MainViewModel) {
             Text(stringResource(R.string.settings_data_management), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onBackground)
             Spacer(modifier = Modifier.height(8.dp))
 
-            // CSV Operations
+            // CSV Operations & Help
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Button(
                     onClick = { viewModel.exportHistoryToCsv(context) },
@@ -106,6 +111,19 @@ fun ScheduleScreen(navController: NavController, viewModel: MainViewModel) {
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(stringResource(R.string.import_csv_btn), color = MaterialTheme.colorScheme.primary, fontSize = 12.sp)
                 }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // V5.4 新增：帮助按钮
+            OutlinedButton(
+                onClick = { showHelpDialog = true },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Icon(Icons.Default.HelpOutline, null, modifier = Modifier.size(16.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(stringResource(R.string.settings_help_reference))
             }
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -193,12 +211,14 @@ fun ScheduleScreen(navController: NavController, viewModel: MainViewModel) {
     // Dialog Logic
     if (showImportDialog) {
         val defaultCsv = stringResource(R.string.import_csv_template)
-
         ImportDialog(defaultText = defaultCsv, onDismiss = { showImportDialog = false }) { csv ->
-            // ✅ 修改处：传入当前的 context
             viewModel.importWeeklyRoutine(context, csv)
             showImportDialog = false
         }
+    }
+
+    if (showHelpDialog) {
+        KeyReferenceDialog(onDismiss = { showHelpDialog = false })
     }
 
     if (showManualRoutineDialog) {
@@ -206,7 +226,117 @@ fun ScheduleScreen(navController: NavController, viewModel: MainViewModel) {
     }
 }
 
-// ================== Helper Components ==================
+// ================== V5.4 Help & Reference Dialog ==================
+
+@Composable
+fun KeyReferenceDialog(onDismiss: () -> Unit) {
+    val context = LocalContext.current
+    val clipboardManager = LocalClipboardManager.current
+
+    // 复用 ExerciseManagerScreen 中的数据定义 (或者在此重新定义以解耦)
+    val bodyPartKeys = listOf(
+        "part_chest", "part_back", "part_legs", "part_shoulders",
+        "part_arms", "part_abs", "part_cardio", "part_other"
+    )
+    val equipKeys = listOf(
+        "equip_barbell", "equip_dumbbell", "equip_machine", "equip_cable",
+        "equip_bodyweight", "equip_cardio_machine", "equip_kettlebell",
+        "equip_smith_machine", "equip_resistance_band", "equip_medicine_ball",
+        "equip_trx", "equip_bench", "equip_other"
+    )
+
+    // 简单的 Helper 函数来获取资源 ID (如果不想公开 ExerciseManagerScreen 的函数)
+    fun getResId(key: String, isBodyPart: Boolean): Int {
+        // 这里为了简单，如果 ExerciseManagerScreen.kt 中的函数是 public 的，可以直接调用
+        // 如果是 private 或者想解耦，可以使用同样的 when 结构
+        // 假设 ExerciseManagerScreen.kt 中的函数是 top-level public 的:
+        return if (isBodyPart) getBodyPartResId(key) else getEquipmentResId(key)
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.help_dialog_title)) },
+        text = {
+            Column(modifier = Modifier.heightIn(max = 400.dp)) {
+                Text(stringResource(R.string.help_dialog_subtitle), fontSize = 12.sp, color = Color.Gray)
+                Spacer(modifier = Modifier.height(8.dp))
+                Divider()
+
+                LazyColumn(modifier = Modifier.weight(1f)) {
+                    // Body Parts Section
+                    item {
+                        Text(
+                            stringResource(R.string.section_body_part),
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
+                        )
+                    }
+                    items(bodyPartKeys) { key ->
+                        ReferenceRow(
+                            label = stringResource(getResId(key, true)),
+                            key = key,
+                            onCopy = {
+                                clipboardManager.setText(AnnotatedString(key))
+                                Toast.makeText(context, context.getString(R.string.msg_copied, key), Toast.LENGTH_SHORT).show()
+                            }
+                        )
+                    }
+
+                    // Equipment Section
+                    item {
+                        Text(
+                            stringResource(R.string.section_equipment),
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
+                        )
+                    }
+                    items(equipKeys) { key ->
+                        ReferenceRow(
+                            label = stringResource(getResId(key, false)),
+                            key = key,
+                            onCopy = {
+                                clipboardManager.setText(AnnotatedString(key))
+                                Toast.makeText(context, context.getString(R.string.msg_copied, key), Toast.LENGTH_SHORT).show()
+                            }
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.btn_done)) }
+        }
+    )
+}
+
+@Composable
+fun ReferenceRow(label: String, key: String, onCopy: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onCopy() }
+            .padding(vertical = 8.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(label, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+        Surface(
+            color = MaterialTheme.colorScheme.surfaceVariant,
+            shape = RoundedCornerShape(4.dp)
+        ) {
+            Text(
+                text = key,
+                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                style = MaterialTheme.typography.labelSmall,
+                fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
+            )
+        }
+    }
+}
+
+// ================== Existing Helper Components ==================
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
