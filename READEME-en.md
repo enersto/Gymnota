@@ -1,42 +1,43 @@
-# myFit - Personal Workout Tracker & Memo (V4.1)
+# myFit - Personal Workout Tracker & Memo (V5.2)
 **myFit** is a personal fitness tracking and memo application built with Android Jetpack Compose. It is designed to help users plan weekly training routines, log daily check-ins, and track workout and weight changes through visualized history records.
 
-🚀 **New in V4.1**: Full support for 5 languages, visual weekly routine scheduling, and deep integration of weight data.
+🚀 **V5.2 Major Update**: Introducing a new Chart Statistics module, multi-dimensional exercise attributes (Body Part/Equipment), a new Core training category, and full Database Backup functionality.
 
 ---
 
-## ✨ Features
+## ✨ Core Features
 
-* **🌍 Internationalization (i18n)**
-* Full support for **English, Simplified Chinese, Deutsch, Español, and 日本語**.
-* One-tap language switching within the app (changes apply instantly without a manual restart).
+* **📊 Visual Statistics** `NEW`
+* **Multi-dimensional Analysis**: Provides four analysis modules: Weight, Cardio Duration, Strength Load, and Core Reps.
+* **Trend Tracking**: Supports switching between **Daily/Monthly** granularity to intuitively view long-term trends in training volume and weight.
+* **Native Rendering**: High-performance Line and Bar charts implemented using Compose Canvas.
+
+
+* **💪 Exercise Library 2.0** `NEW`
+* **Category Expansion**: Added a **"Core"** category (e.g., Crunches, Planks) alongside "Strength" and "Cardio".
+* **Detailed Attributes**: Supports tagging **Target Body Part** (e.g., Chest, Back, Abs) and **Equipment Used** (e.g., Barbell, Dumbbell, Machine).
+* **Structured Sets**: Supports recording multiple sets (Set No. / Weight or Duration / Reps).
+
+
+* **💾 Data Management & Security** `NEW`
+* **Dual Backup**: Supports exporting CSV tables and now includes full backup and restore of **Database (.db)** files.
+* **Lossless Migration**: Automatically migrates legacy data during app updates to ensure no records are lost.
+
+
+* **🌍 Internationalization Support**
+* Fully supports **Simplified Chinese, English, Deutsch, Español, and 日本語**.
+* Full localization adaptation for UI text and statistical charts.
 
 
 * **📅 Smart Weekly Routine**
-* **Type Planning**: Assign training types (e.g., Core Day, Active Rest, Rest Day) to each day of the week.
-* **Routine Planning**: A visual interface to manually schedule specific exercises for fixed days (e.g., automatically schedule "Squats" every "Monday").
+* Visual interface to schedule fixed training exercises for each day of the week, automatically generating daily to-do tasks.
+* Supports setting daily type tags (e.g., Core Day, Rest Day), with the home page theme color changing automatically based on the type.
 
 
 * **✅ Daily Check-in**
-* Automatically generates today's to-do list based on your weekly routine.
-* **Pill-shaped Button**: Interactive check-in buttons that trigger a 🎉 confetti explosion effect upon completion.
-* Swipe left to delete tasks you don't need for the day.
-* Quickly log your current weight via the top-right button.
-
-
-* **📊 History & Weight Tracking**
-* View all training records in reverse chronological order.
-* **Weight Integration**: If weight is recorded on a specific day, a prominent orange tag (e.g., `⚖️ 75.0 KG`) appears next to the date.
-
-
-* **💪 Exercise Library Management**
-* Create, edit, and delete custom exercises.
-* Categorize by "Strength" or "Cardio" (this determines if a weight input field is shown during check-in).
-
-
-* **💾 Data Import/Export**
-* Export workout history to a CSV file.
-* Batch import weekly routines via CSV text.
+* Pill-button interaction; clicking check-in triggers a 🎉 celebration animation.
+* Dynamically add/remove exercise sets to accurately record every lift.
+* Quick weight recording via the top-right corner.
 
 
 
@@ -44,61 +45,54 @@
 
 ## 📱 User Guide
 
-### 1. Initial Setup
+### 1. Building the Exercise Library
 
-* Go to the **Settings** tab.
-* **Language**: Switch to your preferred language (defaults to system settings).
-* **Theme**: Choose your preferred color scheme (Dark, Green, Blue, etc.).
-
-### 2. Build Your Library
-
-* Click **Manage Library** in Settings.
-* Tap the `+` button to add exercises you frequently perform.
-* *Name*: e.g., "Bench Press", "Jogging".
-* *Default Target*: e.g., "4 sets x 10 reps" or "30 mins".
-* *Category*: Choose "Strength" or "Cardio".
+* Go to **Settings -> Manage Exercise Library**.
+* When adding an exercise, in addition to basic info, you can now set:
+* **Body Part**: Chest, Back, Legs, Shoulders, Arms, Abs, Cardio, etc.
+* **Equipment**: Barbell, Dumbbell, Smith Machine, Bodyweight, etc.
+* **Default Target**: e.g., "4 sets x 12 reps".
 
 
 
-### 3. Plan Your Week (Core Workflow)
+### 2. Planning the Weekly Routine
 
-This is the foundation for generating your daily plans:
+1. Click **Weekly Routine** in Settings.
+2. Select a day (e.g., "Monday") and add fixed exercises for that day.
+3. Set the training type for that day (e.g., "Strength Training Day").
 
-1. Click **Weekly Routine Plan** in Settings.
-2. Select a day of the week at the top (e.g., "Mon").
-3. Click the **Add** button at the bottom and select exercises from your library.
-4. Repeat this for the rest of the week.
-5. Return to the main Settings list and assign **Day Types** (e.g., Monday is "Core Day", Sunday is "Rest Day") for visual indicators on the home screen.
+### 3. Daily Training & Check-in
 
-### 4. Start Training
+* The Home page displays today's plan.
+* Click a card to expand details, then click **"+ Add Set"** to record the specific weight and reps for each set.
+* Check the box when finished.
 
-* Go back to the **Check-in** (Home) tab.
-* You will see today's plan automatically listed.
-* **To Train**:
-* Tap a card to expand it and input the actual weight/sets completed.
-* Tap the **"Check"** button on the right to finish. Enjoy the confetti!
+### 4. Viewing Statistics
 
-
-* **Log Weight**: Tap the orange button in the top right corner to log today's weight.
+* Go to the **History** page.
+* Click the toggle at the bottom to switch between **"List / Chart"** views.
+* In **Chart Mode**, you can view max weight trends for single exercises (e.g., "Bench Press") or total duration bar charts for cardio.
 
 ---
 
-## 📂 CSV Import Format
+## 📂 CSV Import Format (V5.2 Update)
 
-If you wish to batch import a routine, please prepare your CSV text in the following format:
+To adapt to the new exercise attributes, the CSV format for batch import has been upgraded (legacy format is compatible, but the new version is recommended for the full experience):
 
-`Day(1-7), Exercise Name, Category(must contain "Cardio" for cardio), Target`
+`Day(1-7), Name, Category(STRENGTH/CARDIO/CORE), Target, BodyPartKey, EquipmentKey`
+
+**Body Part Key Reference**: `part_chest` (Chest), `part_back` (Back), `part_legs` (Legs), `part_abs` (Abs), `part_cardio` (Cardio)
+**Equipment Key Reference**: `equip_barbell` (Barbell), `equip_dumbbell` (Dumbbell), `equip_bodyweight` (Bodyweight), `equip_machine` (Machine)
 
 **Example:**
 
 ```text
-1, Bench Press, Strength, 3 sets x 12 reps
-1, Lat Pulldown, Strength, 4 sets x 10 reps
-3, Running, Cardio, 30 mins
+1, Barbell Bench Press, STRENGTH, 4x8, part_chest, equip_barbell
+1, Pec Deck Fly, STRENGTH, 4x12, part_chest, equip_machine
+2, Running, CARDIO, 30min, part_cardio, equip_cardio_machine
+3, Plank, CORE, 3x60s, part_abs, equip_bodyweight
 
 ```
-
-*(Note: Both English and Chinese commas are supported)*
 
 ---
 
@@ -107,19 +101,19 @@ If you wish to batch import a routine, please prepare your CSV text in the follo
 * **Language**: Kotlin
 * **UI Framework**: Jetpack Compose (Material3)
 * **Architecture**: MVVM (Model-View-ViewModel)
-* **Database**: Room (SQLite)
-* **Asynchronous**: Coroutines & Flow
-* **Navigation**: Jetpack Navigation Compose
+* **Database**: Room (SQLite) with Migrations (v7 -> v8)
+* **Graphics**: Compose Canvas (Custom Charts)
+* **Concurrency**: Coroutines & Flow
 
 ---
 
 ## 📝 Version Info
 
-* **Version**: 4.1
-* **Version Code**: 41
-* **Author**: Designed & Built by enersto
+* **Version**: 5.2
+* **Version Code**: 52
+* **Author**: Designed & Built by enersto & Hajimi
 
 ---
 
-
 > **Note**: This project is for personal tracking and learning purposes. Data is stored locally on your device.
+
