@@ -1,7 +1,12 @@
 package com.example.myfit.ui
 
 import android.app.Activity
+import android.content.Context
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -23,23 +28,34 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.myfit.R
+import com.example.myfit.data.AppDatabase
 import com.example.myfit.model.*
 import com.example.myfit.viewmodel.MainViewModel
 import kotlinx.coroutines.launch
-import androidx.compose.foundation.border
 
 @Composable
 fun ScheduleScreen(navController: NavController, viewModel: MainViewModel) {
     val currentTheme by viewModel.currentTheme.collectAsState()
     val currentLanguage by viewModel.currentLanguage.collectAsState()
+
+    // 🔴 修复点：只声明一次 context
     val context = LocalContext.current
-    val dao = remember { com.example.myfit.data.AppDatabase.getDatabase(context).workoutDao() }
+
+    val dao = remember { AppDatabase.getDatabase(context).workoutDao() }
     val scheduleList by dao.getAllSchedules().collectAsState(initial = emptyList())
 
     var showImportDialog by remember { mutableStateOf(false) }
     var showManualRoutineDialog by remember { mutableStateOf(false) }
 
-    // V4.4 修复：使用 LazyColumn 作为唯一容器，解决滚动和压缩问题
+    // 定义文件选择器 (备份与恢复)
+    val createBackupLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/x-sqlite3")) { uri ->
+        uri?.let { viewModel.backupDatabase(it, context) }
+    }
+
+    val restoreBackupLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        uri?.let { viewModel.restoreDatabase(it, context) }
+    }
+
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -56,10 +72,7 @@ fun ScheduleScreen(navController: NavController, viewModel: MainViewModel) {
         item {
             Text(stringResource(R.string.settings_language), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onBackground)
             Spacer(modifier = Modifier.height(8.dp))
-            // 这里使用 FlowRow 或者简单的 Row (如果放不下可能需要改成两行)
-            // 简单起见，这里演示 Row
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                // ... 中文 和 English 保持不变 ...
                 LanguageChip("中文", "zh", currentLanguage) { viewModel.switchLanguage("zh"); (context as? Activity)?.recreate() }
                 LanguageChip("EN", "en", currentLanguage) { viewModel.switchLanguage("en"); (context as? Activity)?.recreate() }
                 LanguageChip("ES", "es", currentLanguage) { viewModel.switchLanguage("es"); (context as? Activity)?.recreate() }
@@ -68,8 +81,13 @@ fun ScheduleScreen(navController: NavController, viewModel: MainViewModel) {
             }
         }
 
-        // 3. 导入导出按钮
+        // 3. 数据管理 (导入/导出/备份/恢复)
         item {
+            // 🔴 修复：使用 stringResource
+            Text(stringResource(R.string.settings_data_management), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onBackground)
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // CSV 操作
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Button(
                     onClick = { viewModel.exportHistoryToCsv(context) },
@@ -79,7 +97,8 @@ fun ScheduleScreen(navController: NavController, viewModel: MainViewModel) {
                 ) {
                     Icon(Icons.Default.Share, null, tint = MaterialTheme.colorScheme.primary)
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text(stringResource(R.string.export_csv), color = MaterialTheme.colorScheme.primary, fontSize = 12.sp)
+                    // 🔴 修复
+                    Text(stringResource(R.string.export_csv_btn), color = MaterialTheme.colorScheme.primary, fontSize = 12.sp)
                 }
                 Button(
                     onClick = { showImportDialog = true },
@@ -89,7 +108,26 @@ fun ScheduleScreen(navController: NavController, viewModel: MainViewModel) {
                 ) {
                     Icon(Icons.Default.Upload, null, tint = MaterialTheme.colorScheme.primary)
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text(stringResource(R.string.import_plan), color = MaterialTheme.colorScheme.primary, fontSize = 12.sp)
+                    // 🔴 修复
+                    Text(stringResource(R.string.import_csv_btn), color = MaterialTheme.colorScheme.primary, fontSize = 12.sp)
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // 数据库操作
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(onClick = {
+                    createBackupLauncher.launch("myfit_backup_${java.time.LocalDate.now()}.db")
+                }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(8.dp)) {
+                    // 🔴 修复
+                    Text(stringResource(R.string.btn_backup_db), fontSize = 12.sp)
+                }
+                OutlinedButton(onClick = {
+                    restoreBackupLauncher.launch(arrayOf("application/*"))
+                }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(8.dp)) {
+                    // 🔴 修复
+                    Text(stringResource(R.string.btn_restore_db), fontSize = 12.sp)
                 }
             }
         }
@@ -161,7 +199,15 @@ fun ScheduleScreen(navController: NavController, viewModel: MainViewModel) {
 
     // 弹窗逻辑
     if (showImportDialog) {
-        ImportDialog(onDismiss = { showImportDialog = false }) { csv ->
+        val defaultCsv = """
+            Day, Name, Category, Target, BodyPart, Equipment
+            1, 杠铃卧推, STRENGTH, 4x8, part_chest, equip_barbell
+            1, 蝴蝶机夹胸, STRENGTH, 4x12, part_chest, equip_machine
+            2, 跑步, CARDIO, 30min, part_cardio, equip_cardio_machine
+            3, 平板支撑, CORE, 3x60s, part_abs, equip_bodyweight
+        """.trimIndent()
+
+        ImportDialog(defaultText = defaultCsv, onDismiss = { showImportDialog = false }) { csv ->
             viewModel.importWeeklyRoutine(csv)
             showImportDialog = false
         }
@@ -172,9 +218,7 @@ fun ScheduleScreen(navController: NavController, viewModel: MainViewModel) {
     }
 }
 
-// ... ManualRoutineDialog, ImportDialog, LanguageChip, ScheduleItem, ThemeCircle, AboutSection ...
-// (请保留原有的这些辅助组件代码，或者从之前的回答中复制，确保它们存在于文件下方)
-// 为了确保完整性，这里再次提供关键的 ManualRoutineDialog 和 LanguageChip
+// ================== 辅助组件 ==================
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -258,17 +302,28 @@ fun ManualRoutineDialog(viewModel: MainViewModel, onDismiss: () -> Unit) {
 }
 
 @Composable
-fun ImportDialog(onDismiss: () -> Unit, onImport: (String) -> Unit) {
-    var text by remember { mutableStateOf("1,坐姿推胸,力量,3组12次") }
+fun ImportDialog(defaultText: String, onDismiss: () -> Unit, onImport: (String) -> Unit) {
+    var text by remember { mutableStateOf(defaultText) }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.import_dialog_title)) },
-        text = { Column { Text(stringResource(R.string.import_dialog_hint), fontSize = 12.sp, color = Color.Gray); OutlinedTextField(value = text, onValueChange = { text = it }, modifier = Modifier.fillMaxWidth().height(200.dp), textStyle = MaterialTheme.typography.bodySmall) } },
+        text = {
+            Column {
+                Text(stringResource(R.string.import_dialog_hint), fontSize = 12.sp, color = Color.Gray)
+                OutlinedTextField(
+                    value = text,
+                    onValueChange = { text = it },
+                    modifier = Modifier.fillMaxWidth().height(200.dp),
+                    textStyle = MaterialTheme.typography.bodySmall
+                )
+            }
+        },
         confirmButton = { Button(onClick = { onImport(text) }) { Text(stringResource(R.string.import_btn)) } },
         dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.btn_cancel)) } }
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LanguageChip(label: String, code: String, currentCode: String, onClick: () -> Unit) {
     FilterChip(selected = code == currentCode, onClick = onClick, label = { Text(label) })
@@ -297,7 +352,7 @@ fun ThemeCircle(theme: AppTheme, isSelected: Boolean, onClick: () -> Unit) {
             .size(48.dp)
             .clip(CircleShape)
             .background(Color(theme.primary))
-            .border(width = 3.dp, color = borderColor, shape = CircleShape) // 明确指定参数名，减少歧义
+            .border(width = 3.dp, color = borderColor, shape = CircleShape)
             .clickable(onClick = onClick)
     )
 }
@@ -305,11 +360,9 @@ fun ThemeCircle(theme: AppTheme, isSelected: Boolean, onClick: () -> Unit) {
 @Composable
 fun AboutSection() {
     val context = LocalContext.current
-    // 动态获取 App 版本号
     val versionName = remember {
         try {
             val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
-            // ▼▼▼ 修复点：加上 ?: "1.0" 处理空值情况 ▼▼▼
             packageInfo.versionName ?: "1.0"
         } catch (e: Exception) { "1.0" }
     }
@@ -323,7 +376,6 @@ fun AboutSection() {
         )
         Spacer(modifier = Modifier.height(8.dp))
 
-        // 现在 versionName 确定是 String 了，不会报错
         Text(
             text = stringResource(R.string.about_version_format, versionName),
             style = MaterialTheme.typography.bodyMedium,

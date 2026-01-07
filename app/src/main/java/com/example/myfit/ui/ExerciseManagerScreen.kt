@@ -23,6 +23,15 @@ import com.example.myfit.R
 import com.example.myfit.model.ExerciseTemplate
 import com.example.myfit.viewmodel.MainViewModel
 
+
+// 1. 定义常量列表，方便后续维护 (放在文件顶层或单独的 Constants 文件中)
+val EQUIPMENT_OPTIONS = listOf(
+    "equip_barbell", "equip_dumbbell", "equip_machine", "equip_cable",
+    "equip_bodyweight", "equip_cardio_machine", "equip_kettlebell",
+    "equip_smith_machine", "equip_resistance_band", "equip_medicine_ball",
+    "equip_trx", "equip_bench", "equip_other"
+)
+
 @Composable
 fun ExerciseManagerScreen(navController: NavController, viewModel: MainViewModel) {
     val templates by viewModel.allTemplates.collectAsState(initial = emptyList())
@@ -143,7 +152,7 @@ fun ExerciseEditDialog(template: ExerciseTemplate?, onDismiss: () -> Unit, onSav
                 Text(stringResource(R.string.label_equipment), style = MaterialTheme.typography.bodyMedium)
                 ResourceDropdown(
                     currentKey = equipment,
-                    options = listOf("equip_barbell", "equip_dumbbell", "equip_machine", "equip_cable", "equip_bodyweight", "equip_cardio_machine"),
+                    options = EQUIPMENT_OPTIONS, // 使用新列表
                     onSelect = { equipment = it }
                 )
             }
@@ -207,5 +216,13 @@ fun getEquipmentResId(key: String): Int = when(key) {
     "equip_cable" -> R.string.equip_cable
     "equip_bodyweight" -> R.string.equip_bodyweight
     "equip_cardio_machine" -> R.string.equip_cardio_machine
+    // 新增映射
+    "equip_kettlebell" -> R.string.equip_kettlebell
+    "equip_smith_machine" -> R.string.equip_smith_machine
+    "equip_resistance_band" -> R.string.equip_resistance_band
+    "equip_medicine_ball" -> R.string.equip_medicine_ball
+    "equip_trx" -> R.string.equip_trx
+    "equip_bench" -> R.string.equip_bench
+    "equip_other" -> R.string.equip_other
     else -> 0
 }

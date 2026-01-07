@@ -91,4 +91,42 @@
     <string name="equip_cable">龙门架/绳索</string>
     <string name="equip_bodyweight">徒手/自重</string>
     <string name="equip_cardio_machine">有氧器械</string>
+
+    <string name="equip_kettlebell">壶铃</string>
+    <string name="equip_smith_machine">史密斯机</string>
+    <string name="equip_resistance_band">弹力带</string>
+    <string name="equip_medicine_ball">药球</string>
+    <string name="equip_trx">TRX/悬挂</string>
+    <string name="equip_bench">卧推凳/椅子</string>
+    <string name="equip_other">其他辅助</string>
+
+    <string name="settings_data_management">数据管理</string>
+    <string name="btn_backup_db">备份数据库</string>
+    <string name="btn_restore_db">恢复数据库</string>
+
+    <string name="msg_backup_success">数据库备份成功！</string>
+    <string name="msg_backup_failed">备份失败：%s</string>
+    <string name="msg_restore_success">恢复成功！请重启应用生效。</string>
+    <string name="msg_restore_failed">恢复失败：%s</string>
+    <string name="import_csv_btn">导入 CSV</string>
+    <string name="export_csv_btn">导出 CSV</string>
+
+    <string name="tab_list">列表</string>
+    <string name="tab_chart">图表</string>
+
+    <string name="chart_no_data">暂无数据</string>
+    <string name="chart_granularity_day">日</string>
+    <string name="chart_granularity_month">月</string>
+
+    <string name="chart_title_weight">体重趋势 (kg)</string>
+
+    <string name="header_cardio_train">有氧训练</string>
+    <string name="chart_title_cardio_total">有氧总时长 (分钟)</string>
+    <string name="chart_title_cardio_single">单项有氧时长趋势</string>
+
+    <string name="header_strength_train">力量训练</string>
+    <string name="chart_title_strength_single">单项力量重量趋势 (Max)</string>
+
+    <string name="header_core_train">核心训练</string>
+    <string name="chart_title_core_single">单项核心次数趋势</string>
 </resources>

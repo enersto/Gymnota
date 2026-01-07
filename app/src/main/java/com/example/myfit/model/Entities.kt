@@ -43,18 +43,15 @@ data class WorkoutTask(
     val date: String,
     val templateId: Long,
     val name: String,
-    val category: String, // "STRENGTH", "CARDIO", "CORE"
-
-    // V5.0 新增详细数据
+    val category: String,
     val bodyPart: String = "",
     val equipment: String = "",
-    val sets: List<WorkoutSet> = emptyList(), // 核心变化：存储多组数据
 
-    // 兼容旧版本 UI 的字段 (后续 UI 更新中将逐步弱化)
-    var target: String = "",
-    var actualWeight: String = "",
-
-    var isCompleted: Boolean = false
+    // ⚠️ 注意：UI中如果需要修改这些值，必须设为 var
+    var sets: List<WorkoutSet> = emptyList(),
+    var isCompleted: Boolean = false, // 必须是 var 才能被 toggle
+    var target: String = "",          // 兼容旧 UI
+    var actualWeight: String = ""     // 兼容旧 UI
 )
 
 @Entity(tableName = "weight_records")
@@ -71,7 +68,10 @@ data class WeeklyRoutineItem(
     val templateId: Long,
     val name: String,
     val target: String,
-    val category: String
+    val category: String,
+    // V5.2 新增字段，提供默认值以兼容旧代码构造
+    val bodyPart: String = "",
+    val equipment: String = ""
 )
 
 enum class DayType(val labelResId: Int, val colorHex: Long) {

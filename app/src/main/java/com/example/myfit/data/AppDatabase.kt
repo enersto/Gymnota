@@ -11,7 +11,17 @@ import com.example.myfit.model.Converters
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import androidx.room.migration.Migration
 
+
+// 1. 定义迁移策略：版本 7 -> 8
+val MIGRATION_7_8 = object : Migration(7, 8) {
+    override fun migrate(database: SupportSQLiteDatabase) {
+        // 为 weekly_routine 表添加两个新列，默认值设为空字符串
+        database.execSQL("ALTER TABLE weekly_routine ADD COLUMN bodyPart TEXT NOT NULL DEFAULT ''")
+        database.execSQL("ALTER TABLE weekly_routine ADD COLUMN equipment TEXT NOT NULL DEFAULT ''")
+    }
+}
 @Database(
     entities = [
         WorkoutTask::class,
@@ -21,11 +31,12 @@ import kotlinx.coroutines.launch
         AppSetting::class,
         WeeklyRoutineItem::class
     ],
-    version = 7,
+    version = 8, // 🔴 升级版本号到 8
     exportSchema = false
 )
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
+    // 确保这行存在且没有拼写错误
     abstract fun workoutDao(): WorkoutDao
 
     companion object {
@@ -33,8 +44,9 @@ abstract class AppDatabase : RoomDatabase() {
 
         fun getDatabase(context: Context): AppDatabase {
             return instance ?: synchronized(this) {
-                Room.databaseBuilder(context, AppDatabase::class.java, "myfit_v7.db")
-                    .fallbackToDestructiveMigration()
+                Room.databaseBuilder(context, AppDatabase::class.java, "myfit_v7.db") // 文件名保持不变，内部结构升级
+                    .addMigrations(MIGRATION_7_8) // 🔴 添加迁移策略
+                    // .fallbackToDestructiveMigration() // 🔴 删除或注释掉这一行！
                     .addCallback(PrepopulateCallback())
                     .build().also { instance = it }
             }

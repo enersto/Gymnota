@@ -24,6 +24,8 @@ class MainActivity : ComponentActivity() {
         setContent {
             val viewModel: MainViewModel = viewModel()
             val currentTheme by viewModel.currentTheme.collectAsState()
+            // 应该是这样调用的
+            val dao = AppDatabase.getDatabase(applicationContext).workoutDao()
 
             // 监听数据库中的语言设置
             val currentLanguage by viewModel.currentLanguage.collectAsState()

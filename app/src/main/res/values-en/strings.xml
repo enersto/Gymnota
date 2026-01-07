@@ -64,10 +64,10 @@
 
     <string name="label_body_part">Body Part</string>
     <string name="label_equipment">Equipment</string>
-    <string name="label_sets_config">Sets Detail</string>
+    <string name="label_sets_config">Set Details</string>
 
     <string name="header_set_no">Set</string>
-    <string name="header_weight_time">Kg/Time</string>
+    <string name="header_weight_time">Weight/Time</string>
     <string name="header_reps">Reps</string>
     <string name="btn_add_set">Add Set</string>
 
@@ -77,7 +77,7 @@
     <string name="part_shoulders">Shoulders</string>
     <string name="part_arms">Arms</string>
     <string name="part_abs">Abs/Core</string>
-    <string name="part_cardio">Whole Body</string>
+    <string name="part_cardio">Full Body/Cardio</string>
     <string name="part_other">Other</string>
 
     <string name="equip_barbell">Barbell</string>
@@ -86,4 +86,42 @@
     <string name="equip_cable">Cable</string>
     <string name="equip_bodyweight">Bodyweight</string>
     <string name="equip_cardio_machine">Cardio Machine</string>
+
+    <string name="equip_kettlebell">Kettlebell</string>
+    <string name="equip_smith_machine">Smith Machine</string>
+    <string name="equip_resistance_band">Resistance Band</string>
+    <string name="equip_medicine_ball">Medicine Ball</string>
+    <string name="equip_trx">TRX/Suspension</string>
+    <string name="equip_bench">Bench</string>
+    <string name="equip_other">Other Acc.</string>
+
+    <string name="settings_data_management">Data Management</string>
+    <string name="btn_backup_db">Backup Database</string>
+    <string name="btn_restore_db">Restore Database</string>
+
+    <string name="msg_backup_success">Database backup successful!</string>
+    <string name="msg_backup_failed">Backup failed: %s</string>
+    <string name="msg_restore_success">Restore successful! Please restart app.</string>
+    <string name="msg_restore_failed">Restore failed: %s</string>
+    <string name="import_csv_btn">Import CSV</string>
+    <string name="export_csv_btn">Export CSV</string>
+
+    <string name="tab_list">List</string>
+    <string name="tab_chart">Charts</string>
+
+    <string name="chart_no_data">No Data</string>
+    <string name="chart_granularity_day">Day</string>
+    <string name="chart_granularity_month">Month</string>
+
+    <string name="chart_title_weight">Weight Trend (kg)</string>
+
+    <string name="header_cardio_train">Cardio Training</string>
+    <string name="chart_title_cardio_total">Total Duration (min)</string>
+    <string name="chart_title_cardio_single">Single Exercise Duration</string>
+
+    <string name="header_strength_train">Strength Training</string>
+    <string name="chart_title_strength_single">Max Weight Trend</string>
+
+    <string name="header_core_train">Core Training</string>
+    <string name="chart_title_core_single">Total Reps Trend</string>
 </resources>

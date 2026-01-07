@@ -64,4 +64,69 @@
 
     <string name="about_version_format">myFit %1$s</string>
     <string name="about_credit">Designed &amp; Built by enersto and Gemini</string>
+
+    <string name="category_core">Core/Núcleo</string>
+
+    <string name="label_body_part">Parte del cuerpo</string>
+    <string name="label_equipment">Equipo</string>
+    <string name="label_sets_config">Detalles series</string>
+
+    <string name="header_set_no">Serie</string>
+    <string name="header_weight_time">Peso/Tiempo</string>
+    <string name="header_reps">Reps</string>
+    <string name="btn_add_set">Añadir serie</string>
+
+    <string name="part_chest">Pecho</string>
+    <string name="part_back">Espalda</string>
+    <string name="part_legs">Piernas</string>
+    <string name="part_shoulders">Hombros</string>
+    <string name="part_arms">Brazos</string>
+    <string name="part_abs">Abdominales</string>
+    <string name="part_cardio">Cuerpo completo</string>
+    <string name="part_other">Otro</string>
+
+    <string name="equip_barbell">Barra</string>
+    <string name="equip_dumbbell">Mancuerna</string>
+    <string name="equip_machine">Máquina</string>
+    <string name="equip_cable">Polea/Cable</string>
+    <string name="equip_bodyweight">Peso corporal</string>
+    <string name="equip_cardio_machine">Máquina cardio</string>
+
+    <string name="equip_kettlebell">Pesa rusa</string>
+    <string name="equip_smith_machine">Máquina Smith</string>
+    <string name="equip_resistance_band">Banda elástica</string>
+    <string name="equip_medicine_ball">Balón medicinal</string>
+    <string name="equip_trx">TRX/Suspensión</string>
+    <string name="equip_bench">Banco</string>
+    <string name="equip_other">Otro accesorio</string>
+
+    <string name="settings_data_management">Gestión de datos</string>
+    <string name="btn_backup_db">Respaldar BDD</string>
+    <string name="btn_restore_db">Restaurar BDD</string>
+
+    <string name="msg_backup_success">¡Copia de seguridad exitosa!</string>
+    <string name="msg_backup_failed">Error en copia: %s</string>
+    <string name="msg_restore_success">¡Restauración exitosa! Reinicia la app.</string>
+    <string name="msg_restore_failed">Error al restaurar: %s</string>
+    <string name="import_csv_btn">Importar CSV</string>
+    <string name="export_csv_btn">Exportar CSV</string>
+
+    <string name="tab_list">Lista</string>
+    <string name="tab_chart">Gráfica</string>
+
+    <string name="chart_no_data">Sin datos</string>
+    <string name="chart_granularity_day">Día</string>
+    <string name="chart_granularity_month">Mes</string>
+
+    <string name="chart_title_weight">Tendencia de peso (kg)</string>
+
+    <string name="header_cardio_train">Cardio</string>
+    <string name="chart_title_cardio_total">Duración total (min)</string>
+    <string name="chart_title_cardio_single">Tendencia de duración</string>
+
+    <string name="header_strength_train">Fuerza</string>
+    <string name="chart_title_strength_single">Tendencia de peso (Máx)</string>
+
+    <string name="header_core_train">Core / Núcleo</string>
+    <string name="chart_title_core_single">Tendencia de repeticiones</string>
 </resources>

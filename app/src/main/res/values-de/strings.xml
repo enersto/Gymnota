@@ -64,4 +64,69 @@
 
     <string name="about_version_format">myFit %1$s</string>
     <string name="about_credit">Designed &amp; Built by enersto and Gemini</string>
+
+    <string name="category_core">Rumpf/Core</string>
+
+    <string name="label_body_part">Körperpartie</string>
+    <string name="label_equipment">Ausrüstung</string>
+    <string name="label_sets_config">Satz-Details</string>
+
+    <string name="header_set_no">Satz</string>
+    <string name="header_weight_time">Gew./Zeit</string>
+    <string name="header_reps">Wdh.</string>
+    <string name="btn_add_set">Satz hinzuf.</string>
+
+    <string name="part_chest">Brust</string>
+    <string name="part_back">Rücken</string>
+    <string name="part_legs">Beine</string>
+    <string name="part_shoulders">Schultern</string>
+    <string name="part_arms">Arme</string>
+    <string name="part_abs">Bauch/Rumpf</string>
+    <string name="part_cardio">Ganzkörper/Cardio</string>
+    <string name="part_other">Sonstiges</string>
+
+    <string name="equip_barbell">Langhantel</string>
+    <string name="equip_dumbbell">Kurzhantel</string>
+    <string name="equip_machine">Maschine</string>
+    <string name="equip_cable">Kabelzug</string>
+    <string name="equip_bodyweight">Eigengewicht</string>
+    <string name="equip_cardio_machine">Cardiogerät</string>
+
+    <string name="equip_kettlebell">Kugelhantel</string>
+    <string name="equip_smith_machine">Smith-Maschine</string>
+    <string name="equip_resistance_band">Widerstandsband</string>
+    <string name="equip_medicine_ball">Medizinball</string>
+    <string name="equip_trx">TRX/Schlingentrainer</string>
+    <string name="equip_bench">Hantelbank</string>
+    <string name="equip_other">Sonstiges Zubehör</string>
+
+    <string name="settings_data_management">Datenverwaltung</string>
+    <string name="btn_backup_db">Datenbank sichern</string>
+    <string name="btn_restore_db">Datenbank wiederherst.</string>
+
+    <string name="msg_backup_success">Backup erfolgreich!</string>
+    <string name="msg_backup_failed">Backup fehlgeschlagen: %s</string>
+    <string name="msg_restore_success">Wiederherstellung erfolgreich! Bitte App neu starten.</string>
+    <string name="msg_restore_failed">Wiederherstellung fehlgeschlagen: %s</string>
+    <string name="import_csv_btn">CSV importieren</string>
+    <string name="export_csv_btn">CSV exportieren</string>
+
+    <string name="tab_list">Liste</string>
+    <string name="tab_chart">Diagramm</string>
+
+    <string name="chart_no_data">Keine Daten</string>
+    <string name="chart_granularity_day">Tag</string>
+    <string name="chart_granularity_month">Monat</string>
+
+    <string name="chart_title_weight">Gewichtstrend (kg)</string>
+
+    <string name="header_cardio_train">Ausdauertraining</string>
+    <string name="chart_title_cardio_total">Gesamtdauer Cardio (Min)</string>
+    <string name="chart_title_cardio_single">Trend: Einzeldauer</string>
+
+    <string name="header_strength_train">Krafttraining</string>
+    <string name="chart_title_strength_single">Trend: Einzelgewicht (Max)</string>
+
+    <string name="header_core_train">Rumpftraining</string>
+    <string name="chart_title_core_single">Trend: Wiederholungen</string>
 </resources>

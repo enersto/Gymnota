@@ -64,4 +64,69 @@
 
     <string name="about_version_format">myFit %1$s</string>
     <string name="about_credit">Designed &amp; Built by enersto and Gemini</string>
+
+    <string name="category_core">体幹</string>
+
+    <string name="label_body_part">部位</string>
+    <string name="label_equipment">使用機材</string>
+    <string name="label_sets_config">セット詳細</string>
+
+    <string name="header_set_no">セット</string>
+    <string name="header_weight_time">重量/時間</string>
+    <string name="header_reps">回数</string>
+    <string name="btn_add_set">セット追加</string>
+
+    <string name="part_chest">胸</string>
+    <string name="part_back">背中</string>
+    <string name="part_legs">脚</string>
+    <string name="part_shoulders">肩</string>
+    <string name="part_arms">腕</string>
+    <string name="part_abs">腹筋/体幹</string>
+    <string name="part_cardio">全身/有酸素</string>
+    <string name="part_other">その他</string>
+
+    <string name="equip_barbell">バーベル</string>
+    <string name="equip_dumbbell">ダンベル</string>
+    <string name="equip_machine">マシン</string>
+    <string name="equip_cable">ケーブル</string>
+    <string name="equip_bodyweight">自重</string>
+    <string name="equip_cardio_machine">有酸素マシン</string>
+
+    <string name="equip_kettlebell">ケトルベル</string>
+    <string name="equip_smith_machine">スミスマシン</string>
+    <string name="equip_resistance_band">ゴムバンド</string>
+    <string name="equip_medicine_ball">メディシンボール</string>
+    <string name="equip_trx">TRX/サスペンション</string>
+    <string name="equip_bench">ベンチ</string>
+    <string name="equip_other">その他器具</string>
+
+    <string name="settings_data_management">データ管理</string>
+    <string name="btn_backup_db">DBバックアップ</string>
+    <string name="btn_restore_db">DB復元</string>
+
+    <string name="msg_backup_success">バックアップに成功しました！</string>
+    <string name="msg_backup_failed">バックアップ失敗: %s</string>
+    <string name="msg_restore_success">復元成功！アプリを再起動してください。</string>
+    <string name="msg_restore_failed">復元失敗: %s</string>
+    <string name="import_csv_btn">CSVインポート</string>
+    <string name="export_csv_btn">CSVエクスポート</string>
+
+    <string name="tab_list">リスト</string>
+    <string name="tab_chart">グラフ</string>
+
+    <string name="chart_no_data">データなし</string>
+    <string name="chart_granularity_day">日</string>
+    <string name="chart_granularity_month">月</string>
+
+    <string name="chart_title_weight">体重推移 (kg)</string>
+
+    <string name="header_cardio_train">有酸素運動</string>
+    <string name="chart_title_cardio_total">有酸素合計時間 (分)</string>
+    <string name="chart_title_cardio_single">種目別時間推移</string>
+
+    <string name="header_strength_train">筋力トレーニング</string>
+    <string name="chart_title_strength_single">種目別重量推移 (最大)</string>
+
+    <string name="header_core_train">体幹トレーニング</string>
+    <string name="chart_title_core_single">種目別回数推移</string>
 </resources>

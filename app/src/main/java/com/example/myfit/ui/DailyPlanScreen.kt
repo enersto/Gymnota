@@ -36,6 +36,7 @@ import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.math.PI
 import kotlin.random.Random
+import androidx.compose.foundation.lazy.items
 
 // 🔴 关键修复：将 OptIn 注解放在整个文件入口函数上，一劳永逸
 @OptIn(ExperimentalMaterial3Api::class)
@@ -43,7 +44,7 @@ import kotlin.random.Random
 fun DailyPlanScreen(viewModel: MainViewModel, navController: NavController) {
     val date by viewModel.selectedDate.collectAsState()
     val dayType by viewModel.todayScheduleType.collectAsState()
-    val tasks by viewModel.todayTasks.collectAsState(initial = emptyList())
+    val tasks by viewModel.todayTasks.collectAsState(initial = emptyList<WorkoutTask>())
     val showWeightAlert by viewModel.showWeightAlert.collectAsState()
     val progress = if (tasks.isEmpty()) 0f else tasks.count { it.isCompleted } / tasks.size.toFloat()
     val themeColor = MaterialTheme.colorScheme.primary
