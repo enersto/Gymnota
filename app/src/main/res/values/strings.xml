@@ -12,7 +12,7 @@
     <string name="btn_done">已完成</string>
     <string name="btn_check">打卡</string>
 
-    <string name="no_plan">今日暂无安排</string>
+
     <string name="apply_routine">应用今日周计划</string>
     <string name="click_add">或点击右下角 + 号</string>
     <string name="log_weight">记录体重</string>
@@ -55,7 +55,6 @@
     <string name="title_new_exercise">新建动作</string>
     <string name="title_edit_exercise">编辑动作</string>
     <string name="label_name">动作名称</string>
-    <string name="label_target">默认目标</string>
     <string name="hint_target">例如：3组12次 或 30分钟</string>
     <string name="label_category">类别</string>
     <string name="category_strength">力量</string>
@@ -146,4 +145,29 @@
     <string name="section_body_part">训练部位 (Body Part)</string>
     <string name="section_equipment">使用器械 (Equipment)</string>
     <string name="msg_copied">已复制: %1$s</string>
+
+    <string name="toast_task_auto_completed">所有组已完成，自动打卡！</string>
+    <string name="toast_set_completed">本组计时结束，记录已保存</string>
+
+    <string name="timer_start">开始</string>
+    <string name="timer_pause">暂停</string>
+    <string name="timer_resume">继续</string>
+    <string name="timer_stop">停止</string>
+    <string name="label_min">分钟</string>
+    <string name="btn_record_weight_alert">记录体重!</string>
+    <string name="btn_weight">体重</string>
+
+    <string name="notify_training_title">正在训练: %1$s</string>
+    <string name="notify_time_remaining">剩余时间: %1$s</string>
+    <string name="notify_paused_title">已暂停</string>
+    <string name="notify_click_resume">点击继续</string>
+
+    <string name="btn_check_in">打卡</string>
+    <string name="btn_completed">已完成</string>
+    <string name="btn_completed_undo">撤销完成</string>
+    <string name="label_weight">重量 (KG)</string>
+    <string name="label_reps">次数</string>
+    <string name="label_target">目标</string>
+    <string name="no_plan">今日暂无训练计划，去享受生活吧！</string>
+
 </resources>

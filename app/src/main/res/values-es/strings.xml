@@ -12,7 +12,6 @@
     <string name="btn_done">Hecho</string>
     <string name="btn_check">Marcar</string>
 
-    <string name="no_plan">Sin planes para hoy</string>
     <string name="apply_routine">Aplicar Rutina</string>
     <string name="click_add">O haz clic en +</string>
     <string name="log_weight">Registrar Peso</string>
@@ -55,7 +54,6 @@
     <string name="title_new_exercise">Nuevo Ejercicio</string>
     <string name="title_edit_exercise">Editar Ejercicio</string>
     <string name="label_name">Nombre del Ejercicio</string>
-    <string name="label_target">Objetivo Predet.</string>
     <string name="hint_target">ej. 3x12 o 30 min</string>
     <string name="label_category">Categoría</string>
     <string name="category_strength">Fuerza</string>
@@ -146,4 +144,28 @@
     <string name="section_body_part">Partes del cuerpo</string>
     <string name="section_equipment">Equipamiento</string>
     <string name="msg_copied">Copiado: %1$s</string>
+
+    <string name="toast_task_auto_completed">¡Series terminadas! Registro automático.</string>
+    <string name="toast_set_completed">Tiempo finalizado. Registro guardado.</string>
+
+    <string name="timer_start">Iniciar</string>
+    <string name="timer_pause">Pausa</string>
+    <string name="timer_resume">Seguir</string>
+    <string name="timer_stop">Parar</string>
+    <string name="label_min">min</string>
+    <string name="btn_record_weight_alert">¡Anotar peso!</string>
+    <string name="btn_weight">Peso</string>
+
+    <string name="notify_training_title">Entrenando: %1$s</string>
+    <string name="notify_time_remaining">Restante: %1$s</string>
+    <string name="notify_paused_title">Pausado</string>
+    <string name="notify_click_resume">Toca para seguir</string>
+
+    <string name="btn_check_in">Registrar</string>
+    <string name="btn_completed">Hecho</string>
+    <string name="btn_completed_undo">Deshacer</string>
+    <string name="label_weight">Peso (KG)</string>
+    <string name="label_reps">Reps</string>
+    <string name="label_target">Objetivo</string>
+    <string name="no_plan">No hay plan para hoy. ¡Disfruta el día!</string>
 </resources>

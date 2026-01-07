@@ -1,5 +1,10 @@
 package com.example.myfit.ui
 
+import android.Manifest
+import android.os.Build
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Canvas
@@ -10,6 +15,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -21,11 +27,14 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.example.myfit.R
 import com.example.myfit.model.*
@@ -36,9 +45,7 @@ import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.math.PI
 import kotlin.random.Random
-import androidx.compose.foundation.lazy.items
 
-// 🔴 关键修复：将 OptIn 注解放在整个文件入口函数上，一劳永逸
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DailyPlanScreen(viewModel: MainViewModel, navController: NavController) {
@@ -46,12 +53,25 @@ fun DailyPlanScreen(viewModel: MainViewModel, navController: NavController) {
     val dayType by viewModel.todayScheduleType.collectAsState()
     val tasks by viewModel.todayTasks.collectAsState(initial = emptyList<WorkoutTask>())
     val showWeightAlert by viewModel.showWeightAlert.collectAsState()
+    // 使用 collectAsStateWithLifecycle 确保生命周期安全
+    val timerState by viewModel.timerState.collectAsStateWithLifecycle()
     val progress = if (tasks.isEmpty()) 0f else tasks.count { it.isCompleted } / tasks.size.toFloat()
     val themeColor = MaterialTheme.colorScheme.primary
 
     var showAddSheet by remember { mutableStateOf(false) }
     var showWeightDialog by remember { mutableStateOf(false) }
     var showExplosion by remember { mutableStateOf(false) }
+
+    // 1. 权限请求器 (修复 Android 13+ 通知权限问题)
+    val context = LocalContext.current
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+        onResult = { isGranted ->
+            if (!isGranted) {
+                Toast.makeText(context, "需要通知权限才能后台计时", Toast.LENGTH_SHORT).show()
+            }
+        }
+    )
 
     Box(modifier = Modifier.fillMaxSize()) {
         Scaffold(
@@ -74,7 +94,18 @@ fun DailyPlanScreen(viewModel: MainViewModel, navController: NavController) {
                     LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         items(tasks, key = { it.id }) { task ->
                             SwipeToDeleteContainer(item = task, onDelete = { viewModel.removeTask(task) }) {
-                                AdvancedTaskItem(task, themeColor, viewModel) { showExplosion = true }
+                                AdvancedTaskItem(
+                                    task = task,
+                                    themeColor = themeColor,
+                                    viewModel = viewModel,
+                                    timerState = timerState,
+                                    onComplete = { showExplosion = true },
+                                    onRequestPermission = {
+                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                            permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                        }
+                                    }
+                                )
                             }
                         }
                         item { Spacer(modifier = Modifier.height(80.dp)) }
@@ -90,11 +121,19 @@ fun DailyPlanScreen(viewModel: MainViewModel, navController: NavController) {
 }
 
 @Composable
-fun AdvancedTaskItem(task: WorkoutTask, themeColor: Color, viewModel: MainViewModel, onComplete: () -> Unit) {
+fun AdvancedTaskItem(
+    task: WorkoutTask,
+    themeColor: Color,
+    viewModel: MainViewModel,
+    timerState: MainViewModel.TimerState,
+    onComplete: () -> Unit,
+    onRequestPermission: () -> Unit
+) {
     var expanded by remember { mutableStateOf(false) }
     val isCompleted = task.isCompleted
     val cardBgColor = if (isCompleted) Color(0xFFF0F0F0) else MaterialTheme.colorScheme.surface
     val contentAlpha = if (isCompleted) 0.5f else 1f
+    val context = LocalContext.current
 
     val bodyPartRes = getBodyPartResId(task.bodyPart)
     val bodyPartLabel = if (bodyPartRes != 0) stringResource(bodyPartRes) else task.bodyPart
@@ -109,6 +148,7 @@ fun AdvancedTaskItem(task: WorkoutTask, themeColor: Color, viewModel: MainViewMo
         elevation = CardDefaults.cardElevation(defaultElevation = if (isCompleted) 0.dp else 2.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
+            // --- Title Row (Unchanged) ---
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
@@ -135,20 +175,54 @@ fun AdvancedTaskItem(task: WorkoutTask, themeColor: Color, viewModel: MainViewMo
                     Divider(color = Color.LightGray.copy(alpha = 0.3f))
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    Row(Modifier.fillMaxWidth()) {
-                        Text(stringResource(R.string.header_set_no), modifier = Modifier.weight(0.5f), fontSize = 12.sp, color = Color.Gray)
-                        Text(stringResource(R.string.header_weight_time), modifier = Modifier.weight(1f), fontSize = 12.sp, color = Color.Gray)
-                        Text(stringResource(R.string.header_reps), modifier = Modifier.weight(1f), fontSize = 12.sp, color = Color.Gray)
-                    }
-                    Spacer(modifier = Modifier.height(4.dp))
+                    // 2. 更健壮的分类判断 (忽略大小写和空格)
+                    val isStrength = task.category?.uppercase()?.trim() == "STRENGTH"
 
-                    task.sets.forEachIndexed { index, set ->
-                        SetRow(index, set, themeColor) { updatedSet ->
-                            val newSets = task.sets.toMutableList()
-                            newSets[index] = updatedSet
-                            viewModel.updateTask(task.copy(sets = newSets))
+                    if (isStrength) {
+                        // === Strength Layout ===
+                        Row(Modifier.fillMaxWidth()) {
+                            Text(stringResource(R.string.header_set_no), modifier = Modifier.weight(0.5f), fontSize = 12.sp, color = Color.Gray)
+                            Text(stringResource(R.string.header_weight_time), modifier = Modifier.weight(1f), fontSize = 12.sp, color = Color.Gray)
+                            Text(stringResource(R.string.header_reps), modifier = Modifier.weight(1f), fontSize = 12.sp, color = Color.Gray)
                         }
-                        Spacer(modifier = Modifier.height(6.dp))
+                        Spacer(modifier = Modifier.height(4.dp))
+
+                        task.sets.forEachIndexed { index, set ->
+                            SetRow(index, set, themeColor) { updatedSet ->
+                                val newSets = task.sets.toMutableList()
+                                newSets[index] = updatedSet
+                                viewModel.updateTask(task.copy(sets = newSets))
+                            }
+                            Spacer(modifier = Modifier.height(6.dp))
+                        }
+                    } else {
+                        // === Timer Layout for Cardio/Core ===
+                        task.sets.forEachIndexed { index, set ->
+                            TimerSetRow(
+                                index = index,
+                                set = set,
+                                taskId = task.id,
+                                timerState = timerState,
+                                themeColor = themeColor,
+                                onStart = { min ->
+                                    // 3. 点击开始前，先尝试请求权限
+                                    onRequestPermission()
+                                    viewModel.startTimer(context, task.id, index, min)
+                                },
+                                onPause = { viewModel.pauseTimer(context) },
+                                onStop = { viewModel.stopTimer(context) },
+                                onUpdate = { updatedSet ->
+                                    val newSets = task.sets.toMutableList()
+                                    newSets[index] = updatedSet
+                                    viewModel.updateTask(task.copy(sets = newSets))
+                                },
+                                onRemove = {
+                                    val newSets = task.sets.toMutableList().apply { removeAt(index) }
+                                    viewModel.updateTask(task.copy(sets = newSets))
+                                }
+                            )
+                            Divider(modifier = Modifier.padding(vertical = 8.dp), color = Color.LightGray.copy(alpha = 0.2f))
+                        }
                     }
 
                     TextButton(
@@ -171,6 +245,7 @@ fun AdvancedTaskItem(task: WorkoutTask, themeColor: Color, viewModel: MainViewMo
     }
 }
 
+// === Existing SetRow for Strength ===
 @Composable
 fun SetRow(index: Int, set: WorkoutSet, color: Color, onUpdate: (WorkoutSet) -> Unit) {
     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -199,6 +274,120 @@ fun SetRow(index: Int, set: WorkoutSet, color: Color, onUpdate: (WorkoutSet) -> 
         }
     }
 }
+
+// === New TimerSetRow for Cardio/Core ===
+@Composable
+fun TimerSetRow(
+    index: Int,
+    set: WorkoutSet,
+    taskId: Long,
+    timerState: MainViewModel.TimerState,
+    themeColor: Color,
+    onStart: (Int) -> Unit,
+    onPause: () -> Unit,
+    onStop: () -> Unit,
+    onUpdate: (WorkoutSet) -> Unit,
+    onRemove: () -> Unit
+) {
+    val isActive = timerState.taskId == taskId && timerState.setIndex == index
+    var inputMinutes by remember { mutableStateOf("30") }
+
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        // Set Number
+        Text(
+            text = "${index + 1}",
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.width(30.dp),
+            color = Color.Gray,
+            fontWeight = FontWeight.Bold
+        )
+
+        // Middle: Timer Display OR Input
+        Box(
+            modifier = Modifier.weight(1f).padding(horizontal = 8.dp),
+            contentAlignment = Alignment.CenterStart
+        ) {
+            if (isActive) {
+                // 4. 计时中状态：显示倒计时
+                val s = timerState.remainingSeconds
+                val timeStr = String.format("%02d:%02d", s / 60, s % 60)
+                Text(
+                    text = timeStr,
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = themeColor,
+                    fontWeight = FontWeight.Bold
+                )
+            } else if (set.weightOrDuration.isNotBlank() && (set.weightOrDuration.contains("min") || set.reps == "Done")) {
+                // 完成状态
+                Text(
+                    text = "✅ ${set.weightOrDuration}",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.tertiary
+                )
+            } else {
+                // 准备状态：显示输入框
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Surface(
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        shape = RoundedCornerShape(4.dp),
+                        modifier = Modifier.width(80.dp)
+                    ) {
+                        BasicTextField(
+                            value = inputMinutes,
+                            onValueChange = { if (it.all { char -> char.isDigit() }) inputMinutes = it },
+                            textStyle = TextStyle(color = MaterialTheme.colorScheme.onSurface, fontSize = 16.sp, fontWeight = FontWeight.Medium),
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp),
+                            cursorBrush = SolidColor(themeColor)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(stringResource(R.string.label_min), fontSize = 14.sp, color = Color.Gray)
+                }
+            }
+        }
+
+        // Controls
+        Row {
+            if (isActive) {
+                if (timerState.isRunning) {
+                    IconButton(onClick = onPause) {
+                        Icon(Icons.Default.Pause, contentDescription = stringResource(R.string.timer_pause), tint = Color.Gray)
+                    }
+                } else {
+                    IconButton(onClick = { onStart(timerState.totalSeconds / 60) }) {
+                        Icon(Icons.Default.PlayArrow, contentDescription = stringResource(R.string.timer_resume), tint = themeColor)
+                    }
+                }
+                IconButton(onClick = onStop) {
+                    Icon(Icons.Default.Stop, contentDescription = stringResource(R.string.timer_stop), tint = Color.Red)
+                }
+            } else if (set.weightOrDuration.isBlank()) {
+                // 点击开始按钮
+                IconButton(onClick = {
+                    val minutes = inputMinutes.toIntOrNull() ?: 30
+                    onStart(minutes)
+                }) {
+                    Icon(Icons.Default.PlayCircle, contentDescription = stringResource(R.string.timer_start), tint = themeColor, modifier = Modifier.size(32.dp))
+                }
+                IconButton(onClick = onRemove) {
+                    Icon(Icons.Default.Delete, contentDescription = "Remove", tint = Color.LightGray)
+                }
+            } else {
+                IconButton(onClick = onRemove) {
+                    Icon(Icons.Default.Delete, contentDescription = "Remove", tint = Color.LightGray)
+                }
+            }
+        }
+    }
+}
+
+// === Existing Helper Components (Unchanged) ===
 
 @Composable
 fun HeaderSection(date: LocalDate, dayType: DayType, progress: Float, color: Color, showWeightAlert: Boolean, onWeightClick: () -> Unit) {
@@ -229,13 +418,11 @@ fun EmptyState(dayType: DayType, onApplyRoutine: () -> Unit) {
 @Composable
 fun AddExerciseSheet(viewModel: MainViewModel, navController: NavController, onDismiss: () -> Unit) {
     val templates by viewModel.allTemplates.collectAsState(initial = emptyList())
-    // 1. 新增：分类状态
     val categories = listOf("STRENGTH", "CARDIO", "CORE")
     var selectedCategory by remember { mutableStateOf("STRENGTH") }
 
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(modifier = Modifier.fillMaxWidth()) {
-            // 2. 新增：顶部管理入口
             Button(
                 onClick = { onDismiss(); navController.navigate("exercise_manager") },
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
@@ -245,7 +432,6 @@ fun AddExerciseSheet(viewModel: MainViewModel, navController: NavController, onD
 
             Divider(modifier = Modifier.padding(vertical = 8.dp))
 
-            // 3. 新增：分类 Tab
             TabRow(
                 selectedTabIndex = categories.indexOf(selectedCategory),
                 containerColor = Color.Transparent,
@@ -253,7 +439,6 @@ fun AddExerciseSheet(viewModel: MainViewModel, navController: NavController, onD
                 divider = {}
             ) {
                 categories.forEach { category ->
-                    // 简单的映射 helper (由于不在 ExerciseManagerScreen，这里简单内联处理或使用硬编码Key对应资源)
                     val labelRes = when(category) {
                         "STRENGTH" -> R.string.category_strength
                         "CARDIO" -> R.string.category_cardio
@@ -270,7 +455,6 @@ fun AddExerciseSheet(viewModel: MainViewModel, navController: NavController, onD
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // 4. 修改：带过滤的列表
             LazyColumn(
                 modifier = Modifier.fillMaxWidth(),
                 contentPadding = PaddingValues(bottom = 16.dp)
@@ -317,7 +501,6 @@ fun PillCheckButton(isCompleted: Boolean, color: Color, onClick: () -> Unit) {
     }
 }
 
-// 🔴 关键修复：直接在此函数上也加上 OptIn，双保险
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun <T> SwipeToDeleteContainer(

@@ -64,7 +64,7 @@ fun MainScreen() {
         }
     ) { innerPadding ->
         NavHost(navController, startDestination = "home", modifier = Modifier.padding(innerPadding)) {
-            composable("home") { DailyPlanScreen(viewModel, navController) }
+            composable("home") { DailyPlanScreen(navController = navController, viewModel = viewModel) }
             composable("history") { HistoryScreen(viewModel) }
             composable("schedule") { ScheduleScreen(navController, viewModel) }
             composable("exercise_manager") { ExerciseManagerScreen(navController, viewModel) }

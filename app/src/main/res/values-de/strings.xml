@@ -12,7 +12,6 @@
     <string name="btn_done">Fertig</string>
     <string name="btn_check">Check</string>
 
-    <string name="no_plan">Kein Plan für heute</string>
     <string name="apply_routine">Plan anwenden</string>
     <string name="click_add">Oder klicke auf +</string>
     <string name="log_weight">Gewicht loggen</string>
@@ -55,7 +54,6 @@
     <string name="title_new_exercise">Neue Übung</string>
     <string name="title_edit_exercise">Übung bearbeiten</string>
     <string name="label_name">Name der Übung</string>
-    <string name="label_target">Standardziel</string>
     <string name="hint_target">z.B. 3x12 oder 30 Min</string>
     <string name="label_category">Kategorie</string>
     <string name="category_strength">Kraft</string>
@@ -146,4 +144,28 @@
     <string name="section_body_part">Körperpartien</string>
     <string name="section_equipment">Ausrüstung</string>
     <string name="msg_copied">Kopiert: %1$s</string>
+
+    <string name="toast_task_auto_completed">Alle Sätze erledigt. Automatisch eingetragen!</string>
+    <string name="toast_set_completed">Timer beendet. Eintrag gespeichert.</string>
+
+    <string name="timer_start">Start</string>
+    <string name="timer_pause">Pause</string>
+    <string name="timer_resume">Weiter</string>
+    <string name="timer_stop">Stopp</string>
+    <string name="label_min">Min</string>
+    <string name="btn_record_weight_alert">Gewicht loggen!</string>
+    <string name="btn_weight">Gewicht</string>
+
+    <string name="notify_training_title">Training: %1$s</string>
+    <string name="notify_time_remaining">Verbleibend: %1$s</string>
+    <string name="notify_paused_title">Pausiert</string>
+    <string name="notify_click_resume">Tippen zum Fortsetzen</string>
+
+    <string name="btn_check_in">Eintragen</string>
+    <string name="btn_completed">Erledigt</string>
+    <string name="btn_completed_undo">Rückgängig</string>
+    <string name="label_weight">Gewicht (KG)</string>
+    <string name="label_reps">Wdh.</string>
+    <string name="label_target">Ziel</string>
+    <string name="no_plan">Kein Training für heute geplant. Genieß den Tag!</string>
 </resources>

@@ -1,6 +1,5 @@
 package com.example.myfit.ui
 
-import android.graphics.Paint
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -13,176 +12,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.myfit.R
 import com.example.myfit.viewmodel.MainViewModel
 import java.time.LocalDate
-import kotlin.math.max
-
-// ================== 数据模型 ==================
-
-data class ChartDataPoint(
-    val date: LocalDate,
-    val value: Float,
-    val label: String
-)
 
 enum class ChartGranularity { DAILY, MONTHLY }
-
-// ================== 基础图表组件 ==================
-
-@Composable
-fun GranularitySelector(
-    current: ChartGranularity,
-    onSelect: (ChartGranularity) -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(8.dp))
-            .padding(2.dp)
-    ) {
-        val options = listOf(
-            stringResource(R.string.chart_granularity_day) to ChartGranularity.DAILY,
-            stringResource(R.string.chart_granularity_month) to ChartGranularity.MONTHLY
-        )
-
-        options.forEach { (text, type) ->
-            val isSelected = current == type
-            val bgColor = if (isSelected) MaterialTheme.colorScheme.background else Color.Transparent
-            val textColor = if (isSelected) MaterialTheme.colorScheme.primary else Color.Gray
-
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .background(bgColor, RoundedCornerShape(6.dp))
-                    .clickable { onSelect(type) }
-                    .padding(vertical = 4.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(text, fontSize = 12.sp, color = textColor, style = MaterialTheme.typography.labelSmall)
-            }
-        }
-    }
-}
-
-@Composable
-fun LineChart(
-    data: List<ChartDataPoint>,
-    lineColor: Color = MaterialTheme.colorScheme.primary,
-    modifier: Modifier = Modifier.height(200.dp).fillMaxWidth()
-) {
-    if (data.isEmpty()) {
-        Box(modifier, contentAlignment = Alignment.Center) {
-            Text(stringResource(R.string.chart_no_data), color = Color.Gray, fontSize = 12.sp)
-        }
-        return
-    }
-
-    val textColor = MaterialTheme.colorScheme.onSurface.toArgb()
-
-    Canvas(modifier = modifier.padding(top = 20.dp, bottom = 20.dp, start = 10.dp, end = 10.dp)) {
-        val width = size.width
-        val height = size.height
-        val spacing = width / max(data.size - 1, 1)
-
-        val maxValue = data.maxOf { it.value } * 1.1f
-        val minValue = (data.minOf { it.value } * 0.9f).coerceAtLeast(0f)
-        val yRange = max(maxValue - minValue, 1f)
-
-        val path = Path()
-        val points = data.mapIndexed { index, point ->
-            val x = index * spacing
-            val y = height - ((point.value - minValue) / yRange * height)
-            Offset(x, y)
-        }
-
-        points.forEachIndexed { index, point ->
-            if (index == 0) path.moveTo(point.x, point.y) else path.lineTo(point.x, point.y)
-        }
-
-        drawPath(
-            path = path,
-            color = lineColor,
-            style = Stroke(width = 3.dp.toPx())
-        )
-
-        points.forEachIndexed { index, point ->
-            drawCircle(color = lineColor, radius = 4.dp.toPx(), center = point)
-
-            if (data.size < 10 || index % (data.size / 5) == 0) {
-                drawContext.canvas.nativeCanvas.drawText(
-                    data[index].label,
-                    point.x,
-                    height + 20.dp.toPx(),
-                    Paint().apply {
-                        color = textColor
-                        textSize = 10.sp.toPx()
-                        textAlign = Paint.Align.CENTER
-                    }
-                )
-            }
-        }
-    }
-}
-
-@Composable
-fun BarChart(
-    data: List<ChartDataPoint>,
-    barColor: Color = MaterialTheme.colorScheme.secondary,
-    modifier: Modifier = Modifier.height(200.dp).fillMaxWidth()
-) {
-    if (data.isEmpty()) {
-        Box(modifier, contentAlignment = Alignment.Center) {
-            Text(stringResource(R.string.chart_no_data), color = Color.Gray, fontSize = 12.sp)
-        }
-        return
-    }
-
-    val textColor = MaterialTheme.colorScheme.onSurface.toArgb()
-
-    Canvas(modifier = modifier.padding(top = 20.dp, bottom = 20.dp, start = 10.dp, end = 10.dp)) {
-        val width = size.width
-        val height = size.height
-        val barWidth = (width / data.size) * 0.6f
-        val spacing = width / data.size
-
-        val maxValue = max(data.maxOf { it.value } * 1.1f, 1f)
-
-        data.forEachIndexed { index, point ->
-            val barHeight = (point.value / maxValue) * height
-            val x = index * spacing + (spacing - barWidth) / 2
-            val y = height - barHeight
-
-            drawRect(
-                color = barColor,
-                topLeft = Offset(x, y),
-                size = Size(barWidth, barHeight)
-            )
-
-            if (data.size < 10 || index % (data.size / 5) == 0) {
-                drawContext.canvas.nativeCanvas.drawText(
-                    point.label,
-                    x + barWidth / 2,
-                    height + 20.dp.toPx(),
-                    Paint().apply {
-                        color = textColor
-                        textSize = 10.sp.toPx()
-                        textAlign = Paint.Align.CENTER
-                    }
-                )
-            }
-        }
-    }
-}
-
-// ================== 业务容器组件 (补全部分) ==================
+data class ChartDataPoint(val date: LocalDate, val value: Float, val label: String)
 
 @Composable
 fun ChartSection(
@@ -203,16 +45,48 @@ fun ChartSection(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(text = title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                GranularitySelector(current = granularity, onSelect = { granularity = it })
+                Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Row(
+                    modifier = Modifier
+                        .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(8.dp))
+                        .padding(4.dp)
+                ) {
+                    GranularityButton(
+                        stringResource(R.string.chart_granularity_day),
+                        granularity == ChartGranularity.DAILY
+                    ) { granularity = ChartGranularity.DAILY }
+
+                    GranularityButton(
+                        stringResource(R.string.chart_granularity_month),
+                        granularity == ChartGranularity.MONTHLY
+                    ) { granularity = ChartGranularity.MONTHLY }
+                }
             }
             Spacer(modifier = Modifier.height(16.dp))
-            content(granularity)
+            Box(modifier = Modifier.height(220.dp).fillMaxWidth()) { // 稍微增加高度以容纳数值标签
+                content(granularity)
+            }
         }
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun GranularityButton(text: String, isSelected: Boolean, onClick: () -> Unit) {
+    Text(
+        text = text,
+        modifier = Modifier
+            .clickable { onClick() }
+            .background(
+                if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
+                RoundedCornerShape(4.dp)
+            )
+            .padding(horizontal = 12.dp, vertical = 6.dp),
+        color = if (isSelected) Color.White else Color.Gray,
+        fontSize = 12.sp,
+        fontWeight = FontWeight.Bold
+    )
+}
+
 @Composable
 fun SingleExerciseSection(
     viewModel: MainViewModel,
@@ -220,70 +94,188 @@ fun SingleExerciseSection(
     title: String,
     mode: Int
 ) {
-    val exercises by viewModel.getExerciseNamesByCategory(category).collectAsState(initial = emptyList())
     var selectedExercise by remember { mutableStateOf("") }
+    val exercises by viewModel.getExerciseNamesByCategory(category).collectAsStateWithLifecycle(initialValue = emptyList())
 
-    // 默认选中第一个
-    LaunchedEffect(exercises) {
-        if (selectedExercise.isEmpty() && exercises.isNotEmpty()) {
-            selectedExercise = exercises.first()
-        }
-    }
+    if (exercises.isNotEmpty()) {
+        if (selectedExercise.isEmpty()) selectedExercise = exercises.first()
 
-    if (exercises.isEmpty()) return
-
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(text = title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        Column {
+            ChartSection(title = title) { granularity ->
+                val data by viewModel.getSingleExerciseChartData(selectedExercise, mode, granularity).collectAsStateWithLifecycle(initialValue = emptyList())
+                LineChart(data = data)
+            }
             Spacer(modifier = Modifier.height(8.dp))
-
-            // 动作选择下拉框
-            var expanded by remember { mutableStateOf(false) }
-            ExposedDropdownMenuBox(
-                expanded = expanded,
-                onExpandedChange = { expanded = !expanded }
-            ) {
-                OutlinedTextField(
-                    value = selectedExercise,
-                    onValueChange = {},
-                    readOnly = true,
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                    modifier = Modifier.menuAnchor().fillMaxWidth(),
-                    textStyle = MaterialTheme.typography.bodyMedium
-                )
-                ExposedDropdownMenu(
-                    expanded = expanded,
-                    onDismissRequest = { expanded = false }
-                ) {
-                    exercises.forEach { name ->
-                        DropdownMenuItem(
-                            text = { Text(name) },
-                            onClick = {
-                                selectedExercise = name
-                                expanded = false
-                            }
+            androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                items(exercises.size) { index ->
+                    val name = exercises[index]
+                    FilterChip(
+                        selected = name == selectedExercise,
+                        onClick = { selectedExercise = name },
+                        label = { Text(name) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                            selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
                         )
-                    }
+                    )
                 }
             }
+        }
+    }
+}
 
-            Spacer(modifier = Modifier.height(16.dp))
+@Composable
+fun LineChart(
+    data: List<ChartDataPoint>,
+    lineColor: Color = MaterialTheme.colorScheme.primary,
+    modifier: Modifier = Modifier
+) {
+    if (data.isEmpty()) {
+        Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text(stringResource(R.string.chart_no_data), color = Color.Gray, fontSize = 12.sp)
+        }
+        return
+    }
 
-            // 图表部分
-            if (selectedExercise.isNotEmpty()) {
-                var granularity by remember { mutableStateOf(ChartGranularity.DAILY) }
+    val yValues = data.map { it.value }
+    val maxVal = (yValues.maxOrNull() ?: 100f) * 1.2f // 增加顶部留白
+    val minVal = (yValues.minOrNull() ?: 0f) * 0.8f
+    val yRange = if (maxVal - minVal == 0f) 1f else maxVal - minVal
 
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                    GranularitySelector(current = granularity, onSelect = { granularity = it })
-                }
-                Spacer(modifier = Modifier.height(8.dp))
+    // 文字画笔
+    val textPaint = android.graphics.Paint().apply {
+        color = android.graphics.Color.GRAY
+        textSize = 28f
+        textAlign = android.graphics.Paint.Align.CENTER
+    }
+    val valuePaint = android.graphics.Paint().apply {
+        color = lineColor.toArgb()
+        textSize = 32f
+        textAlign = android.graphics.Paint.Align.CENTER
+        isFakeBoldText = true
+    }
 
-                val data by viewModel.getSingleExerciseChartData(selectedExercise, mode, granularity).collectAsState(initial = emptyList())
-                LineChart(data = data)
+    Canvas(modifier = modifier.fillMaxSize().padding(start = 10.dp, end = 10.dp, top = 20.dp, bottom = 20.dp)) {
+        val width = size.width
+        val height = size.height
+        val pointSpacing = if (data.size > 1) width / (data.size - 1) else 0f
+
+        // 绘制坐标轴
+        drawLine(Color.LightGray.copy(alpha = 0.5f), Offset(0f, height), Offset(width, height), 2f)
+
+        // 绘制折线
+        if (data.size > 1) {
+            for (i in 0 until data.size - 1) {
+                val x1 = i * pointSpacing
+                val y1 = height - ((data[i].value - minVal) / yRange) * height
+                val x2 = (i + 1) * pointSpacing
+                val y2 = height - ((data[i + 1].value - minVal) / yRange) * height
+
+                drawLine(
+                    start = Offset(x1, y1),
+                    end = Offset(x2, y2),
+                    color = lineColor,
+                    strokeWidth = 5f
+                )
+            }
+        }
+
+        // 绘制点和数值
+        for (i in data.indices) {
+            val x = i * pointSpacing
+            val y = height - ((data[i].value - minVal) / yRange) * height
+
+            // 绘制点
+            drawCircle(color = Color.White, radius = 10f, center = Offset(x, y))
+            drawCircle(color = lineColor, radius = 7f, center = Offset(x, y))
+
+            // 绘制数值 (如果点不多，或者只绘制极值)
+            if (data.size < 15 || i == 0 || i == data.lastIndex || data[i].value == yValues.maxOrNull()) {
+                drawContext.canvas.nativeCanvas.drawText(
+                    String.format("%.1f", data[i].value),
+                    x,
+                    y - 20f,
+                    valuePaint
+                )
+            }
+
+            // 绘制日期标签 (间隔绘制，避免拥挤)
+            if (data.size < 8 || i % (data.size / 5) == 0) {
+                drawContext.canvas.nativeCanvas.drawText(
+                    data[i].label,
+                    x,
+                    height + 40f,
+                    textPaint
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun BarChart(
+    data: List<ChartDataPoint>,
+    barColor: Color = MaterialTheme.colorScheme.secondary,
+    modifier: Modifier = Modifier
+) {
+    if (data.isEmpty()) {
+        Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text(stringResource(R.string.chart_no_data), color = Color.Gray, fontSize = 12.sp)
+        }
+        return
+    }
+
+    val maxVal = (data.maxOfOrNull { it.value } ?: 100f) * 1.2f
+
+    val textPaint = android.graphics.Paint().apply {
+        color = android.graphics.Color.GRAY
+        textSize = 28f
+        textAlign = android.graphics.Paint.Align.CENTER
+    }
+    val valuePaint = android.graphics.Paint().apply {
+        color = barColor.toArgb()
+        textSize = 28f
+        textAlign = android.graphics.Paint.Align.CENTER
+    }
+
+    Canvas(modifier = modifier.fillMaxSize().padding(start = 10.dp, end = 10.dp, top = 20.dp, bottom = 20.dp)) {
+        val width = size.width
+        val height = size.height
+        val barWidth = (width / data.size) * 0.5f
+        val spacing = width / data.size
+
+        drawLine(Color.LightGray.copy(alpha = 0.5f), Offset(0f, height), Offset(width, height), 2f)
+
+        for (i in data.indices) {
+            val barHeight = (data[i].value / maxVal) * height
+            val x = i * spacing + (spacing / 2) // 居中
+            val y = height - barHeight
+
+            // 绘制柱子
+            drawRect(
+                color = barColor,
+                topLeft = Offset(x - barWidth/2, y),
+                size = Size(barWidth, barHeight)
+            )
+
+            // 绘制数值
+            if (data[i].value > 0) {
+                drawContext.canvas.nativeCanvas.drawText(
+                    String.format("%.0f", data[i].value),
+                    x,
+                    y - 10f,
+                    valuePaint
+                )
+            }
+
+            // 绘制日期
+            if (data.size < 8 || i % (data.size / 5) == 0) {
+                drawContext.canvas.nativeCanvas.drawText(
+                    data[i].label,
+                    x,
+                    height + 40f,
+                    textPaint
+                )
             }
         }
     }

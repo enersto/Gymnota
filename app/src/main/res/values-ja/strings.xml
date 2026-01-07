@@ -12,7 +12,6 @@
     <string name="btn_done">完了</string>
     <string name="btn_check">チェック</string>
 
-    <string name="no_plan">今日の予定なし</string>
     <string name="apply_routine">今日の計画を適用</string>
     <string name="click_add">または + をタップ</string>
     <string name="log_weight">体重を記録</string>
@@ -55,7 +54,6 @@
     <string name="title_new_exercise">新規種目</string>
     <string name="title_edit_exercise">種目を編集</string>
     <string name="label_name">種目名</string>
-    <string name="label_target">デフォルト目標</string>
     <string name="hint_target">例: 3セットx12回, 30分</string>
     <string name="label_category">カテゴリー</string>
     <string name="category_strength">筋力</string>
@@ -146,5 +144,29 @@
     <string name="section_body_part">トレーニング部位</string>
     <string name="section_equipment">使用器具</string>
     <string name="msg_copied">コピーしました: %1$s</string>
+
+    <string name="toast_task_auto_completed">全セット完了。自動記録しました！</string>
+    <string name="toast_set_completed">タイマー終了。記録を保存しました。</string>
+
+    <string name="timer_start">開始</string>
+    <string name="timer_pause">一時停止</string>
+    <string name="timer_resume">再開</string>
+    <string name="timer_stop">停止</string>
+    <string name="label_min">分</string>
+    <string name="btn_record_weight_alert">体重を記録！</string>
+    <string name="btn_weight">体重</string>
+
+    <string name="notify_training_title">トレーニング中: %1$s</string>
+    <string name="notify_time_remaining">残り時間: %1$s</string>
+    <string name="notify_paused_title">一時停止中</string>
+    <string name="notify_click_resume">タップして再開</string>
+
+    <string name="btn_check_in">打刻</string>
+    <string name="btn_completed">完了</string>
+    <string name="btn_completed_undo">元に戻す</string>
+    <string name="label_weight">重量 (KG)</string>
+    <string name="label_reps">回数</string>
+    <string name="label_target">目標</string>
+    <string name="no_plan">今日の予定はありません。良い一日を！</string>
 
 </resources>
