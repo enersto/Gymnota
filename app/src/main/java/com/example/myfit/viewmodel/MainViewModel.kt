@@ -39,21 +39,21 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _selectedDate = MutableStateFlow(LocalDate.now())
     val selectedDate: StateFlow<LocalDate> = _selectedDate.asStateFlow()
 
-    // --- Theme & Language ---
-    val currentTheme = dao.getAppSettings()
-        .map { it?.themeId ?: 1 }
-        .map { AppTheme.fromId(it) }
-        .stateIn(viewModelScope, SharingStarted.Lazily, AppTheme.DARK)
-
-    val currentLanguage = dao.getAppSettings()
-        .map { it?.languageCode ?: "zh" }
-        .stateIn(viewModelScope, SharingStarted.Lazily, "zh")
-
-    // --- User Profile (New) ---
+    // --- User Profile (基础信息) ---
+    // [修复] 即使数据库为空，也提供一个默认对象，防止空指针
     val userProfile = dao.getAppSettings()
-        .filterNotNull()
-        .stateIn(viewModelScope, SharingStarted.Lazily, AppSetting()) // 默认空对象
+        .map { it ?: AppSetting(themeId = 1) }
+        .stateIn(viewModelScope, SharingStarted.Lazily, AppSetting(themeId = 1))
 
+    // --- Theme & Language ---
+    // [优化] 直接观察 userProfile 流，减少重复查询
+    val currentTheme = userProfile
+        .map { AppTheme.fromId(it.themeId) }
+        .stateIn(viewModelScope, SharingStarted.Lazily, AppTheme.GREEN)
+
+    val currentLanguage = userProfile
+        .map { it.languageCode }
+        .stateIn(viewModelScope, SharingStarted.Lazily, "zh")
 
     // --- Schedule ---
     val allSchedules: Flow<List<ScheduleConfig>> = dao.getAllSchedules()
@@ -80,82 +80,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val historyRecords: Flow<List<WorkoutTask>> = dao.getAllHistoryTasks()
     val weightHistory: Flow<List<WeightRecord>> = dao.getAllWeightRecords()
 
-    // --- Chart Data Logic (New for BMI/BMR) ---
+    // --- Lock Screen Guide State ---
+    private val prefs = application.getSharedPreferences("myfit_prefs", Context.MODE_PRIVATE)
+    private val _hasShownLockScreenGuide = MutableStateFlow(prefs.getBoolean("key_lockscreen_guide_shown", false))
+    val hasShownLockScreenGuide = _hasShownLockScreenGuide.asStateFlow()
 
-    // 计算 BMI: kg / (m^2)
-    private fun calculateBMI(weight: Float, heightCm: Float): Float {
-        if (heightCm <= 0) return 0f
-        val heightM = heightCm / 100f
-        return weight / (heightM * heightM)
-    }
-
-    // 计算 BMR (Mifflin-St Jeor 公式)
-    private fun calculateBMR(weight: Float, heightCm: Float, age: Int, gender: Int): Float {
-        // Gender: 0=Male, 1=Female
-        if (heightCm <= 0 || age <= 0) return 0f
-        val s = if (gender == 0) 5 else -161
-        return (10 * weight) + (6.25f * heightCm) - (5 * age) + s
-    }
-
-    // 4) 获取 BMI 图表数据
-    // 注意：历史记录里没有存当时的身高，所以我们使用当前的身高来估算历史 BMI/BMR
-    // 这是一个常见的简化处理。
-    fun getBMIChartData(granularity: ChartGranularity): Flow<List<ChartDataPoint>> {
-        return combine(weightHistory, userProfile) { weights, profile ->
-            val raw = weights.map {
-                val bmi = calculateBMI(it.weight, profile.height)
-                Pair(LocalDate.parse(it.date), bmi)
-            }
-            groupAndFormatData(raw, granularity)
-        }
-    }
-
-    fun getBMRChartData(granularity: ChartGranularity): Flow<List<ChartDataPoint>> {
-        return combine(weightHistory, userProfile) { weights, profile ->
-            val raw = weights.map {
-                val bmr = calculateBMR(it.weight, profile.height, profile.age, profile.gender)
-                Pair(LocalDate.parse(it.date), bmr)
-            }
-            groupAndFormatData(raw, granularity)
-        }
-    }
-
-    // 辅助函数：处理图表数据分组和格式化 (复用原有的逻辑)
-    private fun groupAndFormatData(raw: List<Pair<LocalDate, Float>>, granularity: ChartGranularity): List<ChartDataPoint> {
-        val grouped = when (granularity) {
-            ChartGranularity.DAILY -> raw.groupBy { it.first }
-            ChartGranularity.MONTHLY -> raw.groupBy { it.first.withDayOfMonth(1) }
-        }
-        return grouped.map { (date, list) ->
-            ChartDataPoint(
-                date,
-                list.map { it.second }.average().toFloat(),
-                date.format(DateTimeFormatter.ofPattern("MM/dd"))
-            )
-        }.sortedBy { it.date }
-    }
-
-    // --- Actions ---
-
-    // 2) & 3) 更新 LogWeight 逻辑：同时更新用户信息
-    fun logWeightAndProfile(weight: Float, age: Int?, height: Float?, gender: Int?) = viewModelScope.launch {
-        // 1. 记录体重
-        dao.insertWeight(WeightRecord(date = LocalDate.now().toString(), weight = weight))
-
-        // 2. 更新 Profile (如果有输入)
-        val currentSettings = userProfile.value
-        val newSettings = currentSettings.copy(
-            age = age ?: currentSettings.age,
-            height = height ?: currentSettings.height,
-            gender = gender ?: currentSettings.gender
-        )
-        dao.saveAppSettings(newSettings)
-    }
-
-    // 单独更新 Profile (用于设置页面)
-    fun updateProfile(age: Int, height: Float, gender: Int) = viewModelScope.launch {
-        val currentSettings = userProfile.value
-        dao.saveAppSettings(currentSettings.copy(age = age, height = height, gender = gender))
+    fun markLockScreenGuideShown() {
+        prefs.edit().putBoolean("key_lockscreen_guide_shown", true).apply()
+        _hasShownLockScreenGuide.value = true
     }
 
     // --- Timer State ---
@@ -173,24 +105,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private var timerJob: Job? = null
 
     init {
-        // [修复] 确保在 App 启动时就创建好通道
         NotificationHelper.createNotificationChannel(application)
     }
 
-    // [新增] SharedPreferences 用于保存一些一次性的 UI 状态
-    private val prefs = application.getSharedPreferences("myfit_prefs", Context.MODE_PRIVATE)
-
-    // [新增] 状态流：是否已经展示过锁屏引导
-    private val _hasShownLockScreenGuide = MutableStateFlow(prefs.getBoolean("key_lockscreen_guide_shown", false))
-    val hasShownLockScreenGuide = _hasShownLockScreenGuide.asStateFlow()
-
-    // --- Timer Logic (Updated for Foreground Service) ---
-    // [新增] 标记为已展示（下次不再弹）
-    fun markLockScreenGuideShown() {
-        prefs.edit().putBoolean("key_lockscreen_guide_shown", true).apply()
-        _hasShownLockScreenGuide.value = true
-    }
-
+    // --- Timer Logic ---
     fun startTimer(context: Context, taskId: Long, setIndex: Int, durationMinutes: Int) {
         val current = _timerState.value
         val initialSeconds = if (current.taskId == taskId && current.setIndex == setIndex && current.isPaused) {
@@ -200,14 +118,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             durationMinutes * 60
         }
 
-        // 更新 UI 状态
         _timerState.value = TimerState(taskId, setIndex, durationMinutes * 60, initialSeconds, true, false)
-
-        // 计算结束时间
         val endTimeMillis = System.currentTimeMillis() + (initialSeconds * 1000)
 
-        // [新增] 启动前台服务 Service
-        // 这一步是将 App 提升为前台进程的关键，确保锁屏可见
         viewModelScope.launch(Dispatchers.IO) {
             val task = dao.getTaskById(taskId)
             val taskName = task?.name ?: "Training"
@@ -217,7 +130,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 putExtra(TimerService.EXTRA_TASK_NAME, taskName)
                 putExtra(TimerService.EXTRA_END_TIME, endTimeMillis)
             }
-
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 context.startForegroundService(intent)
             } else {
@@ -225,16 +137,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
 
-        // 启动协程：仅用于 UI 倒计时更新 和 刷新 Notification 时间文本
         timerJob?.cancel()
         timerJob = viewModelScope.launch(Dispatchers.Default) {
-            // 获取 TaskName 用于 updateTimerNotification
             val task = dao.getTaskById(taskId)
             val taskName = task?.name ?: "Training"
 
             while (_timerState.value.remainingSeconds > 0 && _timerState.value.isRunning) {
                 try {
-                    // 刷新通知栏上的倒计时文字
                     withContext(Dispatchers.Main) {
                         NotificationHelper.updateTimerNotification(context, taskName, endTimeMillis)
                     }
@@ -244,10 +153,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 _timerState.update { it.copy(remainingSeconds = it.remainingSeconds - 1) }
             }
 
-            // 倒计时结束
             if (_timerState.value.remainingSeconds <= 0 && _timerState.value.isRunning) {
                 withContext(Dispatchers.Main) {
-                    stopService(context) // 停止服务
+                    stopService(context)
                     onTimerFinished(taskId, setIndex, durationMinutes)
                 }
             }
@@ -257,12 +165,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun pauseTimer(context: Context) {
         _timerState.update { it.copy(isRunning = false, isPaused = true) }
         timerJob?.cancel()
-
-        // 暂停时，我们停止前台服务（因为不再是活跃计时），或者你可以选择保留服务但更新通知为“已暂停”
-        // 这里选择发送一个 updateTimerNotification 将通知变为 "Paused" 状态
-        // 注意：如果要长期暂停并保持锁屏显示，Service 应该继续运行。但通常暂停意味着用户在操作手机。
-        // 为了省电和逻辑简单，这里仅更新 UI。
-        // 若要更严谨，可以向 Service 发送 ACTION_PAUSE (如果实现了的话)，或者就在这里更新 Notification：
         try { NotificationHelper.updateTimerNotification(context, null, null) } catch (e: Exception) { e.printStackTrace() }
     }
 
@@ -272,7 +174,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         stopService(context)
     }
 
-    // [新增] 辅助函数：停止服务
     private fun stopService(context: Context) {
         try {
             val intent = Intent(context, TimerService::class.java).apply {
@@ -281,7 +182,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             context.startService(intent)
         } catch (e: Exception) {
             e.printStackTrace()
-            // 兜底：直接取消通知
             NotificationHelper.cancelNotification(context)
         }
     }
@@ -315,7 +215,85 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    // --- Core Logic ---
+    // --- Chart Data Logic (BMI/BMR) ---
+    private fun calculateBMI(weight: Float, heightCm: Float): Float {
+        if (heightCm <= 0) return 0f
+        val heightM = heightCm / 100f
+        return weight / (heightM * heightM)
+    }
+
+    private fun calculateBMR(weight: Float, heightCm: Float, age: Int, gender: Int): Float {
+        if (heightCm <= 0 || age <= 0) return 0f
+        val s = if (gender == 0) 5 else -161
+        return (10 * weight) + (6.25f * heightCm) - (5 * age) + s
+    }
+
+    fun getBMIChartData(granularity: ChartGranularity): Flow<List<ChartDataPoint>> {
+        return combine(weightHistory, userProfile) { weights, profile ->
+            val raw = weights.map {
+                val bmi = calculateBMI(it.weight, profile.height)
+                Pair(LocalDate.parse(it.date), bmi)
+            }
+            groupAndFormatData(raw, granularity)
+        }
+    }
+
+    fun getBMRChartData(granularity: ChartGranularity): Flow<List<ChartDataPoint>> {
+        return combine(weightHistory, userProfile) { weights, profile ->
+            val raw = weights.map {
+                val bmr = calculateBMR(it.weight, profile.height, profile.age, profile.gender)
+                Pair(LocalDate.parse(it.date), bmr)
+            }
+            groupAndFormatData(raw, granularity)
+        }
+    }
+
+    private fun groupAndFormatData(raw: List<Pair<LocalDate, Float>>, granularity: ChartGranularity): List<ChartDataPoint> {
+        val grouped = when (granularity) {
+            ChartGranularity.DAILY -> raw.groupBy { it.first }
+            ChartGranularity.MONTHLY -> raw.groupBy { it.first.withDayOfMonth(1) }
+        }
+        return grouped.map { (date, list) ->
+            ChartDataPoint(
+                date,
+                list.map { it.second }.average().toFloat(),
+                date.format(DateTimeFormatter.ofPattern("MM/dd"))
+            )
+        }.sortedBy { it.date }
+    }
+
+    // --- Core Logic & Actions ---
+
+    // 🔴 [关键修复]：切换主题时，保留现有语言和身体数据
+    fun switchTheme(theme: AppTheme) = viewModelScope.launch {
+        val currentSettings = userProfile.value // 获取当前完整配置 (包含 age, height 等)
+        dao.saveAppSettings(currentSettings.copy(themeId = theme.id)) // 仅修改 themeId
+    }
+
+    // 🔴 [关键修复]：切换语言时，保留现有主题和身体数据
+    fun switchLanguage(lang: String) = viewModelScope.launch {
+        val currentSettings = userProfile.value // 获取当前完整配置
+        dao.saveAppSettings(currentSettings.copy(languageCode = lang)) // 仅修改 languageCode
+    }
+
+    // 更新体重和身体信息 (打卡页用)
+    fun logWeightAndProfile(weight: Float, age: Int?, height: Float?, gender: Int?) = viewModelScope.launch {
+        dao.insertWeight(WeightRecord(date = LocalDate.now().toString(), weight = weight))
+
+        val currentSettings = userProfile.value
+        val newSettings = currentSettings.copy(
+            age = age ?: currentSettings.age,
+            height = height ?: currentSettings.height,
+            gender = gender ?: currentSettings.gender
+        )
+        dao.saveAppSettings(newSettings)
+    }
+
+    // 更新身体信息 (设置页用)
+    fun updateProfile(age: Int, height: Float, gender: Int) = viewModelScope.launch {
+        val currentSettings = userProfile.value
+        dao.saveAppSettings(currentSettings.copy(age = age, height = height, gender = gender))
+    }
 
     fun deleteTemplate(id: Long) = viewModelScope.launch {
         val t = dao.getTemplateById(id)
@@ -358,10 +336,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 sets = listOf(WorkoutSet(1, "", ""))
             ))
         }
-    }
-
-    fun logWeight(w: Float) = viewModelScope.launch {
-        dao.insertWeight(WeightRecord(date = LocalDate.now().toString(), weight = w))
     }
 
     fun addRoutineItem(day: Int, template: ExerciseTemplate) = viewModelScope.launch {
@@ -422,13 +396,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun getWeightChartData(granularity: ChartGranularity): Flow<List<ChartDataPoint>> {
         return weightHistory.map { records ->
             val raw = records.map { Pair(LocalDate.parse(it.date), it.weight) }
-            val grouped = when (granularity) {
-                ChartGranularity.DAILY -> raw.groupBy { it.first }
-                ChartGranularity.MONTHLY -> raw.groupBy { it.first.withDayOfMonth(1) }
-            }
-            grouped.map { (date, list) ->
-                ChartDataPoint(date, list.map { it.second }.average().toFloat(), date.format(DateTimeFormatter.ofPattern("MM/dd")))
-            }.sortedBy { it.date }
+            groupAndFormatData(raw, granularity)
         }
     }
 
@@ -442,13 +410,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 }.toFloat()
                 Pair(date, sum)
             }
-            val grouped = when (granularity) {
-                ChartGranularity.DAILY -> raw.groupBy { it.first }
-                ChartGranularity.MONTHLY -> raw.groupBy { it.first.withDayOfMonth(1) }
-            }
-            grouped.map { (date, list) ->
-                ChartDataPoint(date, list.sumOf { it.second.toDouble() }.toFloat(), date.format(DateTimeFormatter.ofPattern("MM/dd")))
-            }.sortedBy { it.date }
+            groupAndFormatData(raw, granularity)
         }
     }
 
@@ -471,14 +433,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 }
                 Pair(date, dailyVal)
             }
-            val grouped = when (granularity) {
-                ChartGranularity.DAILY -> raw.groupBy { it.first }
-                ChartGranularity.MONTHLY -> raw.groupBy { it.first.withDayOfMonth(1) }
-            }
-            grouped.map { (date, list) ->
-                val finalVal = if (mode == 1) list.map { it.second }.average().toFloat() else list.sumOf { it.second.toDouble() }.toFloat()
-                ChartDataPoint(date, finalVal, date.format(DateTimeFormatter.ofPattern("MM/dd")))
-            }.sortedBy { it.date }
+            groupAndFormatData(raw, granularity)
         }
     }
 
@@ -497,14 +452,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun switchTheme(theme: AppTheme) = viewModelScope.launch {
-        val currentLang = currentLanguage.value
-        dao.saveAppSettings(AppSetting(0, theme.id, currentLang))
-    }
-    fun switchLanguage(lang: String) = viewModelScope.launch {
-        val currentThemeId = currentTheme.value.id
-        dao.saveAppSettings(AppSetting(0, currentThemeId, lang))
-    }
     fun exportHistoryToCsv(context: Context) {}
     fun importWeeklyRoutine(context: Context, csv: String) {}
     suspend fun optimizeExerciseLibrary(): Int = 0
