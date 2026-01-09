@@ -49,6 +49,28 @@ import kotlin.math.sin
 import kotlin.math.PI
 import kotlin.random.Random
 
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+// 确保已有以下 material3 的引用 (通常已有，确认即可)
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxValue
+import androidx.compose.material3.rememberSwipeToDismissBoxState
+
+// 动画核心库
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
+// 手势处理库 (替代原生的 SwipeToDismiss)
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.rememberDraggableState
+// UI 基础库
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
+import kotlin.math.abs
+import kotlin.math.roundToInt
+import kotlinx.coroutines.launch
+
 // [修复] 删除了重复的 getBodyPartResId 和 getEquipmentResId 定义
 // 它们现在直接引用 ExerciseManagerScreen.kt 中的公共定义
 
@@ -656,38 +678,105 @@ fun PillCheckButton(isCompleted: Boolean, color: Color, onClick: () -> Unit) {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+// [新] 自定义侧滑删除容器：支持“滑开停留”和“深滑删除”
 @Composable
 fun <T> SwipeToDeleteContainer(
     item: T,
     onDelete: (T) -> Unit,
-    content: @Composable () -> Unit
+    content: @Composable () -> Unit // 注意：这里不需要传入 item，直接用 lambda 内容即可
 ) {
-    val dismissState = rememberSwipeToDismissBoxState(
-        confirmValueChange = {
-            if (it == SwipeToDismissBoxValue.EndToStart) {
-                onDelete(item)
-                true
-            } else false
-        }
-    )
+    val haptic = LocalHapticFeedback.current
+    val density = LocalDensity.current
+    val scope = rememberCoroutineScope()
 
-    SwipeToDismissBox(
-        state = dismissState,
-        backgroundContent = {
-            val color = Color.Red
+    // 获取屏幕宽度，用于计算深滑阈值
+    val configuration = LocalConfiguration.current
+    val screenWidthPx = with(density) { configuration.screenWidthDp.dp.toPx() }
+
+    // X轴偏移量，控制卡片位置
+    val offsetX = remember { Animatable(0f) }
+
+    // --- 阈值参数 ---
+    // 1. 悬停阈值：滑开多少像素露出菜单？(这里设为 80dp，大约是垃圾桶按钮的宽度)
+    val revealThresholdPx = with(density) { 80.dp.toPx() }
+    // 2. 删除阈值：深滑多少像素直接删除？(设为屏幕宽度的 50%)
+    val deleteThresholdPx = screenWidthPx * 0.5f
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(IntrinsicSize.Min) // 关键：让红底高度跟随内容高度
+    ) {
+        // --- 底层：红底 + 垃圾桶 (操作区) ---
+        // 仅当有偏移时显示，优化性能
+        if (offsetX.value < 0) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(color, RoundedCornerShape(16.dp))
-                    .padding(end = 24.dp),
+                    .background(MaterialTheme.colorScheme.error, RoundedCornerShape(12.dp))
+                    .clickable {
+                        // [交互] 点击红底 -> 确认删除
+                        onDelete(item)
+                    }
+                    .padding(end = 24.dp), // 图标靠右对齐
                 contentAlignment = Alignment.CenterEnd
             ) {
-                Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color.White)
+                Icon(
+                    imageVector = Icons.Default.Delete,
+                    contentDescription = stringResource(R.string.btn_delete),
+                    tint = MaterialTheme.colorScheme.onError
+                )
             }
-        },
-        content = { content() }
-    )
+        }
+
+        // --- 上层：内容卡片 (滑动区) ---
+        Box(
+            modifier = Modifier
+                .offset { IntOffset(offsetX.value.roundToInt(), 0) }
+                .draggable(
+                    state = rememberDraggableState { delta ->
+                        scope.launch {
+                            // 限制只能向左滑 (负值)，最远滑出屏幕
+                            val target = (offsetX.value + delta).coerceAtMost(0f)
+                            offsetX.snapTo(target)
+                        }
+                    },
+                    orientation = Orientation.Horizontal,
+                    onDragStopped = { velocity ->
+                        // 手指松开后的吸附逻辑
+                        val currentX = abs(offsetX.value)
+
+                        when {
+                            // 1. 深滑模式：滑过屏幕一半 -> 触发直接删除动画
+                            currentX >= deleteThresholdPx -> {
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                launch {
+                                    // 动画滑出屏幕
+                                    offsetX.animateTo(-screenWidthPx, tween(300))
+                                    onDelete(item)
+                                    // 删除回调后重置位置 (防止列表复用时状态错乱)
+                                    offsetX.snapTo(0f)
+                                }
+                            }
+                            // 2. 悬停模式：滑过菜单的一半宽度 -> 吸附到菜单展开位置
+                            currentX >= revealThresholdPx / 2 -> {
+                                launch {
+                                    offsetX.animateTo(-revealThresholdPx, tween(300))
+                                }
+                            }
+                            // 3. 恢复模式：滑动距离不够 -> 回弹关闭
+                            else -> {
+                                launch {
+                                    offsetX.animateTo(0f, tween(300))
+                                }
+                            }
+                        }
+                    }
+                )
+        ) {
+            content()
+        }
+    }
 }
 
 @Composable

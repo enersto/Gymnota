@@ -15,8 +15,8 @@ android {
         applicationId = "com.example.myfit"
         minSdk = 26
         targetSdk = 36
-        versionCode = 573
-        versionName = "5.7.3"
+        versionCode = 574
+        versionName = "5.7.4"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
