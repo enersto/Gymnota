@@ -204,4 +204,10 @@
 
     <string name="chart_title_heatmap">肌肉训练热力图</string>
 
+    <string name="part_hips">臀部</string>
+    <string name="part_thighs">大腿</string>
+    <string name="part_calves">小腿</string>
+
+    <string name="hint_heatmap_volume">数值为历史累积的容量负荷 (重量 × 次数)</string>
+
 </resources>

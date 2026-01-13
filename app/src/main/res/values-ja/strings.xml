@@ -203,4 +203,10 @@
 
     <string name="chart_title_heatmap">筋トレヒートマップ</string>
 
+    <string name="part_hips">臀部</string>
+    <string name="part_thighs">大腿</string>
+    <string name="part_calves">小腿</string>
+
+    <string name="hint_heatmap_volume">数値は過去の累積総負荷量 (重量 × 回数)</string>
+
 </resources>

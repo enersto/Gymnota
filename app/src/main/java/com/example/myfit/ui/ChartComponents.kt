@@ -349,7 +349,7 @@ fun BarChart(
     }
 }
 
-// [新增] 像素人热力图组件
+// [修改] 像素人热力图组件：改为 Layout 布局以支持点击交互
 @Composable
 fun PixelBodyHeatmap(
     viewModel: MainViewModel,
@@ -357,7 +357,9 @@ fun PixelBodyHeatmap(
 ) {
     val heatMap by viewModel.muscleHeatMapData.collectAsStateWithLifecycle(initialValue = emptyMap())
 
-    // 颜色插值器：从 灰色(无训练) -> 绿色(低强度) -> 红色(高强度)
+    // 状态：当前选中的部位信息 (名称, 原始数值)
+    var selectedPartInfo by remember { mutableStateOf<Pair<String, String>?>(null) }
+
     fun getColorForIntensity(intensity: Float): Color {
         return when {
             intensity <= 0f -> Color.LightGray.copy(alpha = 0.3f)
@@ -372,81 +374,114 @@ fun PixelBodyHeatmap(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
-            text = stringResource(R.string.chart_title_heatmap), // 需要在 strings.xml 添加
+            text = stringResource(R.string.chart_title_heatmap),
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.primary
         )
-        Spacer(modifier = Modifier.height(16.dp))
 
-        Canvas(modifier = Modifier.width(120.dp).height(200.dp)) {
-            val blockSize = size.width / 5 // 将宽度分为 5 列
-            val gap = 4f // 方块间距
+        // [新增] 显示点击选中的部位数据
+        Spacer(modifier = Modifier.height(4.dp))
+        val infoText = selectedPartInfo?.let { (name, value) ->
+            "$name: $value"
+        } ?: "" // 默认空
+        Text(
+            text = infoText,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.secondary,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.height(20.dp) // 占位高度防止跳动
+        )
 
-            // 定义绘制单个方块的辅助函数
-            fun drawBlock(col: Int, row: Int, partKey: String) {
-                val intensity = heatMap[partKey] ?: 0f
-                val color = getColorForIntensity(intensity)
+        Spacer(modifier = Modifier.height(8.dp))
 
-                drawRoundRect(
-                    color = color,
-                    topLeft = Offset(col * blockSize + gap / 2, row * blockSize + gap / 2),
-                    size = Size(blockSize - gap, blockSize - gap),
-                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(8f, 8f)
-                )
+        // 使用 Column/Row 布局代替 Canvas
+        val blockSize = 20.dp
+        val gap = 4.dp
+
+        // 网格定义：null 代表空位，String 代表部位 Key
+        val gridRows = listOf(
+            listOf(null, null, "decoration_head", null, null),
+            listOf(null, "part_shoulders", "part_chest", "part_shoulders", null),
+            listOf("part_arms", null, "part_back", null, "part_arms"),
+            listOf("part_arms", null, "part_abs", null, "part_arms"),
+            listOf(null, "part_hips", "part_hips", "part_hips", null),
+            listOf(null, "part_thighs", null, "part_thighs", null),
+            listOf(null, "part_thighs", null, "part_thighs", null),
+            listOf(null, "part_calves", null, "part_calves", null)
+        )
+
+        Column(verticalArrangement = Arrangement.spacedBy(gap)) {
+            gridRows.forEach { rowParts ->
+                Row(horizontalArrangement = Arrangement.spacedBy(gap)) {
+                    rowParts.forEach { partKey ->
+                        if (partKey == null) {
+                            // 空位占位符
+                            Spacer(modifier = Modifier.size(blockSize))
+                        } else {
+                            // 实际方块
+                            val data = heatMap[partKey]
+                            val intensity = data?.intensity ?: 0f
+                            val rawValue = data?.volume ?: 0f
+                            // 头部作为装饰，特殊处理颜色 (或默认0)
+                            val isDecoration = partKey.startsWith("decoration")
+                            val color = if (isDecoration) Color.LightGray else getColorForIntensity(intensity)
+
+                            // 获取部位名称资源ID (需要 ExerciseManagerScreen.kt 中的 helper)
+                            // 注意：这里需要 ensure getBodyPartResId 是可访问的
+                            val labelRes = getBodyPartResId(partKey)
+                            val label = if (labelRes != 0) stringResource(labelRes) else partKey
+
+                            Box(
+                                modifier = Modifier
+                                    .size(blockSize)
+                                    .background(color, RoundedCornerShape(4.dp))
+                                    .clickable(enabled = !isDecoration) {
+                                        // 使用 String.format 给数字加千分位 (%,.0f) 并加上单位
+                                        val formattedValue = String.format("%,.0f kg", rawValue)
+                                        selectedPartInfo = label to formattedValue
+                                    }
+                            )
+                        }
+                    }
+                }
             }
-
-            // --- 绘制像素人 (5x8 网格) ---
-            // 坐标: (列, 行) -> (0..4, 0..7)
-
-            // Row 0: Head (装饰用，不绑定数据)
-            drawBlock(2, 0, "decoration_head")
-
-            // Row 1: Shoulders & Chest
-            drawBlock(1, 1, "part_shoulders") // L.Shoulder
-            drawBlock(2, 1, "part_chest")     // Chest
-            drawBlock(3, 1, "part_shoulders") // R.Shoulder
-
-            // Row 2: Arms & Back
-            drawBlock(0, 2, "part_arms")      // L.Arm (Upper)
-            drawBlock(2, 2, "part_back")      // Back (Center)
-            drawBlock(4, 2, "part_arms")      // R.Arm (Upper)
-
-            // Row 3: Arms (Lower) & Abs
-            drawBlock(0, 3, "part_arms")      // L.Arm (Lower)
-            drawBlock(2, 3, "part_abs")       // Abs
-            drawBlock(4, 3, "part_arms")      // R.Arm (Lower)
-
-            // Row 4: Hips (装饰 或 Core)
-            drawBlock(1, 4, "part_legs")      // Hips L
-            drawBlock(2, 4, "part_legs")      // Hips C
-            drawBlock(3, 4, "part_legs")      // Hips R
-
-            // Row 5: Thighs
-            drawBlock(1, 5, "part_legs")      // L.Thigh
-            drawBlock(3, 5, "part_legs")      // R.Thigh
-
-            // Row 6: Knees
-            drawBlock(1, 6, "part_legs")      // L.Knee
-            drawBlock(3, 6, "part_legs")      // R.Knee
-
-            // Row 7: Calves
-            drawBlock(1, 7, "part_legs")      // L.Calf
-            drawBlock(3, 7, "part_legs")      // R.Calf
         }
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // 图例 (Legend)
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(12.dp).background(Color.LightGray.copy(alpha = 0.3f), RoundedCornerShape(2.dp)))
-            Text(" 0 ", fontSize = 10.sp, color = Color.Gray)
-            Spacer(modifier = Modifier.width(8.dp))
-            Box(Modifier.size(12.dp).background(Color(0xFF81C784), RoundedCornerShape(2.dp)))
-            Text(" <50% ", fontSize = 10.sp, color = Color.Gray)
-            Spacer(modifier = Modifier.width(8.dp))
-            Box(Modifier.size(12.dp).background(Color(0xFFE57373), RoundedCornerShape(2.dp)))
-            Text(" Max ", fontSize = 10.sp, color = Color.Gray)
+        Column(
+            modifier = Modifier.fillMaxWidth(), // 或者根据需要调整
+            horizontalAlignment = Alignment.CenterHorizontally  // 根据需要调整对齐方式
+        ) {
+        // 图例
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    Modifier.size(12.dp)
+                        .background(Color.LightGray.copy(alpha = 0.3f), RoundedCornerShape(2.dp))
+                )
+                Text(" 0 ", fontSize = 10.sp, color = Color.Gray)
+                Spacer(modifier = Modifier.width(8.dp))
+                Box(Modifier.size(12.dp).background(Color(0xFF81C784), RoundedCornerShape(2.dp)))
+                Text(" <50% ", fontSize = 10.sp, color = Color.Gray)
+                Spacer(modifier = Modifier.width(8.dp))
+                Box(Modifier.size(12.dp).background(Color(0xFFE57373), RoundedCornerShape(2.dp)))
+                Text(" Max ", fontSize = 10.sp, color = Color.Gray)
+            }
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            // [新增] 解释性文本
+            Text(
+                text = stringResource(R.string.hint_heatmap_volume), // "数值为历史总容量 (重量 x 次数)"
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.7f),
+                fontSize = 10.sp,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                lineHeight = 14.sp
+            )
+
         }
-    }
+
+        }
 }

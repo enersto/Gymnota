@@ -203,4 +203,10 @@
 
     <string name="chart_title_heatmap">Muskeltraining-Heatmap</string>
 
+    <string name="part_hips">Gesäß</string>
+    <string name="part_thighs">Oberschenkel</string>
+    <string name="part_calves">Waden</string>
+
+    <string name="hint_heatmap_volume">Werte entsprechen dem historischen Gesamtvolumen (Gewicht × Wdh.)</string>
+
 </resources>

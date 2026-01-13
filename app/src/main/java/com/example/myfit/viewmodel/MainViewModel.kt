@@ -31,6 +31,9 @@ import java.io.FileInputStream
 import java.io.FileOutputStream
 import kotlin.system.exitProcess
 
+// [新增] 用于热力图的数据类 (Intensity=0.0~1.0 用于颜色, Volume=原始容量用于显示)
+data class HeatmapPoint(val intensity: Float, val volume: Float)
+
 @OptIn(ExperimentalCoroutinesApi::class)
 class MainViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -78,25 +81,46 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _hasShownLockScreenGuide = MutableStateFlow(prefs.getBoolean("key_lockscreen_guide_shown", false))
     val hasShownLockScreenGuide = _hasShownLockScreenGuide.asStateFlow()
 
-    // [新增] 获取肌肉热力图数据
-    // 返回 Map<部位Key, 热度(0.0~1.0)>
-    val muscleHeatMapData: Flow<Map<String, Float>> = historyRecords.map { tasks ->
-        // 1. 扁平化所有 Set，统计每个部位的总组数 (作为热度依据)
-        val partCounts = mutableMapOf<String, Int>()
+    // [修改] 肌肉热力图数据：返回 HeatmapPoint (包含 intensity 和 raw volume)
+    val muscleHeatMapData: Flow<Map<String, HeatmapPoint>> = historyRecords.map { tasks ->
+        val currentVolumeMap = mutableMapOf<String, Float>()
+
+        fun parseVal(input: String): Float =
+            Regex("[0-9]+(\\.[0-9]+)?").find(input)?.value?.toFloatOrNull() ?: 0f
 
         tasks.forEach { task ->
-            // 如果是 Cardio，可能 1 个 Task 算 1 个 "强度单位"，或者按时长算
-            // 这里简单起见，按 Sets 数量统计
-            val count = if (task.sets.isNotEmpty()) task.sets.size else 1
-            partCounts[task.bodyPart] = partCounts.getOrDefault(task.bodyPart, 0) + count
+            var taskVolume = 0f
+
+            if (task.sets.isNotEmpty()) {
+                task.sets.forEach { set ->
+                    val w = parseVal(set.weightOrDuration).coerceAtLeast(1f)
+                    val r = parseVal(set.reps).coerceAtLeast(1f)
+                    taskVolume += (w * r)
+
+                    if (task.isUnilateral) {
+                        val rw = parseVal(set.rightWeight ?: "0")
+                        val rr = parseVal(set.rightReps ?: "0")
+                        if (rw > 0 && rr > 0) {
+                            taskVolume += (rw * rr)
+                        }
+                    }
+                }
+            } else {
+                val targetVal = parseVal(task.target)
+                taskVolume += if (targetVal > 0) targetVal else 1f
+            }
+
+            currentVolumeMap[task.bodyPart] = currentVolumeMap.getOrDefault(task.bodyPart, 0f) + taskVolume
         }
 
-        // 2. 找出最大值，进行归一化
-        val maxCount = partCounts.values.maxOrNull() ?: 1
+        val globalMaxVolume = currentVolumeMap.values.maxOrNull() ?: 1f
 
-        // 3. 转换为 0.0 ~ 1.0 的浮点数
-        partCounts.mapValues { (_, count) ->
-            count.toFloat() / maxCount.toFloat()
+        currentVolumeMap.mapValues { (_, vol) ->
+            // HeatmapPoint: (热度比例 0~1, 原始容量值)
+            HeatmapPoint(
+                intensity = (vol / globalMaxVolume).coerceIn(0f, 1f),
+                volume = vol
+            )
         }
     }
 

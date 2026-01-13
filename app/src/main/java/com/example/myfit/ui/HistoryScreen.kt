@@ -1,5 +1,6 @@
 package com.example.myfit.ui
 
+import android.view.HapticFeedbackConstants // [修复] 补全缺失的引用
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -12,6 +13,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalView // [新增引用]
+// [新增] 震动反馈相关 Import
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -19,14 +24,20 @@ import androidx.compose.ui.unit.sp
 import com.example.myfit.R
 import com.example.myfit.model.*
 import com.example.myfit.viewmodel.MainViewModel
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
 
 @Composable
 fun HistoryScreen(viewModel: MainViewModel) {
-    var selectedTabIndex by remember { mutableStateOf(0) }
+    var selectedTabIndex by remember { mutableStateOf(1) }
     val tabTitles = listOf(
         stringResource(R.string.tab_list),
         stringResource(R.string.tab_chart)
     )
+
+    // [新增] 获取 View 用于震动反馈
+    val view = LocalView.current
 
     Column(
         modifier = Modifier
@@ -50,7 +61,11 @@ fun HistoryScreen(viewModel: MainViewModel) {
             tabTitles.forEachIndexed { index, title ->
                 Tab(
                     selected = selectedTabIndex == index,
-                    onClick = { selectedTabIndex = index },
+                    onClick = {
+                        // [新增] 震动反馈 (与主屏幕一致)
+                        view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                        selectedTabIndex = index
+                    },
                     text = {
                         Text(
                             text = title,

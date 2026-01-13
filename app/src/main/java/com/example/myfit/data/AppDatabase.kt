@@ -36,6 +36,20 @@ val MIGRATION_9_10 = object : Migration(9, 10) {
     }
 }
 
+// [新增] 3. 定义迁移策略：版本 10 -> 11
+// 目标：将所有 'part_legs' (腿部) 的数据迁移为 'part_thighs' (大腿)
+val MIGRATION_10_11 = object : Migration(10, 11) {
+    override fun migrate(database: SupportSQLiteDatabase) {
+        // 更新动作模板表
+        database.execSQL("UPDATE exercise_templates SET bodyPart = 'part_thighs' WHERE bodyPart = 'part_legs'")
+        // 更新历史记录表
+        database.execSQL("UPDATE workout_tasks SET bodyPart = 'part_thighs' WHERE bodyPart = 'part_legs'")
+        // 更新周计划表
+        database.execSQL("UPDATE weekly_routine SET bodyPart = 'part_thighs' WHERE bodyPart = 'part_legs'")
+    }
+}
+
+
 @Database(
     entities = [
         WorkoutTask::class,
@@ -45,7 +59,7 @@ val MIGRATION_9_10 = object : Migration(9, 10) {
         AppSetting::class,
         WeeklyRoutineItem::class
     ],
-    version = 10, // 🔴 升级版本号到 10
+    version = 11, // 🔴 升级版本号到 11
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -58,7 +72,7 @@ abstract class AppDatabase : RoomDatabase() {
         fun getDatabase(context: Context): AppDatabase {
             return instance ?: synchronized(this) {
                 Room.databaseBuilder(context, AppDatabase::class.java, "myfit_v7.db")
-                    .addMigrations(MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10) // 🔴 添加新迁移策略
+                    .addMigrations(MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11) // 🔴 添加新迁移
                     .addCallback(PrepopulateCallback())
                     .build().also { instance = it }
             }

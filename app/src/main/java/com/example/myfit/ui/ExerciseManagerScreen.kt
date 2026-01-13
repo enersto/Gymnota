@@ -28,8 +28,10 @@ import com.example.myfit.R
 import com.example.myfit.model.ExerciseTemplate
 import com.example.myfit.viewmodel.MainViewModel
 
+// [修改] 更新部位列表：移除 part_legs，增加 hips, thighs, calves
 val BODY_PART_OPTIONS = listOf(
-    "part_chest", "part_back", "part_legs", "part_shoulders",
+    "part_chest", "part_back", "part_shoulders",
+    "part_hips", "part_thighs", "part_calves", // 新增部位
     "part_arms", "part_abs", "part_cardio", "part_other"
 )
 
@@ -431,10 +433,14 @@ fun getCategoryResId(key: String): Int = when(key) {
     else -> R.string.category_strength
 }
 
+// [修改] 更新资源映射函数
 fun getBodyPartResId(key: String): Int = when(key) {
     "part_chest" -> R.string.part_chest
     "part_back" -> R.string.part_back
-    "part_legs" -> R.string.part_legs
+    "part_legs" -> R.string.part_thighs // 兼容旧数据：如果读到旧腿部，显示为大腿
+    "part_thighs" -> R.string.part_thighs // [新增]
+    "part_hips" -> R.string.part_hips     // [新增]
+    "part_calves" -> R.string.part_calves // [新增]
     "part_shoulders" -> R.string.part_shoulders
     "part_arms" -> R.string.part_arms
     "part_abs" -> R.string.part_abs

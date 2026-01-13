@@ -202,4 +202,10 @@
 
     <string name="chart_title_heatmap">Muscle Training Heatmap</string>
 
+    <string name="part_hips">Hips</string>
+    <string name="part_thighs">Thighs</string>
+    <string name="part_calves">Calves</string>
+
+    <string name="hint_heatmap_volume">Values represent historical cumulative Volume Load(Weight × Reps)</string>
+
 </resources>

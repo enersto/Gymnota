@@ -204,4 +204,10 @@
 
     <string name="chart_title_heatmap">Mapa de calor de entrenamiento</string>
 
+    <string name="part_hips">Glúteos</string>
+    <string name="part_thighs">Muslos</string>
+    <string name="part_calves">Pantorrillas</string>
+
+    <string name="hint_heatmap_volume">Los valores representan el volumen histórico acumulado (Peso × Repeticiones)</string>
+
 </resources>
