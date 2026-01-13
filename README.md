@@ -5,7 +5,7 @@
 🚀 **V5.8.1 版本重磅更新**：新增**训练容量热力图 (Heatmap)**，直观展示历史训练频率与负荷；重构**单边动作 (Unilateral)** 数据统计逻辑；优化图表图例布局与多语言体验。
 ---
 
-[English Version](https://www.google.com/search?q=%23english-version)
+[English Version](https://github.com/enersto/Gymnota/blob/main/READEME-en.md)
 
 ## ✨ 核心功能 (Features)
 
