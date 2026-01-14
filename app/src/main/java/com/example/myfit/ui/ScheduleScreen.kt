@@ -38,6 +38,16 @@ import com.example.myfit.viewmodel.MainViewModel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 import java.time.LocalDate
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.material3.TabRowDefaults
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset // 关键：解决 tabIndicatorOffset 报错
+import kotlinx.coroutines.launch
 
 @Composable
 fun ScheduleScreen(navController: NavController, viewModel: MainViewModel) {
@@ -231,7 +241,7 @@ fun ScheduleScreen(navController: NavController, viewModel: MainViewModel) {
             Text(stringResource(R.string.theme_style), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onBackground)
             Spacer(modifier = Modifier.height(12.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                AppTheme.values().forEach { theme ->
+                AppTheme.entries.forEach { theme ->
                     ThemeCircle(theme, currentTheme == theme) { viewModel.switchTheme(theme) }
                 }
             }
@@ -282,30 +292,86 @@ fun ScheduleScreen(navController: NavController, viewModel: MainViewModel) {
 @Composable
 private fun KeyReferenceDialog(onDismiss: () -> Unit) {
     val context = LocalContext.current
-    val clipboardManager = LocalClipboardManager.current
 
-    val bodyPartKeys = listOf(
-        "part_chest", "part_back", "part_legs", "part_shoulders",
-        "part_arms", "part_abs", "part_cardio", "part_other"
-    )
-    val equipKeys = listOf(
-        "equip_barbell", "equip_dumbbell", "equip_machine", "equip_cable",
-        "equip_bodyweight", "equip_cardio_machine", "equip_kettlebell",
-        "equip_smith_machine", "equip_resistance_band", "equip_medicine_ball",
-        "equip_trx", "equip_bench", "equip_other"
-    )
+    // 1. 状态管理
+    val selectedKeys = remember { mutableStateListOf<String>() }
 
+    val bodyPartKeys = remember {
+        listOf(
+            "part_chest", "part_back", "part_shoulders",
+            "part_arms", "part_abs", "part_cardio",
+            "part_hips", "part_thighs", "part_calves", "part_other"
+        )
+    }
+    val equipKeys = remember {
+        listOf(
+            "equip_barbell", "equip_dumbbell", "equip_machine", "equip_cable",
+            "equip_bodyweight", "equip_cardio_machine", "equip_kettlebell",
+            "equip_smith_machine", "equip_resistance_band", "equip_medicine_ball",
+            "equip_trx", "equip_bench", "equip_other"
+        )
+    }
+    val allKeys = remember { bodyPartKeys + equipKeys }
+
+    // 辅助函数 (假设外部已定义 getBodyPartResId 和 getEquipmentResId)
     fun getResId(key: String, isBodyPart: Boolean): Int {
-        // 直接调用同包下 ExerciseManagerScreen.kt 中的公共函数
         return if (isBodyPart) getBodyPartResId(key) else getEquipmentResId(key)
     }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.help_dialog_title)) },
+        title = {
+            // --- 布局修改：改用 Column 垂直排列 ---
+            Column(
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                // 1. 标题文本
+                Text(
+                    text = stringResource(R.string.help_dialog_title),
+                    style = MaterialTheme.typography.titleMedium
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // 2. 操作按钮行 (全选/清除)，右对齐
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // 全选按钮逻辑
+                    if (selectedKeys.size < allKeys.size) {
+                        TextButton(
+                            onClick = {
+                                selectedKeys.clear()
+                                selectedKeys.addAll(allKeys)
+                            }
+                        ) {
+                            Text(stringResource(R.string.btn_select_all), fontSize = 12.sp)
+                        }
+                    }
+
+                    // 间隔，如果两个按钮同时出现时需要
+                    if (selectedKeys.size < allKeys.size && selectedKeys.isNotEmpty()) {
+                        Spacer(modifier = Modifier.width(8.dp))
+                    }
+
+                    // 清除按钮逻辑
+                    if (selectedKeys.isNotEmpty()) {
+                        TextButton(onClick = { selectedKeys.clear() }) {
+                            Text(stringResource(R.string.btn_clear), fontSize = 12.sp)
+                        }
+                    }
+                }
+            }
+        },
         text = {
             Column(modifier = Modifier.heightIn(max = 400.dp)) {
-                Text(stringResource(R.string.help_dialog_subtitle), fontSize = 12.sp, color = Color.Gray)
+                Text(
+                    text = stringResource(R.string.help_dialog_multiselect_hint),
+                    fontSize = 12.sp,
+                    color = Color.Gray
+                )
                 Spacer(modifier = Modifier.height(8.dp))
                 HorizontalDivider()
 
@@ -319,12 +385,13 @@ private fun KeyReferenceDialog(onDismiss: () -> Unit) {
                         )
                     }
                     items(bodyPartKeys) { key ->
-                        ScheduleReferenceRow(
+                        SelectableScheduleRow(
                             label = stringResource(getResId(key, true)),
                             key = key,
-                            onCopy = {
-                                clipboardManager.setText(AnnotatedString(key))
-                                Toast.makeText(context, context.getString(R.string.msg_copied, key), Toast.LENGTH_SHORT).show()
+                            isSelected = selectedKeys.contains(key),
+                            onToggle = {
+                                if (selectedKeys.contains(key)) selectedKeys.remove(key)
+                                else selectedKeys.add(key)
                             }
                         )
                     }
@@ -338,12 +405,13 @@ private fun KeyReferenceDialog(onDismiss: () -> Unit) {
                         )
                     }
                     items(equipKeys) { key ->
-                        ScheduleReferenceRow(
+                        SelectableScheduleRow(
                             label = stringResource(getResId(key, false)),
                             key = key,
-                            onCopy = {
-                                clipboardManager.setText(AnnotatedString(key))
-                                Toast.makeText(context, context.getString(R.string.msg_copied, key), Toast.LENGTH_SHORT).show()
+                            isSelected = selectedKeys.contains(key),
+                            onToggle = {
+                                if (selectedKeys.contains(key)) selectedKeys.remove(key)
+                                else selectedKeys.add(key)
                             }
                         )
                     }
@@ -351,9 +419,98 @@ private fun KeyReferenceDialog(onDismiss: () -> Unit) {
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.btn_done)) }
+            Button(
+                onClick = {
+                    if (selectedKeys.isNotEmpty()) {
+                        val textToCopy = selectedKeys.joinToString(", ")
+
+                        // --- 核心修改：使用原生 ClipboardManager ---
+                        val clipboardManager = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                        val clipData = ClipData.newPlainText("Copied Keys", textToCopy)
+                        clipboardManager.setPrimaryClip(clipData)
+                        // ---------------------------------------
+
+                        Toast.makeText(
+                            context,
+                            context.getString(R.string.msg_copied_count, selectedKeys.size),
+                            Toast.LENGTH_SHORT
+                        ).show()
+                        selectedKeys.clear()
+                    } else {
+                        onDismiss()
+                    }
+                },
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (selectedKeys.isNotEmpty()) MaterialTheme.colorScheme.primary else Color.Gray
+                )
+            ) {
+                Text(
+                    if (selectedKeys.isNotEmpty())
+                        stringResource(R.string.btn_copy_selected, selectedKeys.size)
+                    else
+                        stringResource(R.string.btn_done)
+                )
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.btn_cancel))
+            }
         }
     )
+}
+
+// 3. 新增/修改：支持选中状态的行组件
+@Composable
+private fun SelectableScheduleRow(
+    label: String,
+    key: String,
+    isSelected: Boolean,
+    onToggle: () -> Unit
+) {
+    val backgroundColor = if (isSelected) {
+        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+    } else {
+        Color.Transparent
+    }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp)) // 添加圆角更美观
+            .background(backgroundColor)
+            .clickable { onToggle() }
+            .padding(vertical = 8.dp, horizontal = 4.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            // 添加复选框增加可视性
+            Checkbox(
+                checked = isSelected,
+                onCheckedChange = { onToggle() },
+                modifier = Modifier.size(32.dp).padding(end = 8.dp)
+            )
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+            )
+        }
+
+        Surface(
+            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+            shape = RoundedCornerShape(4.dp)
+        ) {
+            Text(
+                text = key,
+                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                style = MaterialTheme.typography.labelSmall,
+                fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
 }
 
 @Composable
@@ -381,70 +538,129 @@ private fun ScheduleReferenceRow(label: String, key: String, onCopy: () -> Unit)
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun ManualRoutineDialog(viewModel: MainViewModel, onDismiss: () -> Unit) {
-    var selectedDay by remember { mutableStateOf(1) }
-    val routineItems = remember(selectedDay) { mutableStateListOf<WeeklyRoutineItem>() }
-    val allTemplates by viewModel.allTemplates.collectAsState(initial = emptyList())
-    val scope = rememberCoroutineScope()
 
-    LaunchedEffect(selectedDay) {
-        routineItems.clear()
-        routineItems.addAll(viewModel.getRoutineForDay(selectedDay))
-    }
+    @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
+    @Composable
+    fun ManualRoutineDialog(viewModel: MainViewModel, onDismiss: () -> Unit) {
+        // 1. Pager 状态：控制 7 页 (0-6)
+        val pagerState = rememberPagerState(pageCount = { 7 })
+        val scope = rememberCoroutineScope()
 
-    var showTemplateSelector by remember { mutableStateOf(false) }
+        // 2. [关键修复] 定义 selectedDay，让后续代码能继续使用它
+        // Pager 索引是从 0 开始的，所以需要 +1 对应周一(1)到周日(7)
+        val selectedDay = pagerState.currentPage + 1
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        modifier = Modifier.fillMaxSize().padding(16.dp),
-        properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false),
-        title = {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Text(stringResource(R.string.weekly_plan))
-                IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, null) }
-            }
-        },
-        text = {
-            Column(modifier = Modifier.fillMaxSize()) {
-                ScrollableTabRow(selectedTabIndex = selectedDay - 1, edgePadding = 0.dp, containerColor = Color.Transparent) {
-                    (1..7).forEach { day ->
-                        val weekRes = when(day) {
-                            1 -> R.string.week_1; 2 -> R.string.week_2; 3 -> R.string.week_3; 4 -> R.string.week_4
-                            5 -> R.string.week_5; 6 -> R.string.week_6; 7 -> R.string.week_7; else -> R.string.week_1
-                        }
-                        Tab(selected = selectedDay == day, onClick = { selectedDay = day }, text = { Text(stringResource(weekRes)) })
-                    }
+        // 3. 监听页码变化刷新数据
+        val routineItems = remember(selectedDay) { mutableStateListOf<WeeklyRoutineItem>() }
+        val allTemplates by viewModel.allTemplates.collectAsState(initial = emptyList())
+
+        LaunchedEffect(selectedDay) {
+            routineItems.clear()
+            routineItems.addAll(viewModel.getRoutineForDay(selectedDay))
+        }
+
+        var showTemplateSelector by remember { mutableStateOf(false) }
+
+        AlertDialog(
+            onDismissRequest = onDismiss,
+            modifier = Modifier.fillMaxSize().padding(16.dp),
+            properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false),
+            title = {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(stringResource(R.string.weekly_plan))
+                    IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, null) }
                 }
-                Spacer(modifier = Modifier.height(16.dp))
-                Box(modifier = Modifier.weight(1f)) {
-                    if (routineItems.isEmpty()) {
-                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text(stringResource(R.string.no_plan), color = Color.Gray) }
-                    } else {
-                        LazyColumn {
-                            items(routineItems) { item ->
-                                Row(modifier = Modifier.fillMaxWidth().padding(8.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                                    Column {
-                                        Text(item.name, style = MaterialTheme.typography.titleMedium)
-                                        Text(item.target, style = MaterialTheme.typography.bodySmall, color = Color.Gray)
-                                    }
-                                    IconButton(onClick = { viewModel.removeRoutineItem(item); routineItems.remove(item) }) {
-                                        Icon(Icons.Default.Delete, null, tint = Color.Red.copy(alpha = 0.5f))
+            },
+            text = {
+                Column(modifier = Modifier.fillMaxSize()) {
+                    // --- 顶部 Tab 区域 ---
+                    ScrollableTabRow(
+                        selectedTabIndex = pagerState.currentPage,
+                        edgePadding = 0.dp,
+                        containerColor = Color.Transparent,
+                        indicator = { tabPositions ->
+                            // [关键修复] 解决 tabIndicatorOffset 报错
+                            if (pagerState.currentPage < tabPositions.size) {
+                                TabRowDefaults.SecondaryIndicator(
+                                    Modifier.tabIndicatorOffset(tabPositions[pagerState.currentPage])
+                                )
+                            }
+                        }
+                    ) {
+                        (1..7).forEach { day ->
+                            val weekRes = when (day) {
+                                1 -> R.string.week_1; 2 -> R.string.week_2; 3 -> R.string.week_3; 4 -> R.string.week_4
+                                5 -> R.string.week_5; 6 -> R.string.week_6; 7 -> R.string.week_7; else -> R.string.week_1
+                            }
+                            Tab(
+                                selected = pagerState.currentPage == day - 1,
+                                onClick = {
+                                    // 点击 Tab 时滚动 Pager
+                                    scope.launch { pagerState.animateScrollToPage(day - 1) }
+                                },
+                                text = { Text(stringResource(weekRes)) }
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // --- 内容区域：改为 HorizontalPager ---
+                    HorizontalPager(
+                        state = pagerState,
+                        modifier = Modifier.weight(1f),
+                        verticalAlignment = Alignment.Top
+                    ) { page ->
+                        // 这里的 page 参数实际上没被用到，因为内容由外层的 routineItems 控制
+                        // 这样写是为了配合 LazyColumn 的滚动
+                        Box(modifier = Modifier.fillMaxSize()) {
+                            if (routineItems.isEmpty()) {
+                                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                    Text(stringResource(R.string.no_plan), color = Color.Gray)
+                                }
+                            } else {
+                                LazyColumn(modifier = Modifier.fillMaxSize()) {
+                                    items(routineItems) { item ->
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth().padding(8.dp),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Column {
+                                                Text(item.name, style = MaterialTheme.typography.titleMedium)
+                                                Text(item.target, style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                                            }
+                                            IconButton(onClick = {
+                                                viewModel.removeRoutineItem(item)
+                                                routineItems.remove(item)
+                                            }) {
+                                                Icon(Icons.Default.Delete, null, tint = Color.Red.copy(alpha = 0.5f))
+                                            }
+                                        }
+                                        HorizontalDivider()
                                     }
                                 }
-                                HorizontalDivider()
                             }
                         }
                     }
+
+                    // --- 底部按钮 ---
+                    Button(
+                        onClick = { showTemplateSelector = true },
+                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+                    ) {
+                        Icon(Icons.Default.Add, null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(stringResource(R.string.btn_add))
+                    }
                 }
-                Button(onClick = { showTemplateSelector = true }, modifier = Modifier.fillMaxWidth()) {
-                    Icon(Icons.Default.Add, null); Spacer(modifier = Modifier.width(8.dp)); Text(stringResource(R.string.btn_add))
-                }
-            }
-        },
-        confirmButton = {}
-    )
+            },
+            confirmButton = {}
+        )
 
     if (showTemplateSelector) {
         val categories = listOf("STRENGTH", "CARDIO", "CORE")
@@ -549,7 +765,7 @@ fun ScheduleItem(config: ScheduleConfig, onTypeChange: (DayType) -> Unit) {
         1 -> R.string.week_1; 2 -> R.string.week_2; 3 -> R.string.week_3; 4 -> R.string.week_4; 5 -> R.string.week_5; 6 -> R.string.week_6; 7 -> R.string.week_7; else -> R.string.week_1
     }
     val typeName = stringResource(config.dayType.labelResId)
-    Card(modifier = Modifier.fillMaxWidth().clickable { onTypeChange(DayType.values()[(config.dayType.ordinal + 1) % DayType.values().size]) }, colors = CardDefaults.cardColors(containerColor = Color(config.dayType.colorHex).copy(alpha = 0.9f)), shape = RoundedCornerShape(12.dp)) {
+    Card(modifier = Modifier.fillMaxWidth().clickable { onTypeChange(DayType.entries[(config.dayType.ordinal + 1) % DayType.entries.size]) }, colors = CardDefaults.cardColors(containerColor = Color(config.dayType.colorHex).copy(alpha = 0.9f)), shape = RoundedCornerShape(12.dp)) {
         Row(modifier = Modifier.padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             Text(stringResource(weekRes), color = Color.White, style = MaterialTheme.typography.titleMedium)
             Text(typeName, color = Color.White)
@@ -577,7 +793,7 @@ fun ProfileEditDialog(viewModel: MainViewModel, onDismiss: () -> Unit) {
 
     var ageInput by remember(profile) { mutableStateOf(if (profile.age > 0) profile.age.toString() else "") }
     var heightInput by remember(profile) { mutableStateOf(if (profile.height > 0) profile.height.toString() else "") }
-    var selectedGender by remember(profile) { mutableStateOf(profile.gender) }
+    var selectedGender by remember(profile) { mutableIntStateOf(profile.gender) }
 
     AlertDialog(
         onDismissRequest = onDismiss,

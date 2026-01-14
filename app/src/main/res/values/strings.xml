@@ -210,4 +210,10 @@
 
     <string name="hint_heatmap_volume">数值为历史累积的容量负荷 (重量 × 次数)</string>
 
+    <string name="btn_copy_selected">复制已选 (%d)</string>
+    <string name="msg_copied_count">已复制 %d 个项目</string>
+    <string name="btn_select_all">全选</string>
+    <string name="btn_clear">清除</string>
+    <string name="help_dialog_multiselect_hint">点击条目进行多选，最后点击底部按钮复制。</string>
+
 </resources>

@@ -210,4 +210,11 @@
 
     <string name="hint_heatmap_volume">Los valores representan el volumen histórico acumulado (Peso × Repeticiones)</string>
 
+    <string name="btn_copy_selected">Copiar seleccionados (%d)</string>
+    <string name="msg_copied_count">%d elementos copiados</string>
+    <string name="btn_select_all">Seleccionar todo</string>
+    <string name="btn_clear">Borrar</string>
+    <string name="help_dialog_multiselect_hint">Toque los elementos para seleccionar, luego haga clic abajo para copiar.</string>
+
+
 </resources>

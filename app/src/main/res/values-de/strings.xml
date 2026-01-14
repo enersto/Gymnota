@@ -209,4 +209,10 @@
 
     <string name="hint_heatmap_volume">Werte entsprechen dem historischen Gesamtvolumen (Gewicht × Wdh.)</string>
 
+    <string name="btn_copy_selected">Ausgewählte kopieren (%d)</string>
+    <string name="msg_copied_count">%d Elemente kopiert</string>
+    <string name="btn_select_all">Alles auswählen</string>
+    <string name="btn_clear">Löschen</string>
+    <string name="help_dialog_multiselect_hint">Tippen Sie auf Einträge zur Auswahl und klicken Sie unten zum Kopieren.</string>
+
 </resources>

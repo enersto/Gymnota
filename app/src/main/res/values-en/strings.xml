@@ -208,4 +208,10 @@
 
     <string name="hint_heatmap_volume">Values represent historical cumulative Volume Load(Weight × Reps)</string>
 
+    <string name="btn_copy_selected">Copy Selected (%d)</string>
+    <string name="msg_copied_count">Copied %d items</string>
+    <string name="btn_select_all">Select All</string>
+    <string name="btn_clear">Clear</string>
+    <string name="help_dialog_multiselect_hint">Tap items to select, then click the button below to copy.</string>
+
 </resources>

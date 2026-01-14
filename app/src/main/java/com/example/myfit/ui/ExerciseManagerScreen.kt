@@ -27,6 +27,7 @@ import androidx.navigation.NavController
 import com.example.myfit.R
 import com.example.myfit.model.ExerciseTemplate
 import com.example.myfit.viewmodel.MainViewModel
+import androidx.compose.material3.MenuAnchorType
 
 // [修改] 更新部位列表：移除 part_legs，增加 hips, thighs, calves
 val BODY_PART_OPTIONS = listOf(
@@ -405,7 +406,7 @@ fun ResourceDropdown(currentKey: String, options: List<String>, onSelect: (Strin
             onValueChange = {},
             readOnly = true,
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-            modifier = Modifier.menuAnchor().fillMaxWidth(),
+            modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable, true).fillMaxWidth(),
             textStyle = MaterialTheme.typography.bodySmall
         )
         ExposedDropdownMenu(
