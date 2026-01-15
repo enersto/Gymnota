@@ -215,4 +215,16 @@
     <string name="btn_clear">Löschen</string>
     <string name="help_dialog_multiselect_hint">Tippen Sie auf Einträge zur Auswahl und klicken Sie unten zum Kopieren.</string>
 
+    <string name="settings_timer_title">Timer-Einstellungen</string>
+    <string name="timer_prep_title">Vorbereitungszeit</string>
+    <string name="timer_prep_desc">Countdown vor dem Start</string>
+    <string name="timer_final_title">End-Countdown</string>
+    <string name="timer_final_desc">Großanzeige und Ton kurz vor Ende</string>
+    <string name="label_duration_sec">Dauer (Sek.)</string>
+    <string name="timer_overlay_prep">BEREIT MACHEN</string>
+    <string name="timer_overlay_finish">GLEICH GESCHAFFT</string>
+
+    <string name="timer_sound_title">Toneffekte</string>
+    <string name="timer_sound_desc">Töne bei Countdown und Abschluss</string>
+
 </resources>

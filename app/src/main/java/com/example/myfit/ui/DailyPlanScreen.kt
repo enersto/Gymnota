@@ -70,6 +70,8 @@ import kotlin.math.abs
 import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
 
+import com.example.myfit.viewmodel.TimerPhase
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DailyPlanScreen(viewModel: MainViewModel, navController: NavController) {
@@ -146,6 +148,11 @@ fun DailyPlanScreen(viewModel: MainViewModel, navController: NavController) {
                     }
                 }
             }
+        }
+
+        // [新增] 全屏倒计时遮罩
+        if (timerState.isRunning && timerState.showBigAlert) {
+            CountdownOverlay(timerState)
         }
 
         if (showExplosion) ExplosionEffect { showExplosion = false }
@@ -453,7 +460,30 @@ fun TimerSetRow(
             if (isActive) {
                 val s = timerState.remainingSeconds
                 val timeStr = String.format("%02d:%02d", s / 60, s % 60)
-                Text(text = timeStr, style = MaterialTheme.typography.headlineMedium, color = themeColor, fontWeight = FontWeight.Bold)
+
+                // 判断当前是否处于“准备阶段”
+                val isPrep = timerState.phase == TimerPhase.PREP
+                // 准备阶段显示橙色，正式训练显示原本的主题色
+                val displayColor = if (isPrep) Color(0xFFFF9800) else themeColor
+
+                Column(horizontalAlignment = Alignment.Start) {
+                    // 如果是准备阶段，额外显示一行小字 "PREP"
+                    if (isPrep) {
+                        Text(
+                            text = "PREP", // 或者 stringResource(R.string.timer_phase_prep)
+                            style = MaterialTheme.typography.labelSmall,
+                            color = displayColor,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    // 显示时间，颜色跟随状态变化
+                    Text(
+                        text = timeStr,
+                        style = MaterialTheme.typography.headlineMedium,
+                        color = displayColor,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             } else if (set.weightOrDuration.isNotBlank() && (set.weightOrDuration.contains("min") || set.reps == "Done")) {
                 Text(text = "✅ ${set.weightOrDuration}", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.tertiary)
             } else {
@@ -822,4 +852,38 @@ class Particle {
     var speed = Random.nextDouble(10.0, 30.0)
     val color = listOf(Color.Red, Color.Yellow, Color.Blue, Color.Green).random()
     fun update() { radius += speed }
+}
+
+// [新增] 组件实现
+@Composable
+fun CountdownOverlay(timerState: MainViewModel.TimerState) {
+    val isPrep = timerState.phase == TimerPhase.PREP
+    val color = if (isPrep) Color(0xFFFF9800) else Color(0xFFF44336) // 橙色准备，红色结束
+    val title = if (isPrep) stringResource(R.string.timer_overlay_prep) else stringResource(R.string.timer_overlay_finish)
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.85f))
+            .clickable(enabled = false) {}, // 拦截点击
+        contentAlignment = Alignment.Center
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.displayMedium,
+                color = Color.White.copy(alpha = 0.8f),
+                fontWeight = FontWeight.Bold
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // 巨大的数字
+            Text(
+                text = "${timerState.remainingSeconds}",
+                style = MaterialTheme.typography.displayLarge.copy(fontSize = 120.sp),
+                color = color,
+                fontWeight = FontWeight.ExtraBold
+            )
+        }
+    }
 }

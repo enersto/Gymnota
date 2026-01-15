@@ -216,5 +216,17 @@
     <string name="btn_clear">Borrar</string>
     <string name="help_dialog_multiselect_hint">Toque los elementos para seleccionar, luego haga clic abajo para copiar.</string>
 
+    <string name="settings_timer_title">Ajustes del temporizador</string>
+    <string name="timer_prep_title">Tiempo de preparación</string>
+    <string name="timer_prep_desc">Cuenta atrás antes de empezar</string>
+    <string name="timer_final_title">Cuenta atrás final</string>
+    <string name="timer_final_desc">Alerta en pantalla y sonido al terminar</string>
+    <string name="label_duration_sec">Duración (seg)</string>
+    <string name="timer_overlay_prep">PREPÁRATE</string>
+    <string name="timer_overlay_finish">YA CASI</string>
+
+    <string name="timer_sound_title">Efectos de sonido</string>
+    <string name="timer_sound_desc">Sonido durante la cuenta atrás y al final</string>
+
 
 </resources>

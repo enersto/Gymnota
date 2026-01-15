@@ -216,4 +216,15 @@
     <string name="btn_clear">清除</string>
     <string name="help_dialog_multiselect_hint">点击条目进行多选，最后点击底部按钮复制。</string>
 
+    <string name="settings_timer_title">计时设置</string>
+    <string name="timer_prep_title">准备时间</string>
+    <string name="timer_prep_desc">正式开始前的倒计时</string>
+    <string name="timer_final_title">最后倒数</string>
+    <string name="timer_final_desc">结束前的大屏提示和音效</string>
+    <string name="label_duration_sec">时长 (秒)</string>
+    <string name="timer_overlay_prep">准备开始</string>
+    <string name="timer_overlay_finish">快结束了</string>
+
+    <string name="timer_sound_title">提示音效</string>
+    <string name="timer_sound_desc">倒计时和结束时播放声音</string>
 </resources>

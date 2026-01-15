@@ -214,4 +214,16 @@
     <string name="btn_clear">Clear</string>
     <string name="help_dialog_multiselect_hint">Tap items to select, then click the button below to copy.</string>
 
+    <string name="settings_timer_title">Timer Settings</string>
+    <string name="timer_prep_title">Prep Time</string>
+    <string name="timer_prep_desc">Countdown before starting</string>
+    <string name="timer_final_title">Final Countdown</string>
+    <string name="timer_final_desc">Big screen alert &amp; sound before finish</string>
+    <string name="label_duration_sec">Duration (sec)</string>
+    <string name="timer_overlay_prep">GET READY</string>
+    <string name="timer_overlay_finish">ALMOST DONE</string>
+
+    <string name="timer_sound_title">Sound Effects</string>
+    <string name="timer_sound_desc">Play sounds for countdown and finish</string>
+
 </resources>

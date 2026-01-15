@@ -48,6 +48,7 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.TabRowDefaults
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset // 关键：解决 tabIndicatorOffset 报错
 import kotlinx.coroutines.launch
+import androidx.compose.animation.AnimatedVisibility
 
 @Composable
 fun ScheduleScreen(navController: NavController, viewModel: MainViewModel) {
@@ -234,6 +235,11 @@ fun ScheduleScreen(navController: NavController, viewModel: MainViewModel) {
                 Spacer(modifier = Modifier.weight(1f))
                 Text(">", color = Color.Gray)
             }
+        }
+
+        // [新增] 8. Timer Settings (插入到 Data Management 之后)
+        item {
+            TimerSettingsSection(viewModel)
         }
 
         // 6. Theme
@@ -881,5 +887,137 @@ fun AboutSection() {
             color = Color.Gray,
             fontSize = 10.sp
         )
+    }
+}
+
+// [新增] 计时器设置组件
+@Composable
+fun TimerSettingsSection(viewModel: MainViewModel) {
+    var prepEnabled by remember { mutableStateOf(viewModel.getTimerPrepEnabled()) }
+    var prepSecs by remember { mutableIntStateOf(viewModel.getTimerPrepSeconds()) }
+    var finalEnabled by remember { mutableStateOf(viewModel.getTimerFinalEnabled()) }
+    var finalSecs by remember { mutableIntStateOf(viewModel.getTimerFinalSeconds()) }
+
+    var soundEnabled by remember { mutableStateOf(viewModel.getTimerSoundEnabled()) }
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Text(stringResource(R.string.settings_timer_title), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onBackground)
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Card(
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Column(modifier = Modifier.padding(12.dp)) {
+                // [新增] 0. 音效开关 (建议放在最上面或最下面)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text(stringResource(R.string.timer_sound_title), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.timer_sound_desc), style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                    }
+                    Switch(
+                        checked = soundEnabled,
+                        onCheckedChange = {
+                            soundEnabled = it
+                            viewModel.setTimerSoundEnabled(it)
+                        }
+                    )
+                }
+
+                HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                // 1. 准备时间设置
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text(stringResource(R.string.timer_prep_title), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.timer_prep_desc), style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                    }
+                    Switch(
+                        checked = prepEnabled,
+                        onCheckedChange = {
+                            prepEnabled = it
+                            viewModel.setTimerPrepEnabled(it)
+                        }
+                    )
+                }
+
+                AnimatedVisibility(visible = prepEnabled) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(top = 8.dp)
+                    ) {
+                        Text(stringResource(R.string.label_duration_sec), fontSize = 12.sp)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        // 简单的加减控制器
+                        NumberAdjuster(value = prepSecs, range = 3..30) {
+                            prepSecs = it
+                            viewModel.setTimerPrepSeconds(it)
+                        }
+                    }
+                }
+
+                HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+                // 2. 最后倒数设置
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text(stringResource(R.string.timer_final_title), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.timer_final_desc), style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                    }
+                    Switch(
+                        checked = finalEnabled,
+                        onCheckedChange = {
+                            finalEnabled = it
+                            viewModel.setTimerFinalEnabled(it)
+                        }
+                    )
+                }
+
+                AnimatedVisibility(visible = finalEnabled) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(top = 8.dp)
+                    ) {
+                        Text(stringResource(R.string.label_duration_sec), fontSize = 12.sp)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        NumberAdjuster(value = finalSecs, range = 3..15) {
+                            finalSecs = it
+                            viewModel.setTimerFinalSeconds(it)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun NumberAdjuster(value: Int, range: IntRange, onValueChange: (Int) -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        IconButton(
+            onClick = { if (value > range.first) onValueChange(value - 1) },
+            modifier = Modifier.size(32.dp).background(MaterialTheme.colorScheme.surface, CircleShape)
+        ) { Text("-") }
+
+        Text(
+            text = "$value",
+            modifier = Modifier.padding(horizontal = 12.dp).width(24.dp),
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+        )
+
+        IconButton(
+            onClick = { if (value < range.last) onValueChange(value + 1) },
+            modifier = Modifier.size(32.dp).background(MaterialTheme.colorScheme.surface, CircleShape)
+        ) { Text("+") }
     }
 }

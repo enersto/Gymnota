@@ -215,4 +215,16 @@
     <string name="btn_clear">クリア</string>
     <string name="help_dialog_multiselect_hint">項目をタップして選択し、下のボタンでコピーしてください。</string>
 
+    <string name="settings_timer_title">タイマー設定</string>
+    <string name="timer_prep_title">準備時間</string>
+    <string name="timer_prep_desc">開始前のカウントダウン</string>
+    <string name="timer_final_title">ラストカウント</string>
+    <string name="timer_final_desc">終了直前の全画面表示と効果音</string>
+    <string name="label_duration_sec">時間 (秒)</string>
+    <string name="timer_overlay_prep">準備して</string>
+    <string name="timer_overlay_finish">あと少し</string>
+
+    <string name="timer_sound_title">効果音</string>
+    <string name="timer_sound_desc">カウントダウンと終了時に音を鳴らす</string>
+
 </resources>

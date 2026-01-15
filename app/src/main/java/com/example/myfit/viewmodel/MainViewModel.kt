@@ -30,6 +30,16 @@ import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import kotlin.system.exitProcess
+import android.os.SystemClock // 关键：使用系统运行时间
+import android.media.AudioManager
+import android.media.ToneGenerator
+import android.content.SharedPreferences
+
+
+// [新增] 计时器阶段枚举
+enum class TimerPhase {
+    IDLE, PREP, WORK
+}
 
 // [新增] 用于热力图的数据类 (Intensity=0.0~1.0 用于颜色, Volume=原始容量用于显示)
 data class HeatmapPoint(val intensity: Float, val volume: Float)
@@ -39,6 +49,35 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val database = AppDatabase.getDatabase(application)
     private val dao: WorkoutDao = database.workoutDao()
+
+    // [新增] 计时器偏好设置 Key
+    companion object {
+        const val KEY_TIMER_PREP_ENABLED = "timer_prep_enabled"
+        const val KEY_TIMER_PREP_SECS = "timer_prep_secs"
+        const val KEY_TIMER_FINAL_ENABLED = "timer_final_enabled"
+        const val KEY_TIMER_FINAL_SECS = "timer_final_secs"
+        const val KEY_TIMER_SOUND_ENABLED = "timer_sound_enabled" // [新增]
+    }
+
+    // [新增] 声音生成器 (音量 100)
+    private val toneGenerator = ToneGenerator(AudioManager.STREAM_ALARM, 100)
+
+    // [新增] 读取和保存设置的辅助方法
+    fun getTimerPrepEnabled() = prefs.getBoolean(KEY_TIMER_PREP_ENABLED, true)
+    fun setTimerPrepEnabled(enable: Boolean) = prefs.edit().putBoolean(KEY_TIMER_PREP_ENABLED, enable).apply()
+
+    fun getTimerPrepSeconds() = prefs.getInt(KEY_TIMER_PREP_SECS, 10)
+    fun setTimerPrepSeconds(secs: Int) = prefs.edit().putInt(KEY_TIMER_PREP_SECS, secs).apply()
+
+    fun getTimerFinalEnabled() = prefs.getBoolean(KEY_TIMER_FINAL_ENABLED, true)
+    fun setTimerFinalEnabled(enable: Boolean) = prefs.edit().putBoolean(KEY_TIMER_FINAL_ENABLED, enable).apply()
+
+    fun getTimerFinalSeconds() = prefs.getInt(KEY_TIMER_FINAL_SECS, 5)
+    fun setTimerFinalSeconds(secs: Int) = prefs.edit().putInt(KEY_TIMER_FINAL_SECS, secs).apply()
+
+    // [新增] 音效开关读写方法
+    fun getTimerSoundEnabled() = prefs.getBoolean(KEY_TIMER_SOUND_ENABLED, true)
+    fun setTimerSoundEnabled(enable: Boolean) = prefs.edit().putBoolean(KEY_TIMER_SOUND_ENABLED, enable).apply()
 
     private val _selectedDate = MutableStateFlow(LocalDate.now())
     val selectedDate: StateFlow<LocalDate> = _selectedDate.asStateFlow()
@@ -134,9 +173,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val setIndex: Int = -1,
         val totalSeconds: Int = 0,
         val remainingSeconds: Int = 0,
-        val endTimeMillis: Long = 0L,
+        val endTimeMillis: Long = 0L, // 这里将存储 elapsedRealtime
         val isRunning: Boolean = false,
-        val isPaused: Boolean = false
+        val isPaused: Boolean = false,
+        val phase: TimerPhase = TimerPhase.IDLE, // 新增：当前阶段
+        val showBigAlert: Boolean = false // 新增：是否显示大弹窗
     )
 
     private val _timerState = MutableStateFlow(TimerState())
@@ -147,28 +188,73 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         NotificationHelper.createNotificationChannel(application)
     }
 
+    // [重构] 启动计时器入口：决定是进入准备阶段还是直接开始
     fun startTimer(context: Context, taskId: Long, setIndex: Int, durationMinutes: Int) {
+        val prepEnabled = getTimerPrepEnabled()
+        // 只有当前是空闲状态，且开启了准备时间，才进入 PREP 阶段
+        if (prepEnabled && _timerState.value.phase == TimerPhase.IDLE) {
+            startPrepPhase(context, taskId, setIndex, durationMinutes)
+        } else {
+            startWorkPhase(context, taskId, setIndex, durationMinutes)
+        }
+    }
+
+    // [新增] 启动准备阶段
+    private fun startPrepPhase(context: Context, taskId: Long, setIndex: Int, durationMinutes: Int) {
+        val prepSeconds = getTimerPrepSeconds()
+        val now = SystemClock.elapsedRealtime() // 【核心】使用精准时间
+        val endTime = now + (prepSeconds * 1000L)
+
+        _timerState.value = TimerState(
+            taskId = taskId,
+            setIndex = setIndex,
+            totalSeconds = prepSeconds,
+            remainingSeconds = prepSeconds,
+            endTimeMillis = endTime,
+            isRunning = true,
+            phase = TimerPhase.PREP,
+            showBigAlert = true // 准备阶段强制显示大弹窗
+        )
+
+        // 准备阶段的回调：倒计时结束后，自动调用 startWorkPhase
+        runTimerLoop(context, isPrep = true) {
+            startWorkPhase(context, taskId, setIndex, durationMinutes)
+        }
+    }
+
+    // [重构] 启动正式训练阶段 (对应原本的 startTimer 逻辑)
+    private fun startWorkPhase(context: Context, taskId: Long, setIndex: Int, durationMinutes: Int) {
         val current = _timerState.value
-        val now = System.currentTimeMillis()
+        val now = SystemClock.elapsedRealtime() // 【核心】使用精准时间
+
         val durationMillis = durationMinutes * 60 * 1000L
 
-        val endTimeMillis = if (current.taskId == taskId && current.setIndex == setIndex && current.isPaused) {
+        // 判断是否是“暂停后继续”：任务ID一致、Set一致、处于暂停状态、且之前是在WORK阶段暂停的
+        val endTimeMillis = if (current.taskId == taskId && current.setIndex == setIndex && current.isPaused && current.phase == TimerPhase.WORK) {
             now + (current.remainingSeconds * 1000L)
         } else {
-            if (durationMinutes <= 0) return
             now + durationMillis
         }
 
         val initialRemSeconds = ((endTimeMillis - now) / 1000).toInt()
-        _timerState.value = TimerState(taskId, setIndex, durationMinutes * 60, initialRemSeconds, endTimeMillis, true, false)
 
+        _timerState.value = TimerState(
+            taskId, setIndex, durationMinutes * 60, initialRemSeconds, endTimeMillis,
+            isRunning = true, isPaused = false, phase = TimerPhase.WORK, showBigAlert = false
+        )
+
+        // 启动后台服务 (通知栏显示)
         viewModelScope.launch(Dispatchers.IO) {
             val task = dao.getTaskById(taskId)
             val taskName = task?.name ?: "Training"
+
+            // 为了兼容 Service (通常使用墙钟时间)，我们需要换算一下
+            val wallClockEndTime = System.currentTimeMillis() + (endTimeMillis - now)
+
             val intent = Intent(context, TimerService::class.java).apply {
                 action = TimerService.ACTION_START_TIMER
                 putExtra(TimerService.EXTRA_TASK_NAME, taskName)
-                putExtra(TimerService.EXTRA_END_TIME, endTimeMillis)
+                putExtra(TimerService.EXTRA_END_TIME, wallClockEndTime)
             }
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 context.startForegroundService(intent)
@@ -177,32 +263,78 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
 
+        // 正式阶段的回调：倒计时结束后，记录数据
+        runTimerLoop(context, isPrep = false) {
+            onTimerFinished(taskId, setIndex, durationMinutes)
+        }
+    }
+
+    // [重构] 统一的计时循环逻辑
+    private fun runTimerLoop(context: Context, isPrep: Boolean, onFinish: suspend () -> Unit) {
         timerJob?.cancel()
         timerJob = viewModelScope.launch(Dispatchers.Default) {
-            val task = dao.getTaskById(taskId)
-            val taskName = task?.name ?: "Training"
+            val finalEnabled = getTimerFinalEnabled()
+            val finalSeconds = getTimerFinalSeconds()
+
+            var lastBeepSecond = -1 // 防止同一秒响两次
+
+            // [新增] 获取当前音效开关状态
+            val soundEnabled = getTimerSoundEnabled()
 
             while (_timerState.value.isRunning) {
-                val currentNow = System.currentTimeMillis()
+                val currentNow = SystemClock.elapsedRealtime()
                 val targetEnd = _timerState.value.endTimeMillis
-                val remSeconds = ((targetEnd - currentNow) / 1000).toInt()
+                // +1 是为了补偿取整，让 0.9秒 显示为 1秒，体验更佳
+                val remSeconds = ((targetEnd - currentNow) / 1000).toInt() + 1
 
-                if (remSeconds <= 0) {
-                    _timerState.update { it.copy(remainingSeconds = 0) }
+                // 如果时间已到 (<=0)，修正显示为 0
+                val displaySeconds = if ((targetEnd - currentNow) <= 0) 0 else remSeconds
+
+                // --- 判断是否显示大弹窗和播放声音 ---
+                // 条件：是准备阶段，或者 (是正式阶段 且 开启了倒数 且 时间进入倒数范围)
+                val isFinalCountdown = displaySeconds > 0 && displaySeconds <= if (isPrep) 3 else finalSeconds
+
+                _timerState.update {
+                    it.copy(
+                        remainingSeconds = displaySeconds,
+                        showBigAlert = isPrep || (finalEnabled && isFinalCountdown)
+                    )
+                }
+
+                // --- 播放声音 ---
+
+                if (soundEnabled && displaySeconds != lastBeepSecond && isFinalCountdown) {
+                    try {
+                        // 发出短促的“滴”声
+                        toneGenerator.startTone(ToneGenerator.TONE_CDMA_PIP, 150)
+                    } catch (e: Exception) { e.printStackTrace() }
+                    lastBeepSecond = displaySeconds
+                }
+
+                // --- 时间结束 ---
+                if ((targetEnd - currentNow) <= 0) {
+                    // 结束时的长音“嘟——”
+                    // [修改] 增加 soundEnabled 判断
+                    if (soundEnabled) {
+                        try {
+                            toneGenerator.startTone(ToneGenerator.TONE_CDMA_ALERT_CALL_GUARD, 400)
+                        } catch (e: Exception) { e.printStackTrace() }
+                    }
+                    try {
+                        toneGenerator.startTone(ToneGenerator.TONE_CDMA_ALERT_CALL_GUARD, 400)
+                    } catch (e: Exception) { e.printStackTrace() }
+
+                    _timerState.update { it.copy(remainingSeconds = 0, isRunning = false, showBigAlert = false) }
+
                     withContext(Dispatchers.Main) {
-                        stopService(context)
-                        onTimerFinished(taskId, setIndex, durationMinutes)
+                        if (!isPrep) stopService(context) // 只有正式结束才关 Service
+                        onFinish() // 执行回调
                     }
                     break
-                } else {
-                    _timerState.update { it.copy(remainingSeconds = remSeconds) }
-                    try {
-                        withContext(Dispatchers.Main) {
-                            NotificationHelper.updateTimerNotification(context, taskName, targetEnd)
-                        }
-                    } catch (e: Exception) { e.printStackTrace() }
                 }
-                delay(500)
+
+                // 提高刷新频率到 100ms，保证倒计时平滑
+                delay(100)
             }
         }
     }
@@ -214,7 +346,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun stopTimer(context: Context) {
-        _timerState.value = TimerState()
+        _timerState.value = TimerState(phase = TimerPhase.IDLE)
         timerJob?.cancel()
         stopService(context)
     }
@@ -229,6 +361,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             e.printStackTrace()
             NotificationHelper.cancelNotification(context)
         }
+    }
+
+    // [新增/修改]
+    override fun onCleared() {
+        super.onCleared()
+        toneGenerator.release() // 释放音频资源防止内存泄漏
     }
 
     private suspend fun onTimerFinished(taskId: Long, setIndex: Int, durationMinutes: Int) {
