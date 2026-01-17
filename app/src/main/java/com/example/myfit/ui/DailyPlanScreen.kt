@@ -424,11 +424,13 @@ fun SetRow(
                         color = Color.Gray,
                         modifier = Modifier.defaultMinSize(minWidth = 20.dp).padding(end = 4.dp)
                     )
-                    InputBox(weightInput, color, Modifier.weight(1f)) {
-                        weightInput = it
-                        onUpdate(set.copy(weightOrDuration = it))
+                    if (!isRepsOnly) {
+                        InputBox(weightInput, color, Modifier.weight(1f)) {
+                            weightInput = it
+                            onUpdate(set.copy(weightOrDuration = it))
+                        }
+                        Spacer(modifier = Modifier.width(4.dp))
                     }
-                    Spacer(modifier = Modifier.width(4.dp))
                     InputBox(repsInput, color, Modifier.weight(1f)) {
                         repsInput = it
                         onUpdate(set.copy(reps = it))
@@ -442,11 +444,13 @@ fun SetRow(
                         color = Color.Gray,
                         modifier = Modifier.defaultMinSize(minWidth = 20.dp).padding(end = 4.dp)
                     )
-                    InputBox(rightWeightInput, color, Modifier.weight(1f)) {
-                        rightWeightInput = it
-                        onUpdate(set.copy(rightWeight = it))
+                    if (!isRepsOnly) {
+                        InputBox(rightWeightInput, color, Modifier.weight(1f)) {
+                            rightWeightInput = it
+                            onUpdate(set.copy(rightWeight = it))
+                        }
+                        Spacer(modifier = Modifier.width(4.dp))
                     }
-                    Spacer(modifier = Modifier.width(4.dp))
                     InputBox(rightRepsInput, color, Modifier.weight(1f)) {
                         rightRepsInput = it
                         onUpdate(set.copy(rightReps = it))
