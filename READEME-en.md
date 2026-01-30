@@ -1,115 +1,112 @@
-# Gymnota - Personal Workout Memo & Tracker (V5.8.1)
+# Gymnota - Personal Workout Memo & Tracker (V6.0)
 
-**Gymnota** is a personal fitness tracking and memo application built with **Android Jetpack Compose**. It is designed to help users plan weekly training routines, log daily workouts, and utilize **native charts** to deeply visualize training volume and body metric trends.
+**Gymnota** is a personal fitness tracking and memo application built with **Android Jetpack Compose**. It is designed to help users plan weekly training schedules, log daily workouts, and deeply visualize training volume and body status trends through **native charts**.
 
-🚀 **V5.8.1 Major Update**: Introduces the **Training Volume Heatmap** for visualizing workout frequency and load history; refactors data logic for **Unilateral Exercises**; optimizes chart legend layout and multilingual experience.
+🚀 **V6.0 Major Update: The AI Coach Evolution** — A perfect closed loop from "Advice" to "Actionable Planning".
 
 ---
 
-## ✨ Core Features
+## ✨ New in V6.0
 
-**🔥 Training Volume Heatmap** `NEW`
+**🧠 AI Coach Integration**
+* **Context-Aware Planning**: The AI no longer provides generic advice. It reads your **User Profile**, **Training Volume from the last 3 weeks**, and **Weekly Schedule Configuration** to tailor a specific plan for the upcoming week.
+* **Multi-Dimensional Constraints**: Supports custom **Training Focus** (Strength/Cardio/Core), **Equipment Scenario** (Gym/Home/Outdoor), and **Injury Avoidance**, ensuring the plan is safe and feasible.
+* **Execution Loop (Generate & Import)**: Introducing the exclusive "Refine & Import" flow. AI-generated suggestions can be converted into structured data with one click and automatically written into your weekly schedule, eliminating manual entry.
+* **AI Visual Assistant (Snap & Ask)**: Encountered an unfamiliar machine? Snap a photo, and the AI will immediately identify it and explain the target muscle groups and operation techniques.
 
-* **Visual Distribution**: Added a Heatmap component to the History page, intuitively showing daily training intensity through color depth.
-* **Volume Definition**: Uses "Historical Cumulative Volume Load (Weight × Reps)" as the statistical standard.
-* **UI Optimization**: Redesigned bottom legend area with a horizontally centered layout and clear hint text.
+**⚙️ Model Freedom & Enhanced Connectivity**
+* **Multi-Provider Support**: Pre-configured support for mainstream large model services including **OpenAI, DeepSeek, Kimi (Moonshot), Qwen (Aliyun), Gemini, and SiliconFlow**.
+* **Smart Configuration Memory**: Automatically remembers API Keys and Base URLs for different providers, allowing seamless switching.
+* **Connectivity Enhancement**: Built-in smart URL cleaning logic (automatically handles `v1/` suffixes) to significantly improve connection success rates for custom Base URLs.
 
-**⚖️ Smart Data Logic** `NEW`
+**🎨 Markdown Rendering Engine 2.0**
+* **Perfect Typography**: Comprehensively upgraded text display, supporting code block highlighting, multi-level headers, blockquotes, and list formats (essential for weekly plan details).
+* **Enhanced Interaction**: Added long-press to copy and text selection functions, making it easy to extract key information from AI responses.
 
-* **Unilateral Merging**: Comprehensively refactored data processing logic. It now automatically identifies and correctly merges data for left/right split unilateral exercises (e.g., Single-Arm Dumbbell Row) to ensure accurate total volume calculations.
+**🔒 Privacy First**
+* **Local Storage**: API Keys are stored strictly locally via SharedPreferences and never pass through intermediate servers.
+* **Data Masking**: Historical data sent to the AI includes only concise summaries (e.g., total volume, max weight) to maximize privacy protection.
 
-**💪 Body Stats & Metrics**
+---
 
-* **Smart Recording**: Added a "Record Body Stats" entry point on the Check-in page, supporting Weight, Height, Age, and Gender.
-* **Auto Calculation**: The system automatically calculates daily **BMI (Body Mass Index)** and **BMR (Basal Metabolic Rate)** based on the input profile.
-* **Privacy Protection**: Basic profile data (Height/Age/Gender) is stored strictly in the local database and can be modified in Settings at any time.
+## 🔥 Core Features
 
-**⏱️ Pro Workout Timer**
+**📊 Training Volume Heatmap**
+* **Visual Distribution**: Intuitively displays daily training intensity through color depth on the History page.
+* **Calculation Standard**: Based on "Historical Cumulative Volume Load (Weight × Reps)".
 
-* **Foreground Service**: Refactored timing logic ensures the timer is not killed by the system when the screen is locked, off, or the app is in the background.
-* **Lock Screen Display**: Real-time countdown shown in the notification bar, allowing users to check remaining time directly from the lock screen.
-* **Permission Guide**: Added a smart guide dialog for "Lock Screen Notification" permissions.
+**⏱️ Pro Training Timer**
+* **Lock Screen Persistence**: Real-time countdown in the notification bar, supports lock screen viewing, and keeps running in the background without being killed.
+* **Permission Guide**: Smartly guides users to enable necessary permissions to ensure timer stability.
+
+**💪 Body Status & Metrics**
+* **Auto-Calculation**: Automatically calculates **BMI** and **BMR** based on height/age/gender after logging weight.
+* **Local Privacy**: All body profile data is stored only in the local database.
 
 **📈 Visual Statistics Center**
+* **Native Charts**: High-performance line and bar charts drawn with Compose Canvas.
+* **Multi-Dimensional Analysis**: Track trends in Weight, Total Cardio Duration, and 1RM (One Rep Max) for specific exercises.
 
-* **Native Charts**: High-performance Line and Bar charts drawn using Compose Canvas.
-* **Multi-dimensional Analysis**:
-* **Body Stats**: Track long-term trends for Weight, BMI, and BMR.
-* **Cardio/Strength**: Analyze daily/monthly total cardio duration, as well as Max Weight or Reps trends for specific exercises.
+**⚖️ Smart Data Logic**
+* **Unilateral Merger**: Automatically identifies and merges volume data for left/right split exercises (e.g., Single-Arm Rows).
+* **Smart Import**: Automatically creates new exercise templates, fills in body part info, and deduplicates during CSV import.
 
-
-* **View Switching**: Supports toggling between "Day" and "Month" granularity.
-
-**🔄 Smart CSV Import**
-
-* **Auto-Collection**: When importing a weekly plan via CSV, if new exercises are included, the system automatically creates templates and supplements body part/equipment information.
-* **Smart De-duplication**: Automatically detects and cleans up duplicate data in the Exercise Library during import.
-
-**🌍 Internationalization (i18n)**
-
-* Full support for **Simplified Chinese, English, Deutsch, Español, and 日本語**.
-* **Deep Adaptation**: V5.8.1 adds multilingual support for the Heatmap hint "Values represent historical cumulative volume", ensuring a fully localized UI.
-
-**📅 Smart Weekly Routine**
-
-* Visual interface for arranging fixed workout routines for each day of the week, automatically generating daily to-do lists.
-* Support for setting type tags for each day (e.g., Core Day, Rest Day), with the home page theme color changing automatically based on the tag.
+**🌍 Multi-Language Support**
+* Full support for **English, Simplified Chinese, German, Spanish, and Japanese**.
 
 ---
 
 ## 📱 User Guide
 
-### 1. Viewing the Heatmap `NEW`
+### 1. Enable AI Coach `NEW`
+* Go to the **AI Coach** tab.
+* Click the status bar at the top to configure your model (DeepSeek or OpenAI is recommended).
+* **Generate Plan**: Click "Generate Weekly Plan", set your Training Focus and Equipment constraints, and wait for the AI analysis.
+* **Import Schedule**: Once satisfied with the AI-generated plan, click the import button at the bottom to apply it directly to your weekly schedule.
 
-* Go to the **History** page.
-* The **Training Volume Heatmap** is displayed at the top of the page.
-* **Legend**: The bottom legend shows volume levels from low to high. The text hint "Values represent historical cumulative volume (Weight × Reps)" automatically adapts to the current system language.
+### 2. Visual Assistant & Free Chat `NEW`
+* Click the camera icon on the AI page to snap a photo of equipment or an exercise for guidance.
+* Use the Free Chat mode to ask any fitness-related questions.
 
-### 2. Recording Body Stats
+### 3. View Training Heatmap
+* Located at the top of the **History** page.
+* The legend displays volume levels from low to high.
 
-* Click the **"Record Body Stats"** button below the date on the Home page.
-* **First Use**: A dialog will ask for Height, Age, Gender, and Weight to establish a baseline profile.
-* **Daily Log**: For subsequent entries, only Weight is required. The system reuses baseline info to calculate BMI/BMR.
-
-### 3. Timer & Lock Screen Display
-
-* Enter the time (in minutes) to the right of an exercise set and click the Play button to start.
-* **Lock Screen**:
-* Once the timer starts, you can lock your phone.
-* Wake the screen (no need to unlock) to see the countdown in the notification area.
-* *Note: If not displayed, please follow the App's prompt to enable "Lock Screen Notifications" in system settings.*
-
-
-
-### 4. Managing Library & Plans
-
-* Go to the **Settings** page.
-* **Exercise Library**: Efficiently manage exercises via a three-level classification (Category -> Part -> Equipment).
-* **Weekly Plan**: Manually check boxes or batch import weekly fixed routines via CSV.
+### 4. Training Timer & Lock Screen
+* Enter the time (in minutes) next to the exercise set and click the play button to start.
+* **Lock Screen View**: Light up the screen (no unlock needed) to see the countdown in the notification area.
 
 ---
 
 ## 📂 CSV Import Format
 
-Supports expanding the Exercise Library by importing CSV files. The following complete format is recommended:
+Supports expanding the exercise library via CSV import. The recommended full format is as follows:
 
-`Day(1-7), Name, Category(STRENGTH/CARDIO/CORE), Target, PartKey, EquipmentKey`
+**Header**:
+`Day,Name,Category,Target,BodyPart,Equipment,IsUni,LogType`
+
+**Notes**:
+* **Day**: 1-7 (Monday to Sunday)
+* **Category**: STRENGTH / CARDIO / CORE
+* **IsUni**: true / false (Unilateral)
+* **LogType**: 0=Weight x Reps, 1=Duration, 2=Reps Only
 
 **Key Reference**:
-
-* **Body Parts (PartKey)**:
-* Upper/Torso: `part_chest`, `part_back`, `part_shoulders`, `part_arms`, `part_abs`
-* Lower: `part_hips`, `part_thighs`, `part_calves`
-* Other: `part_cardio`, `part_other`
-
-
-* **Equipment (EquipmentKey)**: `equip_barbell`, `equip_dumbbell`, `equip_machine`, `equip_cable`, `equip_smith_machine`, `equip_bodyweight`, `equip_cardio_machine`, `equip_other`
+* **BodyPart**:
+    * Upper/Torso: `part_chest`, `part_back`, `part_shoulders`, `part_arms`, `part_abs`
+    * Lower: `part_hips`, `part_thighs`, `part_calves`
+    * Other: `part_cardio`, `part_other`
+* **Equipment**: `equip_barbell`, `equip_dumbbell`, `equip_machine`, `equip_cable`, `equip_smith_machine`, `equip_bodyweight`, `equip_cardio_machine`, `equip_other`
 
 **Example:**
 
 ```text
-1, Barbell Bench Press, STRENGTH, 4x8, part_chest, equip_barbell
-3, Burpee, CORE, 4x15, part_abs, equip_bodyweight
+Day,Name,Category,Target,BodyPart,Equipment,IsUnilateral,LogType
+1,Bench Press,STRENGTH,3x12,part_chest,equip_machine,false,0 
+1,Plank,CORE,3x60s,part_abs,equip_bodyweight,false,1 
+2,Squat,STRENGTH,4x10,part_thighs,equip_barbell,false,0 
+3,Running,CARDIO,30min,part_cardio,equip_cardio_machine,false,1 
+4,Crunches,CORE,4x20,part_abs,equip_bodyweight,false,2
 
 ```
 
@@ -129,6 +126,7 @@ Supports expanding the Exercise Library by importing CSV files. The following co
 
 ## 📝 Version Info
 
-* **Version**: 5.8.1
-* **Version Code**: 581
+* **Version**: 6.0
+* **Version Code**: 60
 * **Author**: Designed & Built by enersto & Hajimi
+
