@@ -106,6 +106,7 @@ interface WorkoutDao {
     @Query("SELECT * FROM workout_tasks WHERE isCompleted = 1 ORDER BY date DESC")
     fun getHistoryRecords(): Flow<List<WorkoutTask>>
 
+    // [保留这一个，删除另一个重复的]
     @Query("SELECT * FROM workout_tasks WHERE isCompleted = 1 ORDER BY date DESC")
     suspend fun getHistoryRecordsSync(): List<WorkoutTask>
 
@@ -122,4 +123,19 @@ interface WorkoutDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun saveAppSettings(setting: AppSetting)
+
+    // --- AI Chat History ---
+    @Insert
+    suspend fun insertAiChatRecord(record: AiChatRecord)
+
+    @Query("SELECT * FROM ai_chat_history ORDER BY timestamp DESC")
+    fun getAllAiChatRecords(): Flow<List<AiChatRecord>>
+
+    @Query("DELETE FROM ai_chat_history WHERE id = :id")
+    suspend fun deleteAiChatRecord(id: Long)
+
+    // [新增] 同步获取所有日程配置，用于 AI Prompt 构建
+    @Query("SELECT * FROM schedule_config")
+    suspend fun getAllSchedulesSync(): List<ScheduleConfig>
+
 }

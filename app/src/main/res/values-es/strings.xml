@@ -252,7 +252,7 @@
     <string name="msg_reset_exercises_warning">Esto actualizará los nombres e instrucciones de los ejercicios predeterminados al idioma actual. Tus ejercicios personalizados no se verán afectados.</string>
     <string name="btn_confirm">Confirmar</string>
 
-    <string name="btn_update_lib_lang">Cambiar idioma</string>
+    <string name="btn_update_lib_lang">Cambiar idioma de ejercicios</string>
 
     <string name="action_add_photo">Añadir foto</string>
     <string name="action_change_photo">Cambiar foto</string>
@@ -271,5 +271,95 @@
     <string name="no_search_results">No se encontraron resultados</string>
     <string name="action_clear_search">Borrar</string>
     <string name="msg_added_to_plan">"%1$s" añadido</string>
+
+    <string name="tab_ai_coach">Coach IA</string>
+    <string name="ai_coach_title">Asistente Inteligente</string>
+    <string name="ai_config_title">Configuración de IA</string>
+    <string name="ai_provider_label">Proveedor</string>
+    <string name="ai_api_key_label">API Key</string>
+    <string name="ai_model_label">Nombre del Modelo</string>
+    <string name="ai_base_url_label">URL Base (Opcional)</string>
+    <string name="ai_base_url_hint">Ej: https://api.deepseek.com</string>
+    <string name="ai_provider_openai">OpenAI</string>
+    <string name="ai_provider_deepseek">DeepSeek</string>
+    <string name="ai_provider_gemini">Google Gemini</string>
+    <string name="ai_provider_custom">Personalizado</string>
+
+    <string name="btn_generate_weekly_plan">Generar Plan Semanal</string>
+    <string name="msg_generating_plan">Analizando datos de las últimas 3 semanas...</string>
+    <string name="msg_config_missing">Primero configure el modelo de IA en ajustes</string>
+    <string name="label_current_goal">Objetivo Actual</string>
+    <string name="hint_input_goal">Ej: Hipertrofia, mejorar sentadilla</string>
+    <string name="ai_response_title">Sugerencia de IA</string>
+    <string name="btn_save_config">Guardar Config</string>
+
+    <string name="title_ai_history">Historial</string>
+    <string name="msg_no_history">No hay historial</string>
+    <string name="btn_close">Cerrar</string>
+
+    <string name="label_context_length">Referencia Histórica</string>
+    <string name="option_1_week">1 Semana</string>
+    <string name="option_2_weeks">2 Semanas</string>
+    <string name="option_3_weeks">3 Semanas</string>
+    <string name="option_4_weeks">4 Semanas</string>
+
+    <string name="prompt_system_role">Eres un entrenador profesional de fitness. Crea un plan de entrenamiento detallado para la próxima semana basado en el perfil del usuario, horario, objetivo y registros anteriores. Nota: NO utilices tablas Markdown; usa listas o texto para facilitar la lectura en móviles.</string>
+    <string name="prompt_user_profile">Perfil: Sexo=%1$s, Edad=%2$d, Altura=%3$.1fcm</string>
+    <string name="prompt_user_goal">Objetivo: %1$s</string>
+    <string name="prompt_schedule_title">Horario actual (Debe cumplirse):</string>
+    <string name="prompt_history_title">Registros de las últimas %1$d semanas (Fecha - Ejercicio - Detalles):</string>
+
+    <string name="ai_status_configured">%1$s · %2$s</string>
+    <string name="ai_status_unconfigured">IA no configurada</string>
+    <string name="btn_snap_photo">Tomar Foto</string>
+    <string name="btn_free_chat">Chat Libre</string>
+    <string name="hint_input_chat">Pregunta algo (ej. uso de máquinas, técnica)</string>
+
+    <string name="btn_send_message">Enviar</string>
+    <string name="msg_processing">Procesando...</string>
+
+    <string name="prompt_system_vision">Eres un entrenador profesional. Identifica el equipo de gimnasio o ejercicio en la imagen y explica brevemente: 1. Nombre 2. Músculos trabajados 3. Puntos clave. NO uses tablas.</string>
+    <string name="prompt_user_vision_query">¿Qué es esto? ¿Cómo se usa?</string>
+
+    <string name="prompt_system_free_chat">Eres un entrenador profesional. Responde a las preguntas de fitness del usuario de forma concisa y profesional. NO uses tablas.</string>
+
+    <string name="label_focus">Enfoque (Multiselección)</string>
+    <string name="focus_comprehensive">Integral</string>
+    <string name="label_scene">Escenario</string>
+    <string name="scene_gym">Gimnasio</string>
+    <string name="scene_home_equip">Casa (Equipo Básico)</string>
+    <string name="scene_home_none">Casa (Sin equipo)</string>
+    <string name="scene_outdoor">Aire Libre</string>
+
+    <string name="label_injuries">Evitar / Lesiones</string>
+    <string name="hint_injuries_none">Ninguna (Tocar)</string>
+    <string name="dialog_injuries_title">Seleccionar zonas a evitar</string>
+
+    <string name="injury_knee">Rodilla</string>
+    <string name="injury_lower_back">Espalda Baja</string>
+    <string name="injury_shoulder">Hombro</string>
+    <string name="injury_wrist">Muñeca</string>
+    <string name="injury_neck">Cuello</string>
+
+    <string name="prompt_system_csv_generator">Eres un generador de datos. Basado en las necesidades del usuario y los consejos anteriores, genera datos CSV en un formato específico. Cumple estrictamente las siguientes reglas:
+1. Salida SOLO contenido CSV. NO incluyas etiquetas de bloque de código Markdown (como ```csv) ni texto explicativo.
+2. Encabezado de datos: Day,Name,Category,Target,BodyPart,Equipment,IsUni,LogType
+3. Day debe ser un entero del 1 al 7.
+4. IsUni debe ser true o false.
+5. LogType: 0=Fuerza, 1=Cardio/Tiempo, 2=Solo Repeticiones.
+6. Para BodyPart y Equipment usa las claves estándar en inglés (ej. part_chest, equip_barbell); déjalo en blanco si no sabes.
+    </string>
+
+    <string name="prompt_user_generate_csv">Basado en los consejos anteriores, genera datos CSV ejecutables para el plan semanal.</string>
+
+    <string name="btn_get_advice">Obtener Consejos</string>
+    <string name="btn_generate_and_import">Generar e Importar Plan</string>
+    <string name="title_confirm_plan">Confirmar Plan Semanal</string>
+
+    <string name="msg_refine_dialog_hint">La IA generará datos CSV basados en la sugerencia. Si tienes modificaciones (ej. "menos volumen el miércoles"), añádelas abajo:</string>
+    <string name="btn_test_connection">Probar Conexión</string>
+    <string name="msg_connection_success">Conexión Exitosa</string>
+    <string name="msg_connection_failed">Error de Conexión: %1$s</string>
+    <string name="val_default_goal">Mejora Física General</string>
 
 </resources>

@@ -87,6 +87,31 @@ val MIGRATION_12_13 = object : Migration(12, 13) {
     }
 }
 
+// [新增] MIGRATION_13_14: 添加 AI 配置字段
+val MIGRATION_13_14 = object : Migration(13, 14) {
+    override fun migrate(database: SupportSQLiteDatabase) {
+        database.execSQL("ALTER TABLE app_settings ADD COLUMN aiProvider TEXT NOT NULL DEFAULT 'OpenAI'")
+        database.execSQL("ALTER TABLE app_settings ADD COLUMN aiApiKey TEXT NOT NULL DEFAULT ''")
+        database.execSQL("ALTER TABLE app_settings ADD COLUMN aiModel TEXT NOT NULL DEFAULT 'gpt-3.5-turbo'")
+        database.execSQL("ALTER TABLE app_settings ADD COLUMN aiBaseUrl TEXT NOT NULL DEFAULT ''")
+    }
+}
+
+val MIGRATION_14_15 = object : Migration(14, 15) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("""
+            CREATE TABLE IF NOT EXISTS `ai_chat_history` (
+                `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, 
+                `timestamp` INTEGER NOT NULL, 
+                `role` TEXT NOT NULL, 
+                `content` TEXT NOT NULL, 
+                `userGoal` TEXT, 
+                `modelUsed` TEXT
+            )
+        """)
+    }
+}
+
 
 @Database(
     entities = [
@@ -95,9 +120,10 @@ val MIGRATION_12_13 = object : Migration(12, 13) {
         ScheduleConfig::class,
         WeightRecord::class,
         AppSetting::class,
-        WeeklyRoutineItem::class
+        WeeklyRoutineItem::class,
+        AiChatRecord::class
     ],
-    version = 13, // 🔴 升级版本号
+    version = 15, // 🔴 升级版本号
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -111,7 +137,7 @@ abstract class AppDatabase : RoomDatabase() {
             return instance ?: synchronized(this) {
                 Room.databaseBuilder(context, AppDatabase::class.java, "myfit_v7.db")
                     .addMigrations(MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11,
-                        MIGRATION_11_12, MIGRATION_12_13
+                        MIGRATION_11_12, MIGRATION_12_13,MIGRATION_13_14, MIGRATION_14_15
                         ) // 🔴 添加新迁移
                     .addCallback(PrepopulateCallback(context.applicationContext))
                     .build().also { instance = it }

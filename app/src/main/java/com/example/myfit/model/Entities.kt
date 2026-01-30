@@ -23,7 +23,12 @@ data class AppSetting(
     // 给定默认值以兼容旧数据，虽然数据库迁移会处理，但对象实例化需要默认值
     val age: Int = 0,
     val height: Float = 0f,
-    val gender: Int = 0
+    val gender: Int = 0,
+    // [新增] AI 配置字段
+    val aiProvider: String = "OpenAI", // "OpenAI", "DeepSeek", "Gemini"
+    val aiApiKey: String = "",
+    val aiModel: String = "gpt-3.5-turbo", // 默认模型
+    val aiBaseUrl: String = "" // 自定义 URL
 )
 
 // V5.0 更新：动作模板增加部位和器械
@@ -113,6 +118,24 @@ enum class DayType(val labelResId: Int, val colorHex: Long) {
     LIGHT(R.string.type_light, 0xFF03A9F4),
     REST(R.string.type_rest, 0xFF9E9E9E)
 }
+
+// [修改] 1. 更新 ChatMessage，将 content 类型改为 Any 以支持 String 或 List
+data class ChatMessage(
+    val role: String,
+    val content: Any // 原为 String，现改为 Any (兼容 String 或 List<ContentPart>)
+)
+
+// [新增] 2. 兼容 OpenAI 多模态协议的内容部分
+data class ContentPart(
+    val type: String, // "text" 或 "image_url"
+    val text: String? = null,
+    val image_url: ImageUrl? = null
+)
+
+// [新增] 3. 图片 URL 包装器
+data class ImageUrl(
+    val url: String // 格式: "data:image/jpeg;base64,{BASE64_STRING}"
+)
 
 enum class AppTheme(val id: Int, val primary: Long, val background: Long, val onBackground: Long) {
     DARK(0, 0xFFFF5722, 0xFF121212, 0xFFFFFFFF),

@@ -39,6 +39,27 @@ import com.google.gson.Gson // [新增]
 import com.google.gson.reflect.TypeToken // [新增]
 
 
+import androidx.compose.runtime.getValue // [新增]
+import androidx.compose.runtime.mutableStateOf // [新增]
+import androidx.compose.runtime.setValue // [新增]
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.forEach
+import retrofit2.Retrofit // [新增]
+import retrofit2.converter.gson.GsonConverterFactory // [新增]
+import kotlin.text.compareTo
+import kotlin.text.toInt
+
+import okhttp3.OkHttpClient // [新增]
+import java.util.concurrent.TimeUnit // [新增]
+
+import androidx.compose.runtime.mutableIntStateOf // [✅ 添加这一行]
+
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.util.Base64
+import java.io.ByteArrayOutputStream
+import com.example.myfit.data.ai.PromptManager // 确保引用了 PromptManager
+
 // [新增] 计时器阶段枚举
 enum class TimerPhase {
     IDLE, PREP, WORK
@@ -61,6 +82,43 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         const val KEY_TIMER_FINAL_SECS = "timer_final_secs"
         const val KEY_TIMER_SOUND_ENABLED = "timer_sound_enabled" // [新增]
     }
+
+    // [新增] 定义服务商预设配置数据结构
+    data class AiProviderPreset(
+        val name: String,
+        val defaultBaseUrl: String,
+        val defaultModel: String,
+        val website: String = "" // 可选：用于提示用户去哪里申请Key
+    )
+
+    // [新增] 扩展预设列表 (Kimi, 千问, SiliconFlow等)
+    val availableProviders = listOf(
+        AiProviderPreset("OpenAI", "https://api.openai.com/", "gpt-4o-mini"),
+        AiProviderPreset("DeepSeek", "https://api.deepseek.com/", "deepseek-chat"),
+        AiProviderPreset("Gemini", "https://generativelanguage.googleapis.com/v1beta/openai/", "gemini-1.5-flash"),
+        AiProviderPreset("Xiaomi MiMo", "https://api.xiaomimimo.com/", "mimo-v2-flash"),
+        AiProviderPreset("Kimi (Moonshot)", "https://api.moonshot.cn/", "moonshot-v1-8k"),
+        AiProviderPreset("Qwen (Aliyun)", "https://dashscope.aliyuncs.com/compatible-mode/", "qwen-turbo"),
+        AiProviderPreset("SiliconFlow", "https://api.siliconflow.cn/", "deepseek-ai/DeepSeek-V3"), // 硅基流动
+        AiProviderPreset("Custom", "", "")
+    )
+
+    // [新增] 获取指定服务商的保存配置 (优先从 Prefs 读取，没有则用默认值)
+    // 逻辑：优先从本地 Prefs 读取，读不到则使用预设的默认值
+    fun getSavedProviderConfig(providerName: String): Triple<String, String, String> {
+        // 1. 找到预设值作为保底
+        val preset = availableProviders.find { it.name == providerName }
+
+        // 2. 从 SharedPreferences 读取 (Key 格式: ai_config_{provider}_{field})
+        val savedKey = prefs.getString("ai_config_${providerName}_key", "") ?: ""
+        // 如果本地没存过模型名，就用预设的 (比如 qwen-turbo)
+        val savedModel = prefs.getString("ai_config_${providerName}_model", preset?.defaultModel ?: "") ?: ""
+        // 如果本地没存过URL，就用预设的
+        val savedUrl = prefs.getString("ai_config_${providerName}_url", preset?.defaultBaseUrl ?: "") ?: ""
+
+        return Triple(savedKey, savedModel, savedUrl)
+    }
+
 
     // [新增] 声音生成器 (音量 100)
     private val toneGenerator = ToneGenerator(AudioManager.STREAM_ALARM, 100)
@@ -409,6 +467,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+
     private fun calculateBMI(weight: Float, heightCm: Float): Float {
         if (heightCm <= 0) return 0f
         val heightM = heightCm / 100f
@@ -556,25 +615,34 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     suspend fun getRoutineForDay(day: Int): List<WeeklyRoutineItem> = dao.getRoutineForDay(day)
 
+    // [修复] 导出 CSV：将 repository 改为 dao
     fun exportHistoryToCsv(uri: Uri, context: Context) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val tasks = dao.getHistoryRecordsSync()
                 val sb = StringBuilder()
-                sb.append("Date,Name,Category,Target,IsUnilateral,LogType,ActualWeight,Sets\n")
+                // 1. 写入表头 (Header)
+                sb.append("Date,Name,Category,Target,IsUnilateral,LogType,Sets_Detail\n")
 
                 tasks.forEach { t ->
-                    val safeName = t.name.replace(",", " ")
+                    val safeName = t.name.replace(",", " ") // 防止逗号破坏 CSV 格式
+
+                    // 2. 格式化组数详情 (核心恢复部分)
                     val setsStr = t.sets.joinToString(" | ") { set ->
                         if (t.isUnilateral) {
+                            // 单边模式：L: 20kgx10 / R: 20kgx10
                             val left = "${set.weightOrDuration} x ${set.reps}"
                             val right = "${set.rightWeight ?: ""} x ${set.rightReps ?: ""}"
                             "L: $left / R: $right"
                         } else {
+                            // 普通模式：60kg x 12
                             "${set.weightOrDuration} x ${set.reps}"
                         }
                     }
-                    sb.append("${t.date},$safeName,${t.category},${t.target},${t.isUnilateral},${t.logType},${t.actualWeight},$setsStr\n")
+
+                    // 3. 拼接单行数据
+                    // 注意：这里移除了 actualWeight (因为现在数据都在 sets 里)，保留了 logType
+                    sb.append("${t.date},$safeName,${t.category},${t.target},${t.isUnilateral},${t.logType},$setsStr\n")
                 }
 
                 context.contentResolver.openOutputStream(uri)?.use { output ->
@@ -923,5 +991,476 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             list.find { it.name == name }?.logType ?: LogType.WEIGHT_REPS.value
         }
     }
+
+    // [新增] 图片压缩与 Base64 转换 (限制长边 1024px，质量 70%)
+    private fun compressImageToBase64(context: Context, uri: Uri): String? {
+        return try {
+            val inputStream = context.contentResolver.openInputStream(uri)
+            val originalBitmap = BitmapFactory.decodeStream(inputStream)
+            inputStream?.close()
+
+            if (originalBitmap == null) return null
+
+            // 计算缩放比例
+            val maxDimension = 1024
+            val scale = maxDimension.toFloat() / maxOf(originalBitmap.width, originalBitmap.height)
+
+            val scaledBitmap = if (scale < 1) {
+                val newWidth = (originalBitmap.width * scale).toInt()
+                val newHeight = (originalBitmap.height * scale).toInt()
+                Bitmap.createScaledBitmap(originalBitmap, newWidth, newHeight, true)
+            } else {
+                originalBitmap
+            }
+
+            // 压缩并转 Base64
+            val outputStream = ByteArrayOutputStream()
+            scaledBitmap.compress(Bitmap.CompressFormat.JPEG, 70, outputStream)
+            val byteArray = outputStream.toByteArray()
+
+            Base64.encodeToString(byteArray, Base64.NO_WRAP)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
+
+    // --- AI 状态 ---
+    private val _aiResponse = MutableStateFlow<String?>(null)
+    val aiResponse = _aiResponse.asStateFlow()
+
+    private val _aiIsLoading = MutableStateFlow(false)
+    val aiIsLoading = _aiIsLoading.asStateFlow()
+
+    // 当前训练目标 (临时存储在内存，也可以存数据库)
+    var currentTrainingGoal by mutableStateOf("")
+
+    // [新增] 历史记录回溯时长 (1, 2, 3 周)
+    var historyWeeks by mutableIntStateOf(3)
+
+    // [新增] 训练重心 (多选)
+    // 存储资源 Key 或者特定标识，"COMPREHENSIVE" 为默认综合
+    var selectedFocus by mutableStateOf(setOf("COMPREHENSIVE"))
+
+    // [新增] 器械场景 (单选)
+    // 默认 GYM
+    var selectedScene by mutableStateOf(setOf("GYM"))
+
+    // [新增] 伤病避开部位 (多选)
+    var selectedInjuries by mutableStateOf(setOf<String>())
+
+    // ================== [新增] 连接测试状态与方法 ==================
+    sealed class ConnectionState {
+        object Idle : ConnectionState()
+        object Testing : ConnectionState()
+        object Success : ConnectionState()
+        data class Error(val message: String) : ConnectionState()
+    }
+
+    private val _connectionState = MutableStateFlow<ConnectionState>(ConnectionState.Idle)
+    val connectionState = _connectionState.asStateFlow()
+
+    // 在类变量定义区添加
+    val aiChatHistory: Flow<List<AiChatRecord>> = dao.getAllAiChatRecords()
+
+    fun testAiConnection(provider: String, apiKey: String, model: String, baseUrl: String) {
+        if (apiKey.isBlank()) {
+            _connectionState.value = ConnectionState.Error(getApplication<Application>().getString(R.string.msg_config_missing))
+            return
+        }
+
+        viewModelScope.launch(Dispatchers.IO) {
+            _connectionState.value = ConnectionState.Testing
+            try {
+                // 1. 构建 Retrofit (逻辑与 generateWeeklyPlan 相同)
+                val defaultUrl = availableProviders.find { it.name == provider }?.defaultBaseUrl
+                    ?: "https://api.openai.com/" // 兜底
+
+                // 获取用户输入或默认值
+                val rawBaseUrl = if (baseUrl.isNotBlank()) baseUrl else defaultUrl
+
+                // [新增] 2. 强力清洗逻辑：无论来源如何，去掉末尾的 v1/
+                val cleanUrl = rawBaseUrl.trim()
+                    .replace(Regex("v1/?$", RegexOption.IGNORE_CASE), "")
+                    .trimEnd('/')
+
+                // 3. 补全标准结尾 (Retrofit 需要以 / 结尾)
+                val urlToUse = "$cleanUrl/"
+
+                val retrofit = Retrofit.Builder()
+                    .baseUrl(urlToUse)
+                    .addConverterFactory(GsonConverterFactory.create())
+                    .build()
+
+                val api = retrofit.create(com.example.myfit.data.api.AiService::class.java)
+
+                // 2. 发送一个极简的测试请求 (max_tokens=5 节省 Token)
+                // 注意：这里需要确保 ChatRequest 数据类支持 max_tokens 字段，或者服务器忽略多余字段
+                // 为了通用性，我们发送一个简单的 hello
+                val response = api.generateChatCompletion(
+                    authHeader = "Bearer $apiKey",
+                    request = com.example.myfit.data.api.ChatRequest(
+                        model = model,
+                        messages = listOf(com.example.myfit.data.api.ChatMessage("user", "Hello")),
+                        temperature = 0.7
+                    )
+                )
+
+                if (response.choices.isNotEmpty()) {
+                    _connectionState.value = ConnectionState.Success
+                } else {
+                    _connectionState.value = ConnectionState.Error(getApplication<Application>().getString(R.string.import_error))
+                }
+
+            } catch (e: Exception) {
+                e.printStackTrace()
+                _connectionState.value = ConnectionState.Error(getApplication<Application>().getString(R.string.msg_connection_failed, e.message))
+            }
+        }
+    }
+
+    // [修改] saveAiConfig 方法：不仅保存到数据库（当前生效），还保存到 Prefs（记忆）
+    fun saveAiConfig(provider: String, apiKey: String, model: String, baseUrl: String) {
+        // 1. 自动去掉末尾的 v1/ 或 v1 (忽略大小写)
+        val cleanBaseUrl = baseUrl.trim()
+            .replace(Regex("v1/?$", RegexOption.IGNORE_CASE), "") // 移除末尾的 v1 或 v1/
+            .trimEnd('/') // 移除末尾斜杠 (后续构建时会统一补)
+
+        viewModelScope.launch(Dispatchers.IO) {
+            // 1. 保存到数据库 (当前生效的配置)
+            val current = dao.getAppSettings().first() ?: AppSetting()
+            val newSetting = current.copy(
+                aiProvider = provider,
+                aiApiKey = apiKey,
+                aiModel = model,
+                aiBaseUrl = cleanBaseUrl
+            )
+            dao.saveAppSettings(newSetting)
+
+            // 2. [新增] 保存到 SharedPreferences (作为该服务商的存档)
+            prefs.edit().apply {
+                putString("ai_config_${provider}_key", apiKey)
+                putString("ai_config_${provider}_model", model)
+                putString("ai_config_${provider}_url", cleanBaseUrl)
+            }.apply()
+        }
+    }
+
+    // [核心] 生成周计划
+    fun generateWeeklyPlan(context: Context) {
+        val settings = userProfile.value
+        if (settings.aiApiKey.isBlank()) {
+            Toast.makeText(context, context.getString(R.string.msg_config_missing), Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        _aiIsLoading.value = true
+        _aiResponse.value = null
+
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                // 1. 准备数据
+                // (A) 历史记录：根据 historyWeeks 动态计算截止日期
+                val cutoffDate = LocalDate.now().minusWeeks(historyWeeks.toLong()).toString()
+                val allHistory = dao.getHistoryRecordsSync()
+                val filteredHistory = allHistory.filter { it.date >= cutoffDate }
+
+                // (B) [新增] 获取作息配置
+                val schedules = dao.getAllSchedulesSync()
+
+                // 2. [新增] 使用 PromptManager 构建请求消息
+                // 这一步取代了之前那一大段 StringBuilder 代码
+                val messages = com.example.myfit.data.ai.PromptManager.buildWeeklyPlanPrompt(
+                    context = context,
+                    profile = settings,
+                    schedules = schedules,
+                    history = filteredHistory,
+                    goal = currentTrainingGoal,
+                    weeks = historyWeeks,
+                    focusAreas = selectedFocus,
+                    equipmentScene = selectedScene,
+                    injuredAreas = selectedInjuries
+                )
+
+                // 3. 网络请求配置 (保持不变)
+                val client = OkHttpClient.Builder()
+                    .connectTimeout(30, TimeUnit.SECONDS)
+                    .readTimeout(120, TimeUnit.SECONDS)
+                    .writeTimeout(30, TimeUnit.SECONDS)
+                    .build()
+
+                val defaultUrl = availableProviders.find { it.name == settings.aiProvider }?.defaultBaseUrl
+                    ?: "https://api.openai.com/"
+
+                val rawUrl = if (settings.aiBaseUrl.isNotBlank()) settings.aiBaseUrl else defaultUrl
+
+                // [新增] 运行时清洗：防止数据库里的旧数据导致 404
+                val cleanUrl = rawUrl.trim()
+                    .replace(Regex("v1/?$", RegexOption.IGNORE_CASE), "")
+                    .trimEnd('/')
+
+                val finalUrl = "$cleanUrl/" // 强制以 / 结尾
+
+                val retrofit = Retrofit.Builder()
+                    .baseUrl(finalUrl)
+                    .client(client)
+                    .addConverterFactory(GsonConverterFactory.create())
+                    .build()
+
+                val api = retrofit.create(com.example.myfit.data.api.AiService::class.java)
+
+                // 4. 发送请求
+                val response = api.generateChatCompletion(
+                    authHeader = "Bearer ${settings.aiApiKey}",
+                    request = com.example.myfit.data.api.ChatRequest(
+                        model = settings.aiModel,
+                        messages = messages // 直接使用 PromptManager 生成的消息列表
+                    )
+                )
+
+                val content = response.choices.firstOrNull()?.message?.content?.toString() ?: "未识别到内容"
+                _aiResponse.value = content
+
+                saveAiChatRecord(
+                    content = content,
+                    role = "assistant",
+                    userGoal = currentTrainingGoal,
+                    model = settings.aiModel
+                )
+
+            } catch (e: Exception) {
+                e.printStackTrace()
+                _aiResponse.value = "生成失败: ${e.message}\n(如果是 timeout，请检查网络或模型响应速度)"
+            } finally {
+                _aiIsLoading.value = false
+            }
+        }
+    }
+    // 在类方法区添加
+    fun saveAiChatRecord(content: String, role: String, userGoal: String? = null, model: String? = null) {
+        viewModelScope.launch(Dispatchers.IO) {
+            dao.insertAiChatRecord(AiChatRecord(
+                timestamp = System.currentTimeMillis(),
+                role = role,
+                content = content,
+                userGoal = userGoal,
+                modelUsed = model
+            ))
+        }
+    }
+
+    fun deleteAiChatRecord(id: Long) {
+        viewModelScope.launch(Dispatchers.IO) {
+            dao.deleteAiChatRecord(id)
+        }
+    }
+
+    // [新增] 用于回填历史记录到当前显示
+    fun loadAiResponseFromHistory(content: String) {
+        _aiResponse.value = content
+    }
+
+    // [新增] 识别器械/动作 (多模态 API 调用)
+    fun analyzeImage(context: Context, uri: Uri) {
+        val settings = userProfile.value
+        if (settings.aiApiKey.isBlank()) {
+            Toast.makeText(context, "请先在设置中配置 AI 模型", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        _aiIsLoading.value = true
+        _aiResponse.value = context.getString(R.string.msg_processing)
+
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                // 1. 压缩图片
+                val base64Image = compressImageToBase64(context, uri)
+                if (base64Image == null) {
+                    _aiResponse.value = context.getString(R.string.import_error, "Image Error")
+                    return@launch
+                }
+
+                // 2. 构建 Prompt
+                val messages = PromptManager.buildImageAnalysisPrompt(context, base64Image)
+
+                // 3. 配置网络客户端 (复用 generateWeeklyPlan 的逻辑)
+                val client = OkHttpClient.Builder()
+                    .connectTimeout(30, TimeUnit.SECONDS)
+                    .readTimeout(60, TimeUnit.SECONDS) // 图片识别可能稍慢
+                    .writeTimeout(30, TimeUnit.SECONDS)
+                    .build()
+
+                val defaultUrl = availableProviders.find { it.name == settings.aiProvider }?.defaultBaseUrl
+                    ?: "https://api.openai.com/"
+
+                val rawUrl = if (settings.aiBaseUrl.isNotBlank()) settings.aiBaseUrl else defaultUrl
+
+                // [新增] 运行时清洗：防止数据库里的旧数据导致 404
+                val cleanUrl = rawUrl.trim()
+                    .replace(Regex("v1/?$", RegexOption.IGNORE_CASE), "")
+                    .trimEnd('/')
+
+                val finalUrl = "$cleanUrl/" // 强制以 / 结尾
+
+                val retrofit = Retrofit.Builder()
+                    .baseUrl(finalUrl)
+                    .client(client)
+                    .addConverterFactory(GsonConverterFactory.create())
+                    .build()
+
+                val api = retrofit.create(com.example.myfit.data.api.AiService::class.java)
+
+                // 4. 调用 API
+                val response = api.generateChatCompletion(
+                    authHeader = "Bearer ${settings.aiApiKey}",
+                    request = com.example.myfit.data.api.ChatRequest(
+                        model = settings.aiModel,
+                        messages = messages // 发送多模态消息
+                    )
+                )
+
+                val content = response.choices.firstOrNull()?.message?.content?.toString() ?: context.getString(R.string.no_search_results)
+                _aiResponse.value = content
+
+                // 5. 保存记录 (注明是图片识别)
+                saveAiChatRecord(
+                    content = content,
+                    role = "assistant",
+                    userGoal = "[图片识别] 器械/动作分析",
+                    model = settings.aiModel
+                )
+
+            } catch (e: Exception) {
+                e.printStackTrace()
+                _aiResponse.value = "识别失败: ${e.message}\n(请确认当前模型是否支持图片输入，如 gpt-4o 或 gemini-1.5-pro)"
+            } finally {
+                _aiIsLoading.value = false
+            }
+        }
+    }
+
+    // [新增] 发送自由对话
+    fun sendFreeChat(context: Context, query: String) {
+        val settings = userProfile.value
+        if (settings.aiApiKey.isBlank()) {
+            Toast.makeText(context, context.getString(R.string.msg_config_missing), Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        _aiIsLoading.value = true
+        _aiResponse.value = null // 清空旧结果
+
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                // 1. 构建轻量级 Prompt
+                val messages = PromptManager.buildFreeChatPrompt(context, query)
+
+                // 2. 复用 Retrofit 构建逻辑 (建议抽取为 private fun getAiApi() 以减少重复)
+                val client = OkHttpClient.Builder()
+                    .connectTimeout(30, TimeUnit.SECONDS)
+                    .readTimeout(60, TimeUnit.SECONDS)
+                    .build()
+
+                val defaultUrl = availableProviders.find { it.name == settings.aiProvider }?.defaultBaseUrl
+                    ?: "https://api.openai.com/"
+
+                val rawUrl = if (settings.aiBaseUrl.isNotBlank()) settings.aiBaseUrl else defaultUrl
+
+                // [新增] 运行时清洗：防止数据库里的旧数据导致 404
+                val cleanUrl = rawUrl.trim()
+                    .replace(Regex("v1/?$", RegexOption.IGNORE_CASE), "")
+                    .trimEnd('/')
+
+                val finalUrl = "$cleanUrl/" // 强制以 / 结尾
+
+                val retrofit = Retrofit.Builder()
+                    .baseUrl(finalUrl)
+                    .client(client)
+                    .addConverterFactory(GsonConverterFactory.create())
+                    .build()
+
+                val api = retrofit.create(com.example.myfit.data.api.AiService::class.java)
+
+                // 3. 发送请求
+                val response = api.generateChatCompletion(
+                    authHeader = "Bearer ${settings.aiApiKey}",
+                    request = com.example.myfit.data.api.ChatRequest(
+                        model = settings.aiModel,
+                        messages = messages
+                    )
+                )
+
+                val content = response.choices.firstOrNull()?.message?.content?.toString() ?: "AI 无回复"
+                _aiResponse.value = content
+
+                // 4. 保存记录 (Role = free_chat)
+                saveAiChatRecord(content, "assistant", "Free Chat: $query", settings.aiModel)
+
+            } catch (e: Exception) {
+                e.printStackTrace()
+                _aiResponse.value = "Error: ${e.message}"
+            } finally {
+                _aiIsLoading.value = false
+            }
+        }
+    }
+
+    // [新增] 专门控制 CSV 生成过程的 Loading 状态
+    private val _isGeneratingCsv = MutableStateFlow(false)
+    val isGeneratingCsv = _isGeneratingCsv.asStateFlow()
+
+    // [新增] 基于建议生成 CSV (意图 B)
+    // onResult: 回调返回 CSV 字符串
+    fun generateCsvFromAdvice(context: Context, advice: String,userFeedback: String, onResult: (String) -> Unit) {
+        val settings = userProfile.value
+        if (settings.aiApiKey.isBlank()) return
+
+        // [修改] 使用新的 Loading 状态，避免与“获取建议”的大按钮 Loading 冲突
+        _isGeneratingCsv.value = true
+
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                // 1. 构建 Prompt
+                val messages = PromptManager.buildCsvPlanPrompt(context, advice, userFeedback)
+
+                // 2. 复用 Retrofit (略，建议抽取 getAiApi())
+                val client = OkHttpClient.Builder().connectTimeout(30, TimeUnit.SECONDS).build()
+                val baseUrl = if (settings.aiBaseUrl.isNotBlank()) settings.aiBaseUrl else "[https://api.openai.com/](https://api.openai.com/)"
+                val finalUrl = if (baseUrl.endsWith("/")) baseUrl else "$baseUrl/"
+                val retrofit = Retrofit.Builder().baseUrl(finalUrl).client(client).addConverterFactory(GsonConverterFactory.create()).build()
+                val api = retrofit.create(com.example.myfit.data.api.AiService::class.java)
+
+                // 3. 调用 API
+                val response = api.generateChatCompletion(
+                    authHeader = "Bearer ${settings.aiApiKey}",
+                    request = com.example.myfit.data.api.ChatRequest(
+                        model = settings.aiModel,
+                        messages = messages
+                    )
+                )
+
+                val csvContent = response.choices.firstOrNull()?.message?.content?.toString() ?: ""
+
+                // 简单的清洗：去掉可能的 Markdown 标记
+                val cleanCsv = csvContent.replace("```csv", "").replace("```", "").trim()
+
+                withContext(Dispatchers.Main) {
+                    onResult(cleanCsv)
+                }
+
+            } catch (e: Exception) {
+                e.printStackTrace()
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(context, "生成失败: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
+            } finally {
+                _aiIsLoading.value = false
+            }
+        }
+    }
+
+
 }
+
+
 

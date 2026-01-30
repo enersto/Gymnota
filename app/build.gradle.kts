@@ -15,8 +15,8 @@ android {
         applicationId = "com.example.myfit"
         minSdk = 26
         targetSdk = 36
-        versionCode = 5815
-        versionName = "5.8.15"
+        versionCode = 60
+        versionName = "6.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -75,6 +75,11 @@ dependencies {
     implementation("com.google.code.gson:gson:2.10.1") // 新增：用于处理复杂数据结构
 
     implementation("io.coil-kt:coil-compose:2.6.0") // 加载图片
+
+    // Networking
+    implementation("com.squareup.retrofit2:retrofit:2.9.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
+    implementation("com.squareup.okhttp3:logging-interceptor:4.11.0") // 可选，用于调试
 
 
 }

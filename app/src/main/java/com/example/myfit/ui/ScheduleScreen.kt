@@ -196,7 +196,7 @@ fun ScheduleScreen(navController: NavController, viewModel: MainViewModel) {
                     Text(stringResource(R.string.btn_backup_db), fontSize = 12.sp)
                 }
                 OutlinedButton(onClick = {
-                    restoreBackupLauncher.launch(arrayOf("application/*"))
+                    restoreBackupLauncher.launch(arrayOf("*/*"))
                 }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(8.dp)) {
                     Text(stringResource(R.string.btn_restore_db), fontSize = 12.sp)
                 }
@@ -235,6 +235,10 @@ fun ScheduleScreen(navController: NavController, viewModel: MainViewModel) {
                 Spacer(modifier = Modifier.weight(1f))
                 Text(">", color = Color.Gray)
             }
+        }
+
+        item {
+            AiConfigSection(viewModel)
         }
 
         // [新增] 8. Timer Settings (插入到 Data Management 之后)
@@ -1019,5 +1023,151 @@ fun NumberAdjuster(value: Int, range: IntRange, onValueChange: (Int) -> Unit) {
             onClick = { if (value < range.last) onValueChange(value + 1) },
             modifier = Modifier.size(32.dp).background(MaterialTheme.colorScheme.surface, CircleShape)
         ) { Text("+") }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AiConfigSection(viewModel: MainViewModel) {
+    val settings by viewModel.userProfile.collectAsState()
+    // [新增] 监听连接状态
+    val connectionState by viewModel.connectionState.collectAsState()
+
+    var expanded by remember { mutableStateOf(false) }
+    var apiKey by remember(settings) { mutableStateOf(settings.aiApiKey) }
+    var model by remember(settings) { mutableStateOf(settings.aiModel) }
+    var baseUrl by remember(settings) { mutableStateOf(settings.aiBaseUrl) }
+
+    val providers = viewModel.availableProviders.map { it.name }
+    var selectedProvider by remember(settings) { mutableStateOf(settings.aiProvider) }
+
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Text(stringResource(R.string.ai_config_title), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onBackground)
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Card(
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+
+                // 1. 服务商选择器
+                ExposedDropdownMenuBox(
+                    expanded = expanded,
+                    onExpandedChange = { expanded = !expanded }
+                ) {
+                    OutlinedTextField(
+                        value = selectedProvider,
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text(stringResource(R.string.ai_provider_label)) },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                        modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable, true).fillMaxWidth()
+                    )
+                    ExposedDropdownMenu(
+                        expanded = expanded,
+                        onDismissRequest = { expanded = false }
+                    ) {
+                        providers.forEach { providerName ->
+                            DropdownMenuItem(
+                                text = { Text(providerName) },
+                                onClick = {
+                                    // [核心修改] 切换服务商时，自动加载该服务商上次保存的配置
+                                    if (selectedProvider != providerName) {
+                                        val (savedKey, savedModel, savedUrl) = viewModel.getSavedProviderConfig(providerName)
+
+                                        apiKey = savedKey
+                                        model = savedModel
+                                        baseUrl = savedUrl
+                                    }
+
+                                    selectedProvider = providerName
+                                    expanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+
+                // 2. 参数输入框
+                OutlinedTextField(
+                    value = apiKey,
+                    onValueChange = { apiKey = it },
+                    label = { Text(stringResource(R.string.ai_api_key_label)) },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation()
+                )
+
+                OutlinedTextField(
+                    value = model,
+                    onValueChange = { model = it },
+                    label = { Text(stringResource(R.string.ai_model_label)) },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+
+                OutlinedTextField(
+                    value = baseUrl,
+                    onValueChange = { baseUrl = it },
+                    label = { Text(stringResource(R.string.ai_base_url_label)) },
+                    placeholder = { Text(stringResource(R.string.ai_base_url_hint)) },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+
+                // 3. 底部按钮行：测试连接 & 保存
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // [新增] 连接状态指示与测试按钮
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        // 状态图标
+                        when (connectionState) {
+                            is com.example.myfit.viewmodel.MainViewModel.ConnectionState.Testing -> {
+                                CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                            }
+                            is com.example.myfit.viewmodel.MainViewModel.ConnectionState.Success -> {
+                                Icon(Icons.Default.CheckCircle, null, tint = Color(0xFF4CAF50)) // Green
+                            }
+                            is com.example.myfit.viewmodel.MainViewModel.ConnectionState.Error -> {
+                                Icon(Icons.Default.Error, null, tint = MaterialTheme.colorScheme.error)
+                            }
+                            else -> {
+                                Icon(Icons.Default.Circle, null, tint = Color.Gray, modifier = Modifier.size(12.dp))
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.width(8.dp))
+
+                        TextButton(
+                            onClick = { viewModel.testAiConnection(selectedProvider, apiKey, model, baseUrl) },
+                            enabled = apiKey.isNotBlank()
+                        ) {
+                            Text(stringResource(R.string.btn_test_connection)) // 建议放入 strings.xml: btn_test_connection
+                        }
+                    }
+
+                    // 保存按钮
+                    Button(
+                        onClick = { viewModel.saveAiConfig(selectedProvider, apiKey, model, baseUrl) }
+                    ) {
+                        Text(stringResource(R.string.btn_save_config))
+                    }
+                }
+
+                // [新增] 显示错误信息
+                if (connectionState is com.example.myfit.viewmodel.MainViewModel.ConnectionState.Error) {
+                    Text(
+                        text = (connectionState as com.example.myfit.viewmodel.MainViewModel.ConnectionState.Error).message,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(start = 4.dp)
+                    )
+                }
+            }
+        }
     }
 }

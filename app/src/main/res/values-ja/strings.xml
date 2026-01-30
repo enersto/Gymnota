@@ -251,7 +251,7 @@
     <string name="msg_reset_exercises_warning">プリセット種目の名称と説明を現在の言語に更新します。作成したカスタム種目には影響しません。</string>
     <string name="btn_confirm">確認</string>
 
-    <string name="btn_update_lib_lang">言語を変更</string>
+    <string name="btn_update_lib_lang">種目の言語を変更</string>
 
     <string name="action_add_photo">写真を追加</string>
     <string name="action_change_photo">写真を変更</string>
@@ -270,5 +270,95 @@
     <string name="no_search_results">一致する種目がありません</string>
     <string name="action_clear_search">クリア</string>
     <string name="msg_added_to_plan">「%1$s」を追加しました</string>
+
+    <string name="tab_ai_coach">AIコーチ</string>
+    <string name="ai_coach_title">スマート・フィットネス</string>
+    <string name="ai_config_title">AIモデル設定</string>
+    <string name="ai_provider_label">プロバイダー</string>
+    <string name="ai_api_key_label">APIキー</string>
+    <string name="ai_model_label">モデル名</string>
+    <string name="ai_base_url_label">ベースURL (任意)</string>
+    <string name="ai_base_url_hint">例: https://api.deepseek.com</string>
+    <string name="ai_provider_openai">OpenAI</string>
+    <string name="ai_provider_deepseek">DeepSeek</string>
+    <string name="ai_provider_gemini">Google Gemini</string>
+    <string name="ai_provider_custom">カスタム</string>
+
+    <string name="btn_generate_weekly_plan">週間プラン作成</string>
+    <string name="msg_generating_plan">過去3週間のデータを分析中...</string>
+    <string name="msg_config_missing">設定でAIモデルを構成してください</string>
+    <string name="label_current_goal">現在の目標</string>
+    <string name="hint_input_goal">例：筋肥大、スクワット強化</string>
+    <string name="ai_response_title">AIのアドバイス</string>
+    <string name="btn_save_config">設定を保存</string>
+
+    <string name="title_ai_history">履歴</string>
+    <string name="msg_no_history">履歴はありません</string>
+    <string name="btn_close">閉じる</string>
+
+    <string name="label_context_length">参照期間</string>
+    <string name="option_1_week">1週間</string>
+    <string name="option_2_weeks">2週間</string>
+    <string name="option_3_weeks">3週間</string>
+    <string name="option_4_weeks">4週間</string>
+
+    <string name="prompt_system_role">あなたはプロのフィットネスコーチです。ユーザーのプロフィール、スケジュール設定、目標、過去のトレーニング記録に基づいて、来週の詳細なトレーニング計画を作成してください。注意：Markdownの表（テーブル）は使用せず、スマホで読みやすいようにリスト形式やテキスト形式を使用してください。</string>
+    <string name="prompt_user_profile">ユーザー情報: 性別=%1$s, 年齢=%2$d, 身長=%3$.1fcm</string>
+    <string name="prompt_user_goal">目標: %1$s</string>
+    <string name="prompt_schedule_title">現在のスケジュール設定 (遵守必須):</string>
+    <string name="prompt_history_title">過去 %1$d 週間の記録 (日付 - 種目 - 詳細セット):</string>
+
+    <string name="ai_status_configured">%1$s · %2$s</string>
+    <string name="ai_status_unconfigured">AI未設定</string>
+    <string name="btn_snap_photo">写真撮影</string>
+    <string name="btn_free_chat">自由会話</string>
+    <string name="hint_input_chat">質問を入力 (例：マシンの使い方、フォーム矯正)</string>
+
+    <string name="btn_send_message">送信</string>
+    <string name="msg_processing">処理中...</string>
+
+    <string name="prompt_system_vision">あなたはプロのフィットネスコーチです。画像内のフィットネス器具やエクササイズを特定し、簡潔に説明してください：1. 名称 2. 鍛えられる部位 3. ポイント。表形式は使用しないでください。</string>
+    <string name="prompt_user_vision_query">これは何ですか？使い方は？</string>
+
+    <string name="prompt_system_free_chat">あなたはプロのフィットネスコーチです。ユーザーのフィットネスに関する質問に、簡潔かつ専門的に答えてください。表形式は使用しないでください。</string>
+
+    <string name="label_focus">重点 (複数選択)</string>
+    <string name="focus_comprehensive">総合</string>
+    <string name="label_scene">環境・器具</string>
+    <string name="scene_gym">ジム</string>
+    <string name="scene_home_equip">自宅 (器具あり)</string>
+    <string name="scene_home_none">自宅 (自重のみ)</string>
+    <string name="scene_outdoor">屋外 (ラン/自転車)</string>
+
+    <string name="label_injuries">怪我・避ける部位</string>
+    <string name="hint_injuries_none">なし (選択)</string>
+    <string name="dialog_injuries_title">避ける部位を選択</string>
+
+    <string name="injury_knee">膝</string>
+    <string name="injury_lower_back">腰・下背部</string>
+    <string name="injury_shoulder">肩</string>
+    <string name="injury_wrist">手首</string>
+    <string name="injury_neck">首</string>
+
+    <string name="prompt_system_csv_generator">あなたはデータジェネレーターです。ユーザーのニーズと上記のアドバイスに基づいて、特定の形式でCSVデータを生成してください。以下のルールを厳守してください：
+1. CSVコンテンツのみを出力してください。Markdownコードブロックタグ（```csvなど）や説明文は含めないでください。
+2. データヘッダー：Day,Name,Category,Target,BodyPart,Equipment,IsUni,LogType
+3. Day は 1～7 の整数である必要があります。
+4. IsUni は true または false である必要があります。
+5. LogType: 0=筋力, 1=有酸素/時間, 2=回数のみ。
+6. BodyPart と Equipment は標準的な英語のキー（例: part_chest, equip_barbell）を使用し、不明な場合は空欄にしてください。
+    </string>
+
+    <string name="prompt_user_generate_csv">上記のアドバイスに基づいて、実行可能な週間プランのCSVデータを生成してください。</string>
+
+    <string name="btn_get_advice">アドバイスを取得</string>
+    <string name="btn_generate_and_import">プラン生成＆インポート</string>
+    <string name="title_confirm_plan">週間プランの確認</string>
+
+    <string name="msg_refine_dialog_hint">AIはアドバイスに基づいてCSVデータを生成します。修正希望（例：「水曜の走る量を減らして」）がある場合は、以下に追記してください：</string>
+    <string name="btn_test_connection">接続テスト</string>
+    <string name="msg_connection_success">接続成功</string>
+    <string name="msg_connection_failed">接続失敗: %1$s</string>
+    <string name="val_default_goal">総合的な体力向上</string>
 
 </resources>

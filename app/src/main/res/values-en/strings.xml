@@ -250,7 +250,7 @@
     <string name="msg_reset_exercises_warning">This will update the names and instructions of standard exercises to the current language. Your custom exercises will not be affected.</string>
     <string name="btn_confirm">Confirm</string>
 
-    <string name="btn_update_lib_lang">Change Language</string>
+    <string name="btn_update_lib_lang">Change Exercise Language</string>
 
     <string name="action_add_photo">Add Photo</string>
     <string name="action_change_photo">Change Photo</string>
@@ -269,4 +269,96 @@
     <string name="no_search_results">No matching exercises found</string>
     <string name="action_clear_search">Clear</string>
     <string name="msg_added_to_plan">Added "%1$s"</string>
+
+    <string name="tab_ai_coach">AI Coach</string>
+    <string name="ai_coach_title">Smart Fitness Assistant</string>
+    <string name="ai_config_title">AI Model Config</string>
+    <string name="ai_provider_label">Provider</string>
+    <string name="ai_api_key_label">API Key</string>
+    <string name="ai_model_label">Model Name</string>
+    <string name="ai_base_url_label">Base URL (Optional)</string>
+    <string name="ai_base_url_hint">E.g.: https://api.deepseek.com</string>
+    <string name="ai_provider_openai">OpenAI</string>
+    <string name="ai_provider_deepseek">DeepSeek</string>
+    <string name="ai_provider_gemini">Google Gemini</string>
+    <string name="ai_provider_custom">Custom</string>
+
+    <string name="btn_generate_weekly_plan">Generate Weekly Plan</string>
+    <string name="msg_generating_plan">Analyzing data from the last 3 weeks...</string>
+    <string name="msg_config_missing">Please configure the AI model in settings first</string>
+    <string name="label_current_goal">Current Goal</string>
+    <string name="hint_input_goal">E.g., Hypertrophy, increase squat max</string>
+    <string name="ai_response_title">AI Suggestion</string>
+    <string name="btn_save_config">Save Config</string>
+
+    <string name="title_ai_history">History</string>
+    <string name="msg_no_history">No history available</string>
+    <string name="btn_close">Close</string>
+
+    <string name="label_context_length">History Context</string>
+    <string name="option_1_week">1 Week</string>
+    <string name="option_2_weeks">2 Weeks</string>
+    <string name="option_3_weeks">3 Weeks</string>
+    <string name="option_4_weeks">4 Weeks</string>
+
+    <string name="prompt_system_role">You are a professional fitness coach. Create a detailed weekly training plan for the next week based on the user\'s profile, schedule settings, goal, and past training records. Note: Do NOT use Markdown tables; use lists or text format instead for mobile readability.</string>
+    <string name="prompt_user_profile">User Profile: Gender=%1$s, Age=%2$d, Height=%3$.1fcm</string>
+    <string name="prompt_user_goal">Goal: %1$s</string>
+    <string name="prompt_schedule_title">Current Schedule Config (Must obey):</string>
+    <string name="prompt_history_title">Last %1$d weeks records (Date - Exercise - Detailed Sets):</string>
+
+    <string name="ai_status_configured">%1$s · %2$s</string>
+    <string name="ai_status_unconfigured">AI Not Configured</string>
+    <string name="btn_snap_photo">Snap Photo</string>
+    <string name="btn_free_chat">Free Chat</string>
+    <string name="hint_input_chat">Ask anything (e.g., equipment usage, form correction)</string>
+
+    <string name="btn_send_message">Send</string>
+    <string name="msg_processing">Processing...</string>
+
+    <string name="prompt_system_vision">You are a professional fitness coach. Identify the fitness equipment or exercise in the image and briefly explain: 1. Name 2. Target Muscles 3. Key Points. Do NOT use tables.</string>
+    <string name="prompt_user_vision_query">What is this? How do I use it?</string>
+
+    <string name="prompt_system_free_chat">You are a professional fitness coach. Answer the user\'s fitness-related questions concisely and professionally. Do NOT use tables.</string>
+
+    <string name="label_focus">Focus (Multi-select)</string>
+    <string name="focus_comprehensive">Hybrid</string>
+    <string name="label_scene">Scene</string>
+    <string name="scene_gym">Gym</string>
+    <string name="scene_home_equip">Home (Basic Equip)</string>
+    <string name="scene_home_none">Home (Bodyweight)</string>
+    <string name="scene_outdoor">Outdoor (Run/Cardio)</string>
+
+    <string name="label_injuries">Avoid Areas / Injuries</string>
+    <string name="hint_injuries_none">None (Tap to select)</string>
+    <string name="dialog_injuries_title">Select Areas to Avoid</string>
+
+    <string name="injury_knee">Knee</string>
+    <string name="injury_lower_back">Lower Back</string>
+    <string name="injury_shoulder">Shoulder</string>
+    <string name="injury_wrist">Wrist</string>
+    <string name="injury_neck">Neck</string>
+
+    <string name="prompt_system_csv_generator">You are a data generator. Based on user needs and the advice above, generate CSV data in a specific format. Strictly adhere to the following rules:
+1. Output ONLY CSV content. Do NOT include Markdown code block tags (like ```csv) or any explanatory text.
+2. Data Header: Day,Name,Category,Target,BodyPart,Equipment,IsUni,LogType
+3. Day must be an integer from 1-7.
+4. IsUni must be true or false.
+5. LogType: 0=Strength, 1=Cardio/Duration, 2=Reps Only.
+6. BodyPart and Equipment should use standard English Keys (e.g., part_chest, equip_barbell); leave blank if unknown.
+    </string>
+
+    <string name="prompt_user_generate_csv">Based on the above advice, please generate executable weekly plan CSV data.</string>
+
+    <string name="btn_get_advice">Get Training Advice</string>
+    <string name="btn_generate_and_import">Generate &amp; Import Plan</string>
+    <string name="title_confirm_plan">Confirm Weekly Plan</string>
+
+    <string name="msg_refine_dialog_hint">AI will generate CSV data based on the advice. If you have modifications (e.g., "reduce Wednesday volume"), add them below:</string>
+    <string name="btn_test_connection">Test Connection</string>
+    <string name="msg_connection_success">Connection Successful</string>
+    <string name="msg_connection_failed">Connection Failed: %1$s</string>
+    <string name="val_default_goal">Overall Fitness Improvement</string>
+
+
 </resources>

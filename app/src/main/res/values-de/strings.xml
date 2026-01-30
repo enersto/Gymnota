@@ -251,7 +251,7 @@
     <string name="msg_reset_exercises_warning">Dies aktualisiert Namen und Anleitungen der Standardübungen auf die aktuelle Sprache. Eigene Übungen sind nicht betroffen.</string>
     <string name="btn_confirm">Bestätigen</string>
 
-    <string name="btn_update_lib_lang">Sprache ändern</string>
+    <string name="btn_update_lib_lang">Übungssprache ändern</string>
 
     <string name="action_add_photo">Foto hinzufügen</string>
     <string name="action_change_photo">Foto ändern</string>
@@ -270,5 +270,97 @@
     <string name="no_search_results">Keine Übung gefunden</string>
     <string name="action_clear_search">Löschen</string>
     <string name="msg_added_to_plan">„%1$s“ hinzugefügt</string>
+
+    <string name="tab_ai_coach">AI-Coach</string>
+    <string name="ai_coach_title">Smarter Fitness-Assistent</string>
+    <string name="ai_config_title">KI-Modell Konfiguration</string>
+    <string name="ai_provider_label">Anbieter</string>
+    <string name="ai_api_key_label">API Key</string>
+    <string name="ai_model_label">Modellname</string>
+    <string name="ai_base_url_label">Basis-URL (Optional)</string>
+    <string name="ai_base_url_hint">Z.B.: https://api.deepseek.com</string>
+    <string name="ai_provider_openai">OpenAI</string>
+    <string name="ai_provider_deepseek">DeepSeek</string>
+    <string name="ai_provider_gemini">Google Gemini</string>
+    <string name="ai_provider_custom">Benutzerdefiniert</string>
+
+    <string name="btn_generate_weekly_plan">Wochenplan erstellen</string>
+    <string name="msg_generating_plan">Analysiere Daten der letzten 3 Wochen...</string>
+    <string name="msg_config_missing">Bitte zuerst KI-Modell in Einstellungen konfigurieren</string>
+    <string name="label_current_goal">Aktuelles Ziel</string>
+    <string name="hint_input_goal">Z.B.: Hypertrophie, Kniebeugen verbessern</string>
+    <string name="ai_response_title">KI-Vorschlag</string>
+    <string name="btn_save_config">Konfiguration speichern</string>
+
+    <string name="title_ai_history">Verlauf</string>
+    <string name="msg_no_history">Kein Verlauf vorhanden</string>
+    <string name="btn_close">Schließen</string>
+
+    <string name="label_context_length">Referenzzeitraum</string>
+    <string name="option_1_week">1 Woche</string>
+    <string name="option_2_weeks">2 Wochen</string>
+    <string name="option_3_weeks">3 Wochen</string>
+    <string name="option_4_weeks">4 Wochen</string>
+
+    <string name="prompt_system_role">Du bist ein professioneller Fitnesstrainer. Erstelle einen detaillierten Wochenplan für die nächste Woche basierend auf dem Profil, den Zeitplaneinstellungen, dem Ziel und den Trainingsaufzeichnungen des Benutzers. Hinweis: Verwende KEINE Markdown-Tabellen, sondern Listen oder Textformat für bessere Lesbarkeit auf Mobilgeräten.</string>
+    <string name="prompt_user_profile">Profil: Geschlecht=%1$s, Alter=%2$d, Größe=%3$.1fcm</string>
+    <string name="prompt_user_goal">Ziel: %1$s</string>
+    <string name="prompt_schedule_title">Aktueller Zeitplan (Muss eingehalten werden):</string>
+    <string name="prompt_history_title">Aufzeichnungen der letzten %1$d Wochen (Datum - Übung - Details):</string>
+
+    <string name="ai_status_configured">%1$s · %2$s</string>
+    <string name="ai_status_unconfigured">KI nicht konfiguriert</string>
+    <string name="btn_snap_photo">Foto machen</string>
+    <string name="btn_free_chat">Freier Chat</string>
+    <string name="hint_input_chat">Frage etwas (z.B. Geräteerklärung, Formkorrektur)</string>
+
+    <string name="btn_send_message">Senden</string>
+    <string name="msg_processing">Verarbeite...</string>
+
+    <string name="prompt_system_vision">Du bist ein professioneller Fitnesstrainer. Identifiziere das Fitnessgerät oder die Übung auf dem Bild und erkläre kurz: 1. Name 2. Zielmuskeln 3. Wichtige Punkte. Verwende KEINE Tabellen.</string>
+    <string name="prompt_user_vision_query">Was ist das? Wie trainiere ich damit?</string>
+
+    <string name="prompt_system_free_chat">Du bist ein professioneller Fitnesstrainer. Beantworte die Fitnessfragen des Benutzers prägnant und professionell. Verwende KEINE Tabellen.</string>
+
+    <string name="label_focus">Fokus (Mehrfachauswahl)</string>
+    <string name="focus_comprehensive">Mix</string>
+    <string name="label_scene">Ort/Geräte</string>
+    <string name="scene_gym">Studio</string>
+    <string name="scene_home_equip">Zuhause (Kleingeräte)</string>
+    <string name="scene_home_none">Zuhause (Ohne Geräte)</string>
+    <string name="scene_outdoor">Outdoor (Laufen/Rad)</string>
+
+    <string name="label_injuries">Verletzungen / Meiden</string>
+    <string name="hint_injuries_none">Keine (Tippen)</string>
+    <string name="dialog_injuries_title">Zu meidende Bereiche wählen</string>
+
+    <string name="injury_knee">Knie</string>
+    <string name="injury_lower_back">Unterer Rücken</string>
+    <string name="injury_shoulder">Schulter</string>
+    <string name="injury_wrist">Handgelenk</string>
+    <string name="injury_neck">Nacken</string>
+
+    <string name="prompt_system_csv_generator">Du bist ein Datengenerator. Erstelle basierend auf den Benutzerbedürfnissen und den obigen Ratschlägen CSV-Daten in einem bestimmten Format. Halte dich streng an folgende Regeln:
+1. Gib NUR CSV-Inhalte aus. Keine Markdown-Codeblöcke (wie ```csv) oder erklärenden Text.
+2. Daten-Header: Day,Name,Category,Target,BodyPart,Equipment,IsUni,LogType
+3. Day muss eine ganze Zahl von 1-7 sein.
+4. IsUni muss true oder false sein.
+5. LogType: 0=Kraft, 1=Cardio/Zeit, 2=Nur Wiederholungen.
+6. BodyPart und Equipment sollten englische Standard-Keys verwenden (z.B. part_chest, equip_barbell); bei Unklarheit leer lassen.
+    </string>
+
+    <string name="prompt_user_generate_csv">Bitte generiere basierend auf den obigen Ratschlägen ausführbare CSV-Daten für den Wochenplan.</string>
+
+    <string name="btn_get_advice">Trainingsvorschlag holen</string>
+    <string name="btn_generate_and_import">Plan erstellen &amp; importieren</string>
+    <string name="title_confirm_plan">Wochenplan bestätigen</string>
+
+    <string name="msg_refine_dialog_hint">Die KI generiert CSV-Daten basierend auf dem Vorschlag. Falls du Änderungswünsche hast (z.B. "Mittwoch weniger laufen"), füge sie unten hinzu:</string>
+    <string name="btn_test_connection">Verbindung testen</string>
+    <string name="msg_connection_success">Verbindung erfolgreich</string>
+    <string name="msg_connection_failed">Verbindung fehlgeschlagen: %1$s</string>
+    <string name="val_default_goal">Allgemeine Fitnessverbesserung</string>
+
+
 
 </resources>

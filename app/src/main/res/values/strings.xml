@@ -252,7 +252,7 @@
     <string name="msg_reset_exercises_warning">这将把系统预设动作的名称和说明更新为当前语言。您的自定义动作不会受到影响。</string>
     <string name="btn_confirm">确认</string>
 
-    <string name="btn_update_lib_lang">更改语言</string>
+    <string name="btn_update_lib_lang">更改动作语言</string>
 
     <string name="action_add_photo">添加照片</string>
     <string name="action_change_photo">更换照片</string>
@@ -272,6 +272,93 @@
     <string name="action_clear_search">清除</string>
     <string name="msg_added_to_plan">已添加「%1$s」</string>
 
+    <string name="tab_ai_coach">AI 私教</string>
+    <string name="ai_coach_title">智能健身助手</string>
+    <string name="ai_config_title">AI 模型配置</string>
+    <string name="ai_provider_label">服务商</string>
+    <string name="ai_api_key_label">API Key</string>
+    <string name="ai_model_label">模型名称</string>
+    <string name="ai_base_url_label">Base URL (选填)</string>
+    <string name="ai_base_url_hint">例如: https://api.deepseek.com</string>
+    <string name="ai_provider_openai">OpenAI</string>
+    <string name="ai_provider_deepseek">DeepSeek</string>
+    <string name="ai_provider_gemini">Google Gemini</string>
+    <string name="ai_provider_custom">自定义</string>
+
+    <string name="btn_generate_weekly_plan">生成周度计划</string>
+    <string name="msg_generating_plan">正在分析最近 3 周数据...</string>
+    <string name="msg_config_missing">请先在设置中配置 AI 模型</string>
+    <string name="label_current_goal">当前目标</string>
+    <string name="hint_input_goal">例如：增强胸肌厚度，提高深蹲重量</string>
+    <string name="ai_response_title">AI 建议</string>
+    <string name="btn_save_config">保存配置</string>
+
+    <string name="title_ai_history">历史建议</string>
+    <string name="msg_no_history">暂无历史记录</string>
+    <string name="btn_close">关闭</string>
+
+    <string name="label_context_length">参考历史时长</string>
+    <string name="option_1_week">1周</string>
+    <string name="option_2_weeks">2周</string>
+    <string name="option_3_weeks">3周</string>
+    <string name="option_4_weeks">4周</string>
+
+    <string name="prompt_system_role">你是一个专业的健身教练。请根据用户的档案、作息设定、目标和过往训练记录，制定下一周的详细训练计划。注意：请勿使用 Markdown 表格，请使用列表或文本格式展示，以便手机阅读。</string>
+    <string name="prompt_user_profile">用户档案: 性别=%1$s, 年龄=%2$d, 身高=%3$.1fcm</string>
+    <string name="prompt_user_goal">训练目标: %1$s</string>
+    <string name="prompt_schedule_title">当前周作息设定 (必须遵守):</string>
+    <string name="prompt_history_title">最近 %1$d 周训练记录 (日期 - 动作 - 详细组数数据):</string>
+    <string name="ai_status_configured">%1$s · %2$s</string> <string name="ai_status_unconfigured">未配置模型</string>
+    <string name="btn_snap_photo">拍一拍</string>
+    <string name="btn_free_chat">自由对话</string>
+    <string name="hint_input_chat">想问什么？(例如：器械用法、动作纠正)</string>
+
+    <string name="btn_send_message">发送消息</string>
+    <string name="msg_processing">处理中...</string>
+
+    <string name="prompt_system_vision">你是一个专业的健身教练。请识别图片中的健身器械或动作，并简要说明：1. 名称 2. 锻炼部位 3. 动作要领。请勿使用表格。</string>
+    <string name="prompt_user_vision_query">这是什么？怎么练？</string>
+
+    <string name="prompt_system_free_chat">你是一个专业的健身教练。请简洁、专业地回答用户的健身相关问题。请勿使用表格。</string>
+
+    <string name="label_focus">训练重心 (多选)</string>
+    <string name="focus_comprehensive">综合</string>
+    <string name="label_scene">器械场景</string>
+    <string name="scene_gym">健身房</string>
+    <string name="scene_home_equip">居家 (简易器械)</string>
+    <string name="scene_home_none">居家 (无器械/自重)</string>
+    <string name="scene_outdoor">户外 (跑步/骑行)</string>
+
+    <string name="label_injuries">避开部位 / 伤痛禁忌</string>
+    <string name="hint_injuries_none">无 (点击选择)</string>
+    <string name="dialog_injuries_title">选择需避开的部位</string>
+
+    <string name="injury_knee">膝盖</string>
+    <string name="injury_lower_back">下背/腰椎</string>
+    <string name="injury_shoulder">肩部</string>
+    <string name="injury_wrist">手腕</string>
+    <string name="injury_neck">颈椎</string>
+
+    <string name="prompt_system_csv_generator">你是一个数据生成器。请根据用户的需求和上文的建议，生成符合特定格式的 CSV 数据。严格遵守以下规则：
+1. 只输出 CSV 内容，不要包含 Markdown 代码块标记（如 ```csv）、不要包含任何解释性文字。
+2. 数据格式头：Day,Name,Category,Target,BodyPart,Equipment,IsUni,LogType
+3. Day 必须是 1-7 的整数。
+4. IsUni 必须是 true 或 false。
+5. LogType: 0=力量, 1=有氧/计时, 2=仅次数。
+6. BodyPart 和 Equipment 尽量使用标准的英文 Key (如 part_chest, equip_barbell)，如果不知道则留空。
+    </string>
+
+    <string name="prompt_user_generate_csv">请基于上述建议，生成可执行的周计划 CSV 数据。</string>
+
+    <string name="btn_get_advice">获取训练建议</string>
+    <string name="btn_generate_and_import">生成并导入此计划</string>
+    <string name="title_confirm_plan">确认周计划</string>
+
+    <string name="msg_refine_dialog_hint">AI 将基于建议生成 CSV 数据。如有修改意见（如“减少周三跑量”），请在下方补充：</string>
+    <string name="btn_test_connection">测试连接</string>
+    <string name="msg_connection_success">连接成功</string>
+    <string name="msg_connection_failed">连接失败: %1$s</string>
+    <string name="val_default_goal">综合体能提升</string>
 
 
 </resources>
