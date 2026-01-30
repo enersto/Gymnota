@@ -180,7 +180,37 @@ object PromptManager {
     fun buildCsvPlanPrompt(context: Context, adviceContent: String, userFeedback: String = ""): List<ChatMessage> {
         val systemPrompt = context.getString(R.string.prompt_system_csv_generator)
 
-        var userPromptContent = context.getString(R.string.prompt_user_generate_csv) + "\n\nBased on advice:\n" + adviceContent
+        // 1. 定义 App 支持的合法 Key (白名单)
+        val validBodyParts = listOf(
+            "part_chest", "part_back", "part_shoulders",
+            "part_arms", "part_abs", "part_cardio",
+            "part_hips", "part_thighs", "part_calves", "part_other"
+        )
+        val validEquipment = listOf(
+            "equip_barbell", "equip_dumbbell", "equip_machine", "equip_cable",
+            "equip_bodyweight", "equip_cardio_machine", "equip_kettlebell",
+            "equip_smith_machine", "equip_resistance_band", "equip_medicine_ball",
+            "equip_trx", "equip_bench", "equip_other"
+        )
+
+        // 2. 构建约束指令
+        // 显式告诉 AI：如果遇到 "Triceps"，必须映射到 "part_arms"；遇到 "Core"，必须映射到 "part_abs"
+        val constraintPrompt = """
+            
+            IMPORTANT - STRICT FORMAT RULES:
+            1. For 'BodyPart' column, you MUST ONLY use one of these exact keys:
+            [${validBodyParts.joinToString(", ")}]
+            (Rule: Map 'triceps'/'biceps'/'forearms' -> 'part_arms'. Map 'core' -> 'part_abs'. Map 'glutes' -> 'part_hips'. Map 'quads'/'hamstrings' -> 'part_thighs'.)
+            
+            2. For 'Equipment' column, you MUST ONLY use one of these exact keys:
+            [${validEquipment.joinToString(", ")}]
+            
+        """.trimIndent()
+
+        // 3. 拼接用户 Prompt
+        var userPromptContent = context.getString(R.string.prompt_user_generate_csv) +
+                "\n$constraintPrompt" + // 插入约束
+                "\n\nBased on advice:\n" + adviceContent
 
         // Append user feedback if present
         if (userFeedback.isNotBlank()) {
