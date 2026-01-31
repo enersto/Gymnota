@@ -64,9 +64,14 @@ object PromptManager {
                 "HOME_EQUIP" -> resources.getString(R.string.scene_home_equip)
                 "HOME_NONE" -> resources.getString(R.string.scene_home_none)
                 "OUTDOOR" -> resources.getString(R.string.scene_outdoor)
+                // [新增] 新场景映射
+                "POOL" -> resources.getString(R.string.scene_pool)
+                "YOGA_STUDIO" -> resources.getString(R.string.scene_yoga)
+                "LIMITED_GYM" -> resources.getString(R.string.scene_limited_gym)
+                "CROSSFIT_BOX" -> resources.getString(R.string.scene_crossfit)
                 else -> resources.getString(R.string.scene_gym)
             }
-        }.joinToString(" + ") // 用 " + " 连接多个场景
+        }.joinToString(" + ")
 
         sb.append("- Scene: $sceneText\n")
 
@@ -151,16 +156,6 @@ object PromptManager {
     private fun getDayTypeName(type: DayType): String {
         return type.name // 直接返回枚举名，AI通常能理解 (CORE, REST, STRENGTH...)
     }
-
-    // [新增] 自由对话 Prompt (轻量级，无历史记录)
-    fun buildFreeChatPrompt(context: Context, userQuery: String): List<ChatMessage> {
-        val systemPrompt = context.getString(R.string.prompt_system_free_chat)
-        return listOf(
-            ChatMessage("system", systemPrompt),
-            ChatMessage("user", userQuery)
-        )
-    }
-
     // [新增] 根据当前语言环境，追加强制语言指令
     private fun getLanguageInstruction(context: Context): String {
         val locale = context.resources.configuration.locales[0]
@@ -171,6 +166,34 @@ object PromptManager {
             "es" -> "\n\n(Por favor, responda en español.)"
             else -> "\n\n(请务必使用中文回答。)"
         }
+    }
+
+    // [修改] 自由对话 Prompt：增加语言强制指令
+    fun buildFreeChatPrompt(context: Context, userQuery: String): List<ChatMessage> {
+        val systemPrompt = context.getString(R.string.prompt_system_free_chat)
+        val langInstruction = getLanguageInstruction(context) // [新增] 获取语言指令
+        return listOf(
+            ChatMessage("system", systemPrompt + langInstruction), // [修改] 拼接指令
+            ChatMessage("user", userQuery)
+        )
+    }
+    // [新增] 自由对话的多模态 Prompt (自定义文本 + 图片)
+    fun buildMultimodalChatPrompt(context: Context, userQuery: String, base64Image: String): List<ChatMessage> {
+        val systemPrompt = context.getString(R.string.prompt_system_free_chat)
+        val langInstruction = getLanguageInstruction(context)
+
+        val contentParts = listOf(
+            ContentPart(type = "text", text = userQuery),
+            ContentPart(
+                type = "image_url",
+                image_url = ImageUrl(url = "data:image/jpeg;base64,$base64Image")
+            )
+        )
+
+        return listOf(
+            ChatMessage("system", systemPrompt + langInstruction),
+            ChatMessage("user", contentParts as Any)
+        )
     }
 
     // [新增] 构建 CSV 生成请求
@@ -204,6 +227,10 @@ object PromptManager {
             
             2. For 'Equipment' column, you MUST ONLY use one of these exact keys:
             [${validEquipment.joinToString(", ")}]
+            
+            3. OUTPUT CSV COLUMNS MUST BE EXACTLY:
+            Day,Name,Category,Target,BodyPart,Equipment,IsUni,LogType,Instruction
+            (The 'Instruction' column must be a short tip, e.g., "Keep back straight".)
             
         """.trimIndent()
 

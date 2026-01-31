@@ -35,13 +35,20 @@
     <string name="about">关于</string>
 
     <string name="import_dialog_title">粘贴 CSV 内容</string>
-    <string name="import_dialog_hint">格式：\nDay,Name,Category,Target,BodyPart,Equipment,IsUni,LogType\n\n注意：\nDay: 1-7 (周一至周日)\nIsUni: true/false (单边)\nLogType: 0=重量 x 次数, 1=计时, 2=次数</string>    <string name="import_btn">导入</string>
-    <string name="import_csv_template">Day,Name,Category,Target,BodyPart,Equipment,IsUnilateral,LogType\n
-\n1,坐姿推胸,STRENGTH,3x12,part_chest,equip_machine,false,0
-\n1,平板支撑,CORE,3x60s,part_abs,equip_bodyweight,false,1
-\n2,深蹲,STRENGTH,4x10,part_thighs,equip_barbell,false,0
-\n3,有氧跑,CARDIO,30min,part_cardio,equip_cardio_machine,false,1
-\n4,卷腹,CORE,4x20,part_abs,equip_bodyweight,false,2</string>
+    <string name="import_dialog_hint">格式：
+    Day,Name,Category,Target,BodyPart,Equipment,IsUni,LogType,Instruction\n
+    \n注意：
+    \nDay: 1-7 (周一至周日)
+    \nIsUni: true/false (单边)
+    \nLogType: 0=重量, 1=计时, 2=次数
+    \nInstruction: 动作要领说明</string>
+    <string name="import_btn">导入</string>
+    <string name="import_csv_template">Day,Name,Category,Target,BodyPart,Equipment,IsUnilateral,LogType,Instruction
+\n1,坐姿推胸,STRENGTH,3x12,part_chest,equip_machine,false,0,挺胸收腹保持稳定
+\n1,平板支撑,CORE,3x60s,part_abs,equip_bodyweight,false,1,保持身体呈一条直线
+\n2,深蹲,STRENGTH,4x10,part_thighs,equip_barbell,false,0,膝盖与脚尖方向一致
+\n3,有氧跑,CARDIO,30min,part_cardio,equip_cardio_machine,false,1,保持呼吸节奏
+\n4,卷腹,CORE,4x20,part_abs,equip_bodyweight,false,2,依靠腹部力量卷起</string>
 
     <string name="week_1">周一</string>
     <string name="week_2">周二</string>
@@ -341,12 +348,13 @@
 
     <string name="prompt_system_csv_generator">你是一个数据生成器。请根据用户的需求和上文的建议，生成符合特定格式的 CSV 数据。严格遵守以下规则：
 1. 只输出 CSV 内容，不要包含 Markdown 代码块标记（如 ```csv）、不要包含任何解释性文字。
-2. 数据格式头：Day,Name,Category,Target,BodyPart,Equipment,IsUni,LogType
+2. 数据格式头：Day,Name,Category,Target,BodyPart,Equipment,IsUni,LogType,Instruction
 3. Day 必须是 1-7 的整数。
 4. IsUni 必须是 true 或 false。
 5. LogType: 0=力量, 1=有氧/计时, 2=仅次数。
-6. BodyPart 和 Equipment 尽量使用标准的英文 Key (如 part_chest, equip_barbell)，如果不知道则留空。
-    </string>
+6. BodyPart 和 Equipment 尽量使用标准的英文 Key (如 part_chest, equip_barbell)。
+7. Instruction: 简短的动作要领说明（15字以内），如果是休息日则留空。
+</string>
 
     <string name="prompt_user_generate_csv">请基于上述建议，生成可执行的周计划 CSV 数据。</string>
 
@@ -359,6 +367,11 @@
     <string name="msg_connection_success">连接成功</string>
     <string name="msg_connection_failed">连接失败: %1$s</string>
     <string name="val_default_goal">综合体能提升</string>
+
+    <string name="scene_pool">游泳池</string>
+    <string name="scene_yoga">瑜伽/普拉提房</string>
+    <string name="scene_limited_gym">酒店/简易健身房</string>
+    <string name="scene_crossfit">综合体能馆 (CrossFit)</string>
 
 
 </resources>

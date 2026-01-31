@@ -98,7 +98,7 @@ data class WeeklyRoutineItem(
     val equipment: String = "",
     val isUnilateral: Boolean = false, // [新增]
     val logType: Int = 0,
-    val imageUri: String? = null // [新增]
+    val imageUri: String? = null// [新增]
 )
 
 // [新增] 记录类型枚举

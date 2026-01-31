@@ -63,6 +63,13 @@ import androidx.compose.material.icons.filled.ArrowForwardIos
 
 import androidx.compose.material.icons.filled.Download // [新增] 下载/导入图标
 import android.content.Context
+import androidx.compose.material.icons.filled.Close //以此类推，确保有 Close 图标
+import androidx.compose.material.icons.filled.Image // 新增相册图标
+
+// ... 其他 imports ...
+import androidx.compose.ui.draw.clip // 确保这行存在
+import androidx.compose.ui.layout.ContentScale // [新增]
+import coil.compose.AsyncImage // [新增] 必须添加这个才能显示图片
 
 private fun createTempPictureUri(context: android.content.Context): Uri? {
     return try {
@@ -98,6 +105,18 @@ fun AICoachScreen(viewModel: MainViewModel,navController: NavController) {
     var tempCsvData by remember { mutableStateOf("") }
     // [新增] 控制“优化并生成”对话框的显示
     var showRefineDialog by remember { mutableStateOf(false) }
+
+    // [新增] 聊天图片状态
+    var chatImageUri by remember { mutableStateOf<Uri?>(null) }
+
+    // [新增] 相册选择器 (用于聊天)
+    val chatGalleryLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        if (uri != null) {
+            chatImageUri = uri
+            // 如果不在自由对话模式，自动切换过去
+            isFreeChatMode = true
+        }
+    }
 
     // 辅助函数：创建临时文件 URI
     fun createTempPictureUri(): Uri? {
@@ -270,68 +289,140 @@ fun AICoachScreen(viewModel: MainViewModel,navController: NavController) {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // [新增] 只有在非自由对话模式下才显示详细配置
-        if (!isFreeChatMode) {
-            PlanConfigCard(viewModel)
-            Spacer(modifier = Modifier.height(16.dp))
-        }
+        // [修复] 根据模式显示不同的输入区域
+        if (isFreeChatMode) {
+                // ==================== 自由对话模式 ====================
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    // A. 图片预览气泡 (仅在已选图时显示)
+                    if (chatImageUri != null) {
+                        Box(
+                            modifier = Modifier
+                                .padding(bottom = 8.dp)
+                                .size(80.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(MaterialTheme.colorScheme.surfaceVariant)
+                        ) {
+                            AsyncImage(
+                                model = chatImageUri,
+                                contentDescription = null,
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
+                            )
+                            // 删除图片的小叉号
+                            IconButton(
+                                onClick = { chatImageUri = null },
+                                modifier = Modifier
+                                    .align(Alignment.TopEnd)
+                                    .size(24.dp)
+                                    .background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(0.dp, 0.dp, 0.dp, 8.dp))
+                            ) {
+                                Icon(Icons.Default.Close, null, tint = Color.White, modifier = Modifier.size(16.dp))
+                            }
+                        }
+                    }
 
-        // [修改] 输入框 Hint 根据模式变化
-        OutlinedTextField(
-            value = viewModel.currentTrainingGoal,
-            onValueChange = { viewModel.currentTrainingGoal = it },
-            label = { Text(if (isFreeChatMode) stringResource(R.string.btn_free_chat) else stringResource(R.string.label_current_goal))},
-            placeholder = {
-                Text(
-                    if (isFreeChatMode) stringResource(R.string.hint_input_chat) else stringResource(
-                        R.string.hint_input_goal
+                    // B. 输入框 (带相册按钮)
+                    OutlinedTextField(
+                        value = viewModel.currentTrainingGoal,
+                        onValueChange = { viewModel.currentTrainingGoal = it },
+                        label = { Text(stringResource(R.string.btn_free_chat)) },
+                        placeholder = { Text(stringResource(R.string.hint_input_chat)) },
+                        modifier = Modifier.fillMaxWidth(),
+                        maxLines = 3,
+                        trailingIcon = {
+                            IconButton(onClick = { chatGalleryLauncher.launch("image/*") }) {
+                                Icon(
+                                    Icons.Default.Image,
+                                    contentDescription = "Add Image",
+                                    tint = if (chatImageUri != null) MaterialTheme.colorScheme.primary else Color.Gray
+                                )
+                            }
+                        }
                     )
-                )
-            },
-            modifier = Modifier.fillMaxWidth(),
-            maxLines = 3
-        )
+                }
+
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // 生成按钮
+// ------------------------------------------------------
+// 3. 发送/确认按钮 (逻辑也需要微调)
+// ------------------------------------------------------
         Button(
             onClick = {
                 if (isFreeChatMode) {
-                    // 模式 A: 自由对话
-                    if (viewModel.currentTrainingGoal.isNotBlank()) {
-                        viewModel.sendFreeChat(context, viewModel.currentTrainingGoal)
+                    // 自由对话逻辑：支持文字 OR 图片
+                    if (viewModel.currentTrainingGoal.isNotBlank() || chatImageUri != null) {
+                        viewModel.sendFreeChat(context, viewModel.currentTrainingGoal, chatImageUri)
+                        chatImageUri = null // 发送后清空图片
                     } else {
-                        Toast.makeText(
-                            context,
-                            context.getString(R.string.hint_input_chat),
-                            Toast.LENGTH_SHORT
-                        ).show()
+                        Toast.makeText(context, context.getString(R.string.hint_input_chat), Toast.LENGTH_SHORT).show()
                     }
                 } else {
-                    // 模式 B: 生成周计划
+                    // 周计划逻辑
                     viewModel.generateWeeklyPlan(context)
                 }
             },
             enabled = !isLoading,
-            modifier = Modifier.fillMaxWidth()
-        ) {
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            contentPadding = PaddingValues(vertical = 12.dp)
+        ){
             if (isLoading) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(24.dp),
-                    color = MaterialTheme.colorScheme.onPrimary
-                )
+                CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Color.White, strokeWidth = 2.dp)
                 Spacer(modifier = Modifier.width(8.dp))
-                // 显示通用加载文案
                 Text(stringResource(R.string.msg_processing))
             } else {
-                // 根据模式显示不同文字
-                Text(
-                    if (isFreeChatMode) stringResource(R.string.btn_send_message)
-                    else stringResource(R.string.btn_get_advice) // [修改] 改为 "获取训练建议"
-                )
+                Text(stringResource(R.string.btn_send_message))
             }
         }
+        } else {
+            // ==================== 周计划模式 ====================
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+            // 显示详细配置卡片
+            PlanConfigCard(viewModel)
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // 目标输入框
+            OutlinedTextField(
+                value = viewModel.currentTrainingGoal,
+                onValueChange = { viewModel.currentTrainingGoal = it },
+                label = { Text(if (isFreeChatMode) stringResource(R.string.btn_free_chat) else stringResource(R.string.label_current_goal))},
+                placeholder = {
+                    Text(
+                        if (isFreeChatMode) stringResource(R.string.hint_input_chat) else stringResource(
+                            R.string.hint_input_goal
+                        )
+                    )
+                },
+                modifier = Modifier.fillMaxWidth(),
+                maxLines = 3
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+                // 生成周计划按钮
+                Button(
+                    onClick = {
+                        viewModel.generateWeeklyPlan(context)
+                    },
+                    enabled = !isLoading,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    contentPadding = PaddingValues(vertical = 12.dp)
+                ) {
+                    if (isLoading) {
+                        CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Color.White, strokeWidth = 2.dp)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(stringResource(R.string.msg_processing))
+                    } else {
+                        Text(stringResource(R.string.btn_get_advice))
+                    }
+                }
+
+            }
 
         Spacer(modifier = Modifier.height(24.dp))
 
@@ -594,11 +685,17 @@ fun PlanConfigCard(viewModel: MainViewModel) {
                 verticalArrangement = Arrangement.spacedBy(8.dp), // [新增] 增加换行后的垂直间距
                 modifier = Modifier.padding(top = 4.dp)
                 ) {
+                // [修改] 3. 器械场景 (单选) - 增加新选项
                 val sceneOptions = listOf(
                     "GYM" to R.string.scene_gym,
                     "HOME_EQUIP" to R.string.scene_home_equip,
                     "HOME_NONE" to R.string.scene_home_none,
-                    "OUTDOOR" to R.string.scene_outdoor
+                    "OUTDOOR" to R.string.scene_outdoor,
+                    // [新增]
+                    "POOL" to R.string.scene_pool,
+                    "YOGA_STUDIO" to R.string.scene_yoga,
+                    "LIMITED_GYM" to R.string.scene_limited_gym,
+                    "CROSSFIT_BOX" to R.string.scene_crossfit
                 )
                 sceneOptions.forEach { (key, resId) ->
                     val isSelected = viewModel.selectedScene.contains(key)

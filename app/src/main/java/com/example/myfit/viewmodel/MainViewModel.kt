@@ -600,7 +600,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             bodyPart = template.bodyPart,
             equipment = template.equipment,
             isUnilateral = template.isUnilateral,
-            logType = template.logType // [新增]
+            logType = template.logType// [新增]
         ))
     }
 
@@ -836,7 +836,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 data class PendingItem(
                     val day: Int, val name: String, val category: String, val target: String,
                     val bodyPart: String, val equipment: String, val isUni: Boolean,
-                    val logType: Int
+                    val logType: Int,
+                    val instruction: String
                 )
 
                 val pendingItems = mutableListOf<PendingItem>()
@@ -863,8 +864,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         }
                         val logType = if (parts.size > 7) parts[7].toIntOrNull() ?: inferredLogType else inferredLogType
 
+                        // [新增] 解析第 9 列 (索引 8) Instruction
+                        // 使用 getOrNull 防止旧版 CSV 越界，并去掉可能的引号
+                        val instructionText = parts.getOrNull(8)?.trim()?.replace("\"", "") ?: ""
+
+
                         daysToOverwrite.add(day) // 标记这一天需要被覆盖
-                        pendingItems.add(PendingItem(day, name, category, target, bodyPart, equipment, isUni,logType))
+                        pendingItems.add(PendingItem(day, name, category, target, bodyPart, equipment, isUni,logType,
+                            instructionText))
                     }
                 }
 
@@ -891,7 +898,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                             bodyPart = item.bodyPart,
                             equipment = item.equipment,
                             isUnilateral = item.isUni,
-                            logType = item.logType
+                            logType = item.logType,
+                            instruction = item.instruction // [新增] 写入数据库
                         )
                         dao.insertTemplate(newTemp)
                     } else {
@@ -1340,7 +1348,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     // [新增] 发送自由对话
-    fun sendFreeChat(context: Context, query: String) {
+    fun sendFreeChat(context: Context, query: String,imageUri: Uri? = null) {
         val settings = userProfile.value
         if (settings.aiApiKey.isBlank()) {
             Toast.makeText(context, context.getString(R.string.msg_config_missing), Toast.LENGTH_SHORT).show()
@@ -1352,8 +1360,23 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                // 1. 构建轻量级 Prompt
-                val messages = PromptManager.buildFreeChatPrompt(context, query)
+                // [修改] 根据是否有图片构建不同的 Prompt
+                val messages = if (imageUri != null) {
+                    val base64 = compressImageToBase64(context, imageUri)
+                    if (base64 != null) {
+                        // [修改] 必须添加前缀，否则 API 无法识别图片
+
+                        PromptManager.buildMultimodalChatPrompt(context, query, base64)
+                    } else {
+                        // 图片处理失败则回退到纯文本，并提示用户
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(context, "图片处理失败，发送纯文本", Toast.LENGTH_SHORT).show()
+                        }
+                        PromptManager.buildFreeChatPrompt(context, query)
+                    }
+                } else {
+                    PromptManager.buildFreeChatPrompt(context, query)
+                }
 
                 // 2. 复用 Retrofit 构建逻辑 (建议抽取为 private fun getAiApi() 以减少重复)
                 val client = OkHttpClient.Builder()
@@ -1393,7 +1416,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 val content = response.choices.firstOrNull()?.message?.content?.toString() ?: "AI 无回复"
                 _aiResponse.value = content
 
-                // 4. 保存记录 (Role = free_chat)
+                // 保存记录 (如果带图，在 Log 里标注一下)
+                val logPrefix = if (imageUri != null) "[Image] " else ""
                 saveAiChatRecord(content, "assistant", "Free Chat: $query", settings.aiModel)
 
             } catch (e: Exception) {
