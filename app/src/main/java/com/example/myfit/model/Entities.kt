@@ -148,3 +148,12 @@ enum class AppTheme(val id: Int, val primary: Long, val background: Long, val on
         fun fromId(id: Int): AppTheme = values().find { it.id == id } ?: GREEN
     }
 }
+
+// [新增] 用于数据库备份的 AI 配置表
+@Entity(tableName = "ai_provider_configs")
+data class AiProviderConfig(
+    @PrimaryKey val providerName: String, // 例如 "OpenAI", "DeepSeek"
+    val apiKey: String,
+    val model: String,
+    val baseUrl: String
+)

@@ -361,6 +361,17 @@
     <string name="msg_connection_failed">Verbindung fehlgeschlagen: %1$s</string>
     <string name="val_default_goal">Allgemeine Fitnessverbesserung</string>
 
+    <string name="scene_pool">Schwimmbad</string>
+    <string name="scene_yoga">Yoga-/Pilates-Studio</string>
+    <string name="scene_limited_gym">Hotel/Einfaches Fitnessstudio</string>
+    <string name="scene_crossfit">CrossFit-Box</string>
+
+    <string name="ai_is_thinking">KI denkt nach…</string>
+    <string name="image_processing_failed_fallback">Bildverarbeitung fehlgeschlagen, wird als reiner Text gesendet.</string>
+    <string name="ai_no_reply">KI hat keinen Inhalt zurückgegeben.</string>
+    <string name="ai_request_error">Anfragefehler: %s</string>
+
+
 
 
 </resources>

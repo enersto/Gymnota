@@ -16,6 +16,7 @@ import androidx.navigation.NavController
 import com.example.myfit.R
 import com.example.myfit.viewmodel.MainViewModel
 import kotlinx.coroutines.launch
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -56,6 +57,15 @@ fun ExerciseSelectionScreen(viewModel: MainViewModel, navController: NavControll
             } else {
                 TopAppBar(
                     title = { Text(stringResource(R.string.title_select_exercise)) },
+                    // [新增] 添加返回箭头
+                    navigationIcon = {
+                        IconButton(onClick = { navController.popBackStack() }) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Back"
+                            )
+                        }
+                    },
                     actions = {
                         IconButton(onClick = { isSearching = true }) {
                             Icon(Icons.Default.Search, contentDescription = "Search")
@@ -106,7 +116,7 @@ fun ExerciseSelectionScreen(viewModel: MainViewModel, navController: NavControll
                     Toast.LENGTH_SHORT
                 ).show()
                 // 可选：添加后是否自动关闭页面？
-                // navController.popBackStack()
+                navController.popBackStack()
             },
             onDelete = null // 选择模式不提供删除功能
         )

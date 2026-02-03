@@ -361,4 +361,15 @@
     <string name="msg_connection_failed">接続失敗: %1$s</string>
     <string name="val_default_goal">総合的な体力向上</string>
 
+    <string name="scene_pool">プール</string>
+    <string name="scene_yoga">ヨガ・ピラティススタジオ</string>
+    <string name="scene_limited_gym">ホテル/簡易ジム</string>
+    <string name="scene_crossfit">クロスフィットボックス</string>
+
+    <string name="ai_is_thinking">AIが思考中…</string>
+    <string name="image_processing_failed_fallback">画像処理に失敗しました。テキストのみで送信します。</string>
+    <string name="ai_no_reply">AIから返信がありませんでした。</string>
+    <string name="ai_request_error">リクエストエラー: %s</string>
+
+
 </resources>

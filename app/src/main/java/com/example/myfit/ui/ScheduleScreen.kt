@@ -50,6 +50,10 @@ import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset // 关键：
 import kotlinx.coroutines.launch
 import androidx.compose.animation.AnimatedVisibility
 
+import androidx.compose.foundation.lazy.rememberLazyListState // 用于控制滚动
+import androidx.navigation.compose.currentBackStackEntryAsState // 用于监听路由参数
+import androidx.compose.runtime.LaunchedEffect // 用于执行副作用滚动
+
 @Composable
 fun ScheduleScreen(navController: NavController, viewModel: MainViewModel) {
     val currentTheme by viewModel.currentTheme.collectAsState()
@@ -80,7 +84,38 @@ fun ScheduleScreen(navController: NavController, viewModel: MainViewModel) {
 
     val scope = rememberCoroutineScope()
 
+    // [新增] 1. 创建并绑定 ListState
+    val listState = rememberLazyListState()
+
+    // [新增] 2. 监听跳转参数并执行滚动
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val scrollTrigger = navBackStackEntry?.arguments?.getString("scrollToType")
+
+    // 监听 scrollTrigger 的变化。只要它变了（而且不是默认值 "false"），就执行滚动
+    LaunchedEffect(scrollTrigger) {
+        if (scrollTrigger != null && scrollTrigger != "false") {
+            // 稍微延迟一点点，确保页面恢复渲染完成（可选，但推荐）
+            // delay(100)
+
+            // 强制滚动到目标位置 (Plan Type 标题的位置)
+            listState.animateScrollToItem(index = 8)
+        }
+    }
+
+    // [新增] AI 配置滚动逻辑
+    val scrollTriggerAi = navBackStackEntry?.arguments?.getString("scrollToAi")
+    LaunchedEffect(scrollTriggerAi) {
+        if (scrollTriggerAi != null && scrollTriggerAi != "false") {
+            // 稍微延迟确保布局就绪
+            delay(100)
+            // 这里的 index = 5 是基于您的 LazyColumn 顺序推算的：
+            // 0:Title, 1:Language, 2:Data, 3:WeeklyBtn, 4:LibBtn, 5:AiConfig
+            listState.animateScrollToItem(index = 5)
+        }
+    }
+
     LazyColumn(
+        state = listState, // [新增] 3. 必须绑定此 state
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
@@ -1033,6 +1068,9 @@ fun AiConfigSection(viewModel: MainViewModel) {
     // [新增] 监听连接状态
     val connectionState by viewModel.connectionState.collectAsState()
 
+    // [新增] 1. 获取 Compose 的协程作用域
+    val scope = rememberCoroutineScope()
+
     var expanded by remember { mutableStateOf(false) }
     var apiKey by remember(settings) { mutableStateOf(settings.aiApiKey) }
     var model by remember(settings) { mutableStateOf(settings.aiModel) }
@@ -1072,13 +1110,16 @@ fun AiConfigSection(viewModel: MainViewModel) {
                             DropdownMenuItem(
                                 text = { Text(providerName) },
                                 onClick = {
-                                    // [核心修改] 切换服务商时，自动加载该服务商上次保存的配置
+                                    // [核心修改] 2. 使用 scope.launch 替代 viewModel.viewModelScope.launch
                                     if (selectedProvider != providerName) {
-                                        val (savedKey, savedModel, savedUrl) = viewModel.getSavedProviderConfig(providerName)
-
-                                        apiKey = savedKey
-                                        model = savedModel
-                                        baseUrl = savedUrl
+                                        scope.launch {
+                                            // 调用 ViewModel 的挂起函数读取配置
+                                            val (savedKey, savedModel, savedUrl) = viewModel.getSavedProviderConfig(providerName)
+                                            // 更新 UI 状态
+                                            apiKey = savedKey
+                                            model = savedModel
+                                            baseUrl = savedUrl
+                                        }
                                     }
 
                                     selectedProvider = providerName

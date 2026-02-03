@@ -372,6 +372,13 @@
     <string name="scene_yoga">瑜伽/普拉提房</string>
     <string name="scene_limited_gym">酒店/简易健身房</string>
     <string name="scene_crossfit">综合体能馆 (CrossFit)</string>
+    
+    <string name="ai_is_thinking">AI 正在思考中…</string>
+    <string name="image_processing_failed_fallback">图片处理失败，已转为纯文本消息发送。</string>
+    <string name="ai_no_reply">AI 未返回任何内容。</string>
+    <string name="ai_request_error">请求出错: %s</string>
+
+
 
 
 </resources>

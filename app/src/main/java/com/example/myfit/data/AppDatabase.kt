@@ -15,6 +15,9 @@ import androidx.room.migration.Migration
 import com.google.gson.Gson // [修复] 添加 Gson 引用
 import com.google.gson.reflect.TypeToken // [修复] 添加 TypeToken 引用
 
+import androidx.room.Entity
+import androidx.room.PrimaryKey
+
 val MIGRATION_7_8 = object : Migration(7, 8) {
     override fun migrate(database: SupportSQLiteDatabase) {}
 }
@@ -112,6 +115,25 @@ val MIGRATION_14_15 = object : Migration(14, 15) {
     }
 }
 
+// [新增] 迁移策略 15 -> 16
+val MIGRATION_15_16 = object : Migration(15, 16) {
+    override fun migrate(database: SupportSQLiteDatabase) {
+        // 创建新的配置表
+        database.execSQL("""
+            CREATE TABLE IF NOT EXISTS `ai_provider_configs` (
+                `providerName` TEXT NOT NULL, 
+                `apiKey` TEXT NOT NULL, 
+                `model` TEXT NOT NULL, 
+                `baseUrl` TEXT NOT NULL, 
+                PRIMARY KEY(`providerName`)
+            )
+        """)
+
+        // (可选) 如果希望升级时自动把当前正在使用的配置存入新表，可以加这一句：
+        database.execSQL("INSERT OR REPLACE INTO ai_provider_configs (providerName, apiKey, model, baseUrl) SELECT aiProvider, aiApiKey, aiModel, aiBaseUrl FROM app_settings")
+    }
+}
+
 
 @Database(
     entities = [
@@ -121,9 +143,10 @@ val MIGRATION_14_15 = object : Migration(14, 15) {
         WeightRecord::class,
         AppSetting::class,
         WeeklyRoutineItem::class,
-        AiChatRecord::class
+        AiChatRecord::class,
+        AiProviderConfig::class
     ],
-    version = 15, // 🔴 升级版本号
+    version = 16, // 🔴 升级版本号
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -137,7 +160,8 @@ abstract class AppDatabase : RoomDatabase() {
             return instance ?: synchronized(this) {
                 Room.databaseBuilder(context, AppDatabase::class.java, "myfit_v7.db")
                     .addMigrations(MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11,
-                        MIGRATION_11_12, MIGRATION_12_13,MIGRATION_13_14, MIGRATION_14_15
+                        MIGRATION_11_12, MIGRATION_12_13,MIGRATION_13_14, MIGRATION_14_15,
+                        MIGRATION_15_16
                         ) // 🔴 添加新迁移
                     .addCallback(PrepopulateCallback(context.applicationContext))
                     .build().also { instance = it }

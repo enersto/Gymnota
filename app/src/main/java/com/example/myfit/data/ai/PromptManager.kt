@@ -182,16 +182,26 @@ object PromptManager {
         val systemPrompt = context.getString(R.string.prompt_system_free_chat)
         val langInstruction = getLanguageInstruction(context)
 
-        val contentParts = listOf(
-            ContentPart(type = "text", text = userQuery),
+        // 1. 创建一个可变的 contentParts 列表
+        val contentParts = mutableListOf<ContentPart>()
+
+        // 2. 如果用户输入了文本，则添加文本部分
+        if (userQuery.isNotBlank()) {
+            contentParts.add(ContentPart(type = "text", text = userQuery))
+        }
+
+        // 3. 总是添加图片部分
+        contentParts.add(
             ContentPart(
                 type = "image_url",
                 image_url = ImageUrl(url = "data:image/jpeg;base64,$base64Image")
             )
         )
 
+        // 4. 返回构建好的消息列表
         return listOf(
             ChatMessage("system", systemPrompt + langInstruction),
+            // 将包含一个或两个元素的 contentParts 列表作为 user 的 content
             ChatMessage("user", contentParts as Any)
         )
     }
@@ -230,7 +240,7 @@ object PromptManager {
             
             3. OUTPUT CSV COLUMNS MUST BE EXACTLY:
             Day,Name,Category,Target,BodyPart,Equipment,IsUni,LogType,Instruction
-            (The 'Instruction' column must be a short tip, e.g., "Keep back straight".)
+            (The 'Instruction' column must be a tip within 100 words, e.g., "Keep back straight".)
             
         """.trimIndent()
 

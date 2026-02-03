@@ -212,67 +212,6 @@ fun HistoryCharts(viewModel: MainViewModel) {
             }
         }
 
-// 4) --- 模块 1: 身体状态 (合并 体重 + BMI + BMR) ---
-        item {
-            Text(
-                stringResource(R.string.chart_title_body_status), // "Body Status"
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
-            )
-        }
-
-        // 1.1 体重图表
-        item {
-            ChartSection(title = stringResource(R.string.chart_title_weight)) { granularity ->
-                val data by viewModel.getWeightChartData(granularity).collectAsState(initial = emptyList())
-                LineChart(data = data)
-            }
-        }
-
-        // 1.2 BMI 图表 (新增)
-        item {
-            ChartSection(title = stringResource(R.string.chart_title_bmi)) { granularity ->
-                val data by viewModel.getBMIChartData(granularity).collectAsState(initial = emptyList())
-                LineChart(data = data, lineColor = Color(0xFFE91E63)) // 使用不同颜色区分
-            }
-        }
-
-        // 1.3 BMR 图表 (新增)
-        item {
-            ChartSection(title = stringResource(R.string.chart_title_bmr)) { granularity ->
-                val data by viewModel.getBMRChartData(granularity).collectAsState(initial = emptyList())
-                LineChart(data = data, lineColor = Color(0xFF9C27B0)) // 使用不同颜色区分
-            }
-        }
-
-        // --- 模块 2: 有氧训练 (总时长 + 单项) ---
-        item {
-            Text(
-                stringResource(R.string.header_cardio_train),
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
-            )
-        }
-        item {
-            ChartSection(
-                title = stringResource(R.string.chart_title_cardio_total),
-                defaultChartType = "BAR"
-            ) { granularity ->
-                val data by viewModel.getCardioTotalChartData(granularity).collectAsState(initial = emptyList())
-                BarChart(data = data)
-            }
-        }
-        item {
-            SingleExerciseSection(
-                viewModel = viewModel,
-                category = "CARDIO",
-                title = stringResource(R.string.chart_title_cardio_single),
-                defaultMode = 0 // 时长
-            )
-        }
-
         // --- 模块 3: 力量训练 (单项最大重量) ---
         item {
             Text(
@@ -309,7 +248,68 @@ fun HistoryCharts(viewModel: MainViewModel) {
             )
         }
 
-        item { Spacer(modifier = Modifier.height(50.dp)) }
+        // --- 模块 2: 有氧训练 (总时长 + 单项) ---
+        item {
+            Text(
+                stringResource(R.string.header_cardio_train),
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
+            )
+        }
+        item {
+            ChartSection(
+                title = stringResource(R.string.chart_title_cardio_total),
+                defaultChartType = "BAR"
+            ) { granularity ->
+                val data by viewModel.getCardioTotalChartData(granularity).collectAsState(initial = emptyList())
+                BarChart(data = data)
+            }
+        }
+        item {
+            SingleExerciseSection(
+                viewModel = viewModel,
+                category = "CARDIO",
+                title = stringResource(R.string.chart_title_cardio_single),
+                defaultMode = 0 // 时长
+            )
+        }
+
+// 4) --- 模块 1: 身体状态 (合并 体重 + BMI + BMR) ---
+        item {
+            Text(
+                stringResource(R.string.chart_title_body_status), // "Body Status"
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
+            )
+        }
+
+        // 1.1 体重图表
+        item {
+            ChartSection(title = stringResource(R.string.chart_title_weight)) { granularity ->
+                val data by viewModel.getWeightChartData(granularity).collectAsState(initial = emptyList())
+                LineChart(data = data)
+            }
+        }
+
+        // 1.2 BMI 图表 (新增)
+        item {
+            ChartSection(title = stringResource(R.string.chart_title_bmi)) { granularity ->
+                val data by viewModel.getBMIChartData(granularity).collectAsState(initial = emptyList())
+                LineChart(data = data, lineColor = Color(0xFFE91E63)) // 使用不同颜色区分
+            }
+        }
+
+        // 1.3 BMR 图表 (新增)
+        item {
+            ChartSection(title = stringResource(R.string.chart_title_bmr)) { granularity ->
+                val data by viewModel.getBMRChartData(granularity).collectAsState(initial = emptyList())
+                LineChart(data = data, lineColor = Color(0xFF9C27B0)) // 使用不同颜色区分
+            }
+        }
+
+        item { Spacer(modifier = Modifier.height(20.dp)) }
     }
 }
 

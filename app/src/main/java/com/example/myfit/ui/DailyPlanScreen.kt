@@ -80,6 +80,8 @@ import androidx.compose.ui.layout.ContentScale
 import java.io.File
 import androidx.compose.ui.draw.clip // [检查] 确保有这一行
 
+import androidx.navigation.NavGraph.Companion.findStartDestination
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DailyPlanScreen(viewModel: MainViewModel, navController: NavController) {
@@ -131,7 +133,28 @@ fun DailyPlanScreen(viewModel: MainViewModel, navController: NavController) {
         ) { padding ->
             Column(modifier = Modifier.padding(padding).padding(16.dp)) {
 
-                HeaderSection(date, dayType, progress, themeColor, showWeightAlert) { showWeightDialog = true }
+                HeaderSection(
+                    date = date,
+                    dayType = dayType,
+                    progress = progress,
+                    color = themeColor,
+                    showWeightAlert = showWeightAlert,
+                    onWeightClick = { showWeightDialog = true },
+                    onTypeClick = {
+                        // [修改] 模拟底部导航栏的切换行为
+                        navController.navigate("settings?scrollToType=true") {
+                            // 弹出到导航图的起始目的地（即 DailyPlan），保存状态
+                            // 这样点击返回键时，会回到首页，而不是退出应用
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                saveState = true
+                            }
+                            // 避免在堆栈顶部创建多个实例
+                            launchSingleTop = true
+                            // 恢复之前可能保存的状态
+                            restoreState = true
+                        }
+                    }
+                )
 
                 Spacer(modifier = Modifier.height(16.dp))
 
@@ -264,18 +287,21 @@ fun AdvancedTaskItem(
 
                 // [新增] 图片展示 (如果有) - 逻辑类似 ExerciseMinimalCard
                 if (!task.imageUri.isNullOrBlank()) {
-                    AsyncImage(
-                        model = if (task.imageUri!!.startsWith("/")) File(task.imageUri!!) else task.imageUri,
-                        contentDescription = null,
-                        modifier = Modifier
-                            .size(48.dp)
-                            .clip(RoundedCornerShape(6.dp))
-                            .background(Color.LightGray)
-                            // [交互] 如果 bar 未展开，图片在最左侧；展开后点击图片也可以看大图(可选)
-                            .clickable(enabled = expanded) { showDetailInfo = true },
-                        contentScale = ContentScale.Crop
-                    )
-                    Spacer(modifier = Modifier.width(12.dp))
+                    val uri = task.imageUri // 智能转换，创建一个本地引用
+                    if (uri != null) { // 再次确认非空，虽然外层判断了，但这样更安全
+                        AsyncImage(
+                            // 逻辑优化：如果是绝对路径(/开头)转为File对象，否则直接用Uri字符串
+                            model = if (uri.startsWith("/")) File(uri) else uri,
+                            contentDescription = null,
+                            modifier = Modifier
+                                .size(48.dp)
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(Color.LightGray)
+                                .clickable(enabled = expanded) { showDetailInfo = true },
+                            contentScale = ContentScale.Crop
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                    }
                 }
 
                 Column(modifier = Modifier.weight(1f)) {
@@ -685,7 +711,10 @@ fun TimerSetRow(
 }
 
 @Composable
-fun HeaderSection(date: LocalDate, dayType: DayType, progress: Float, color: Color, showWeightAlert: Boolean, onWeightClick: () -> Unit) {
+fun HeaderSection(date: LocalDate, dayType: DayType,
+                  progress: Float, color: Color,
+                  showWeightAlert: Boolean, onWeightClick: () -> Unit,
+                  onTypeClick: () -> Unit) {
     Column {
         val dateText = remember(date) {
             date.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.FULL))
@@ -710,7 +739,13 @@ fun HeaderSection(date: LocalDate, dayType: DayType, progress: Float, color: Col
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        Text(stringResource(dayType.labelResId), color = color, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+        Text(
+            text = stringResource(dayType.labelResId),
+            color = color,
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.clickable { onTypeClick() } // [新增] 点击跳转
+        )
 
         Spacer(modifier = Modifier.height(12.dp))
 

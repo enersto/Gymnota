@@ -71,6 +71,8 @@ import androidx.compose.ui.draw.clip // 确保这行存在
 import androidx.compose.ui.layout.ContentScale // [新增]
 import coil.compose.AsyncImage // [新增] 必须添加这个才能显示图片
 
+import androidx.navigation.NavGraph.Companion.findStartDestination
+
 private fun createTempPictureUri(context: android.content.Context): Uri? {
     return try {
         val tempFile = File.createTempFile("ai_query_", ".jpg", context.cacheDir).apply {
@@ -183,7 +185,18 @@ fun AICoachScreen(viewModel: MainViewModel,navController: NavController) {
         ) {
             // 左侧：模型状态卡片
             Card(
-                onClick = { navController.navigate(Screen.Settings.route) }, // 跳转配置
+                onClick = {
+                    // [修改] 带上 scrollToAi 参数，值为时间戳以强制刷新
+                    val timestamp = System.currentTimeMillis()
+                    navController.navigate("settings?scrollToAi=$timestamp") {
+                        // 保持底部导航的平滑切换体验
+                        popUpTo(navController.graph.findStartDestination().id) {
+                            saveState = true
+                        }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                },
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(
                         alpha = 0.5f

@@ -138,4 +138,15 @@ interface WorkoutDao {
     @Query("SELECT * FROM schedule_config")
     suspend fun getAllSchedulesSync(): List<ScheduleConfig>
 
+    // --- AI Provider Configs ---
+
+    @Query("SELECT * FROM ai_provider_configs WHERE providerName = :name")
+    suspend fun getAiProviderConfig(name: String): AiProviderConfig?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun saveAiProviderConfig(config: AiProviderConfig)
+
+    @Query("SELECT * FROM ai_provider_configs")
+    suspend fun getAllAiProviderConfigs(): List<AiProviderConfig>
+
 }

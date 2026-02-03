@@ -103,20 +103,28 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         AiProviderPreset("Custom", "", "")
     )
 
-    // [新增] 获取指定服务商的保存配置 (优先从 Prefs 读取，没有则用默认值)
-    // 逻辑：优先从本地 Prefs 读取，读不到则使用预设的默认值
-    fun getSavedProviderConfig(providerName: String): Triple<String, String, String> {
-        // 1. 找到预设值作为保底
+    // [修改] 改为 suspend 函数，从数据库读取
+    suspend fun getSavedProviderConfig(providerName: String): Triple<String, String, String> {
+        // 1. 尝试从数据库读取
+        val savedConfig = dao.getAiProviderConfig(providerName)
+
+        if (savedConfig != null) {
+            return Triple(savedConfig.apiKey, savedConfig.model, savedConfig.baseUrl)
+        }
+
+        // 2. 数据库没有，尝试从 SharedPreferences 读取 (为了兼容老版本数据迁移，可选)
+        val prefKey = prefs.getString("ai_config_${providerName}_key", null)
+        if (prefKey != null) {
+            val prefModel = prefs.getString("ai_config_${providerName}_model", "") ?: ""
+            val prefUrl = prefs.getString("ai_config_${providerName}_url", "") ?: ""
+            // 顺便迁移到数据库
+            dao.saveAiProviderConfig(AiProviderConfig(providerName, prefKey, prefModel, prefUrl))
+            return Triple(prefKey, prefModel, prefUrl)
+        }
+
+        // 3. 都没有，返回预设默认值
         val preset = availableProviders.find { it.name == providerName }
-
-        // 2. 从 SharedPreferences 读取 (Key 格式: ai_config_{provider}_{field})
-        val savedKey = prefs.getString("ai_config_${providerName}_key", "") ?: ""
-        // 如果本地没存过模型名，就用预设的 (比如 qwen-turbo)
-        val savedModel = prefs.getString("ai_config_${providerName}_model", preset?.defaultModel ?: "") ?: ""
-        // 如果本地没存过URL，就用预设的
-        val savedUrl = prefs.getString("ai_config_${providerName}_url", preset?.defaultBaseUrl ?: "") ?: ""
-
-        return Triple(savedKey, savedModel, savedUrl)
+        return Triple("", preset?.defaultModel ?: "", preset?.defaultBaseUrl ?: "")
     }
 
 
@@ -793,8 +801,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val targetTasks = tasks.filter { it.name == name }
             val raw = targetTasks.groupBy { LocalDate.parse(it.date) }.map { (date, tList) ->
                 val values = tList.flatMap { t ->
-                    if (t.sets.isNotEmpty()) t.sets
-                    else listOf(WorkoutSet(setNumber = 1, weightOrDuration = t.actualWeight.ifEmpty { t.target }, reps = t.target))
+                    if (t.sets.isNotEmpty()) {
+                        t.sets
+                    } else {
+                        listOf(
+                            WorkoutSet(
+                                setNumber = 1,
+                                weightOrDuration = t.actualWeight.ifEmpty { t.target },
+                                reps = t.target
+                            )
+                        )
+                    }
                 }
 
                 val dailyVal = when(mode) {
@@ -1145,12 +1162,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             )
             dao.saveAppSettings(newSetting)
 
-            // 2. [新增] 保存到 SharedPreferences (作为该服务商的存档)
-            prefs.edit().apply {
-                putString("ai_config_${provider}_key", apiKey)
-                putString("ai_config_${provider}_model", model)
-                putString("ai_config_${provider}_url", cleanBaseUrl)
-            }.apply()
+            // 2. [修改] 保存到数据库的新表 (归档，支持备份)
+            // 不再使用 prefs.edit()...
+            dao.saveAiProviderConfig(
+                AiProviderConfig(
+                    providerName = provider,
+                    apiKey = apiKey,
+                    model = model,
+                    baseUrl = cleanBaseUrl
+                )
+            )
         }
     }
 
@@ -1364,13 +1385,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 val messages = if (imageUri != null) {
                     val base64 = compressImageToBase64(context, imageUri)
                     if (base64 != null) {
-                        // [修改] 必须添加前缀，否则 API 无法识别图片
-
                         PromptManager.buildMultimodalChatPrompt(context, query, base64)
                     } else {
                         // 图片处理失败则回退到纯文本，并提示用户
                         withContext(Dispatchers.Main) {
-                            Toast.makeText(context, "图片处理失败，发送纯文本", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, context.getString(R.string.image_processing_failed_fallback),
+                                Toast.LENGTH_LONG).show()
                         }
                         PromptManager.buildFreeChatPrompt(context, query)
                     }

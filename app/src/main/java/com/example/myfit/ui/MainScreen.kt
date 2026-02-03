@@ -23,6 +23,8 @@ import androidx.navigation.compose.rememberNavController
 import com.example.myfit.R
 import com.example.myfit.viewmodel.MainViewModel
 import android.view.HapticFeedbackConstants
+import androidx.navigation.NavType // [新增]
+import androidx.navigation.navArgument // [新增]
 
 sealed class Screen(val route: String, val titleResId: Int, val icon: ImageVector) {
     object DailyPlan : Screen("daily_plan", R.string.tab_home, Icons.Default.CalendarToday)
@@ -48,7 +50,9 @@ fun MainScreen(viewModel: MainViewModel) {
                     NavigationBarItem(
                         icon = { Icon(screen.icon, contentDescription = null) },
                         label = { Text(stringResource(screen.titleResId)) },
-                        selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true,
+                        selected = currentDestination?.hierarchy?.any {
+                            it.route?.startsWith(screen.route) == true
+                        } == true,
                         onClick = {
                             view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
                             navController.navigate(screen.route) {
@@ -79,7 +83,19 @@ fun MainScreen(viewModel: MainViewModel) {
                 composable(Screen.AICoach.route) {
                     AICoachScreen(viewModel = viewModel, navController = navController)
                 }
-                composable(Screen.Settings.route) {
+                composable(// 使其支持 ?scrollToType=true 這種參數格式
+                    route = Screen.Settings.route + "?scrollToType={scrollToType}&scrollToAi={scrollToAi}",
+                    arguments = listOf(
+                        navArgument("scrollToType") {
+                            defaultValue = "false"
+                            type = NavType.StringType
+                        },
+                        // [新增] AI 滚动参数
+                        navArgument("scrollToAi") {
+                            defaultValue = "false"
+                            type = NavType.StringType
+                        }
+                    )) {
                     ScheduleScreen(navController, viewModel)
                 }
                 composable("exercise_manager") {

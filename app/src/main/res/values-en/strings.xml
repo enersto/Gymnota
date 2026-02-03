@@ -360,5 +360,16 @@
     <string name="msg_connection_failed">Connection Failed: %1$s</string>
     <string name="val_default_goal">Overall Fitness Improvement</string>
 
+    <string name="scene_pool">Swimming Pool</string>
+    <string name="scene_yoga">Yoga/Pilates Studio</string>
+    <string name="scene_limited_gym">Hotel/Limited Gym</string>
+    <string name="scene_crossfit">CrossFit Box</string>
+
+    <string name="ai_is_thinking">AI is thinking…</string>
+    <string name="image_processing_failed_fallback">Image processing failed, sending as plain text.</string>
+    <string name="ai_no_reply">AI did not return any content.</string>
+    <string name="ai_request_error">Request error: %s</string>
+
+
 
 </resources>
