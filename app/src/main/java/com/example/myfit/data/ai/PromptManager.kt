@@ -206,13 +206,21 @@ object PromptManager {
         )
     }
 
+    private fun getUserLanguageName(context: Context): String {
+        val locale = context.resources.configuration.locales[0]
+        return locale.displayLanguage // 自动返回 "中文", "English", "日本語" 等
+        // 或者如果你想强制控制，也可以用你之前的 when 逻辑返回 "Simplified Chinese" 等
+    }
+
     // [新增] 构建 CSV 生成请求
     // 注意：这里需要把之前的建议内容作为 context 传回去，或者依赖多轮对话 (如果是多轮对话架构)
     // 鉴于目前是单次请求架构，我们需要把之前的建议拼接在 User Prompt 里
     // [修改] 增加 userFeedback 参数
-    fun buildCsvPlanPrompt(context: Context, adviceContent: String, userFeedback: String = ""): List<ChatMessage> {
+    fun buildCsvPlanPrompt(context: Context, adviceContent: String,
+                           userFeedback: String = ""): List<ChatMessage> {
         val systemPrompt = context.getString(R.string.prompt_system_csv_generator)
 
+        val userLang = getUserLanguageName(context)
         // 1. 定义 App 支持的合法 Key (白名单)
         val validBodyParts = listOf(
             "part_chest", "part_back", "part_shoulders",
@@ -231,17 +239,35 @@ object PromptManager {
         val constraintPrompt = """
             
             IMPORTANT - STRICT FORMAT RULES:
+            0. For 'Category' column, you MUST ONLY use one of these exact keys:
+            ['STRENGTH', 'CARDIO', 'CORE']
+            (Rule: Map 'Strength Training'/'Power'/'Hypertrophy' -> 'STRENGTH'. 
+            Map 'Aerobic'/'HIIT'/'Running' -> 'CARDIO'. 
+            Map 'Abs'/'Plank'/'Stability' -> 'CORE'.)
+            
             1. For 'BodyPart' column, you MUST ONLY use one of these exact keys:
             [${validBodyParts.joinToString(", ")}]
-            (Rule: Map 'triceps'/'biceps'/'forearms' -> 'part_arms'. Map 'core' -> 'part_abs'. Map 'glutes' -> 'part_hips'. Map 'quads'/'hamstrings' -> 'part_thighs'.)
+            (Rule: Map 'triceps'/'biceps'/'forearms' -> 'part_arms'. 
+            Map 'core' -> 'part_abs'. Map 'glutes' -> 'part_hips'. 
+            Map 'quads'/'hamstrings' -> 'part_thighs'.)
             
             2. For 'Equipment' column, you MUST ONLY use one of these exact keys:
             [${validEquipment.joinToString(", ")}]
             
             3. OUTPUT CSV COLUMNS MUST BE EXACTLY:
             Day,Name,Category,Target,BodyPart,Equipment,IsUni,LogType,Instruction
-            (The 'Instruction' column must be a tip within 100 words, e.g., "Keep back straight".)
+            (The 'Instruction' column must be a tip within 100 words based on the records of users if there are records, 
+            e.g., "Keep back straight and feel the back strength when you're doing".)
             
+            4. STRICT RULES for 'IsUni' (Is Unilateral?):
+            - Set to 'true' IF the exercise is performed one side at a time (e.g., Dumbbell Bicep Curls, Lunges, Single-arm Rows, Split Squats, Lateral Raises).
+            - Set to 'false' for Barbell exercises (Squats, Bench Press) or Machine exercises using both limbs simultaneously.
+            - SPECIFICALLY: "Dumbbell Bicep Curl" (哑铃弯举) MUST be true. "Dumbbell Row" (哑铃划船) MUST be true.
+            
+            5. LANGUAGE & CONTENT CONSTRAINT:
+            - Columns 'Category', 'BodyPart', 'Equipment' MUST remain in ENGLISH keys (as defined above).
+            - Columns 'Name' and 'Instruction' MUST be in $userLang (User's Language).
+            - For 'Instruction': Provide specific technique tips in $userLang.
         """.trimIndent()
 
         // 3. 拼接用户 Prompt

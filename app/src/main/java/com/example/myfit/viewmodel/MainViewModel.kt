@@ -875,11 +875,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         val equipment = if (parts.size > 5 && parts[5].isNotBlank()) parts[5] else "equip_other"
                         val isUni = if (parts.size > 6) parts[6].toBoolean() else false
                         // [新增] 解析 LogType，如果 CSV 没这列(旧版)，则根据 Category 推断
-                        val inferredLogType = when(category) {
-                            "CARDIO", "CORE" -> 1 // DURATION
+                        val inferredLogType = when {
+                            category.equals("CARDIO", ignoreCase = true) || category.contains("有氧") -> 1 // DURATION
+                            category.equals("CORE", ignoreCase = true) || category.contains("核心") -> 2 // REPS_ONLY
                             else -> 0 // WEIGHT_REPS
                         }
-                        val logType = if (parts.size > 7) parts[7].toIntOrNull() ?: inferredLogType else inferredLogType
+                        // [优化] 加强 LogType 解析的健壮性
+                        val rawLogType = parts.getOrNull(7)?.trim()
+                        // 优先尝试解析数字，失败则使用推断值
+                        val logType = rawLogType?.toIntOrNull() ?: inferredLogType
 
                         // [新增] 解析第 9 列 (索引 8) Instruction
                         // 使用 getOrNull 防止旧版 CSV 越界，并去掉可能的引号

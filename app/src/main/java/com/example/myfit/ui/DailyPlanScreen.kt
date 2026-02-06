@@ -359,8 +359,13 @@ fun AdvancedTaskItem(
                     val newState = !task.isCompleted
                     var updatedTask = task.copy(isCompleted = newState)
 
+                    val isCardioOrCore = task.logType == LogType.DURATION.value ||
+                            task.logType == LogType.REPS_ONLY.value ||
+                            task.category.contains("有氧") ||
+                            task.category.contains("核心")
+
                     // 自动填充逻辑：如果有氧/核心任务打卡，且未填数据，自动填入目标值
-                    if (newState && (task.category == "CARDIO" || task.category == "CORE")) {
+                    if (newState && isCardioOrCore) {
                         val filledSets = task.sets.map { set ->
                             if (set.weightOrDuration.isBlank()) {
                                 set.copy(
@@ -435,7 +440,9 @@ fun AdvancedTaskItem(
                     } else {
                         // --- 计时模式 ---
                         // [新增] 核心运动显示秒数输入框
-                        val showSeconds = task.category == "CORE"
+                        val showSeconds = task.category.equals("CORE", ignoreCase = true)||
+                                task.target.contains("s", ignoreCase = true) ||
+                                task.target.contains("秒")
 
                         task.sets.forEachIndexed { index, set ->
                             TimerSetRow(
@@ -448,7 +455,6 @@ fun AdvancedTaskItem(
                                 showSeconds = showSeconds, // [新增参数] 传递给 TimerSetRow
                                 onStart = { minutesFloat ->
                                     onRequestPermission()
-                                    // 注意：ViewModel目前只接受Int分钟，暂时转换，后续建议升级ViewModel支持Float
                                     viewModel.startTimer(context, task.id, index, minutesFloat)
                                 },
                                 onPause = { viewModel.pauseTimer(context) },
