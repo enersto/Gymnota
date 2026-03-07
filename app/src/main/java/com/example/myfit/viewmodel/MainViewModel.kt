@@ -508,6 +508,38 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun getBodyFatChartData(granularity: ChartGranularity): Flow<List<ChartDataPoint>> {
+        return weightHistory.map { records ->
+            val raw = records.filter { it.bodyFatKg != null }
+                .map { Pair(LocalDate.parse(it.date), it.bodyFatKg!!) }
+            groupAndFormatData(raw, granularity)
+        }
+    }
+
+    fun getSkeletalMuscleChartData(granularity: ChartGranularity): Flow<List<ChartDataPoint>> {
+        return weightHistory.map { records ->
+            val raw = records.filter { it.skeletalMuscleKg != null }
+                .map { Pair(LocalDate.parse(it.date), it.skeletalMuscleKg!!) }
+            groupAndFormatData(raw, granularity)
+        }
+    }
+
+    fun getBodyWaterChartData(granularity: ChartGranularity): Flow<List<ChartDataPoint>> {
+        return weightHistory.map { records ->
+            val raw = records.filter { it.bodyWaterPercentage != null }
+                .map { Pair(LocalDate.parse(it.date), it.bodyWaterPercentage!!) }
+            groupAndFormatData(raw, granularity)
+        }
+    }
+
+    fun getWHRChartData(granularity: ChartGranularity): Flow<List<ChartDataPoint>> {
+        return weightHistory.map { records ->
+            val raw = records.filter { it.waistCircumference != null && it.hipCircumference != null }
+                .map { Pair(LocalDate.parse(it.date), it.waistHipRatio ?: 0f) }
+            groupAndFormatData(raw, granularity)
+        }
+    }
+
     private fun groupAndFormatData(raw: List<Pair<LocalDate, Float>>, granularity: ChartGranularity): List<ChartDataPoint> {
         val grouped = when (granularity) {
             ChartGranularity.DAILY -> raw.groupBy { it.first }
@@ -532,16 +564,35 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         dao.saveAppSettings(currentSettings.copy(languageCode = lang))
     }
 
-    fun logWeightAndProfile(weight: Float, age: Int?, height: Float?, gender: Int?) = viewModelScope.launch {
-        dao.insertWeight(WeightRecord(date = LocalDate.now().toString(), weight = weight))
+    fun logWeightAndProfile(
+        weight: Float,
+        age: Int?,
+        height: Float?,
+        gender: Int?,
+        bodyFat: Float?,
+        muscle: Float?,
+        water: Float?,
+        waist: Float?,
+        hip: Float?
+    ) {
+        viewModelScope.launch {
+            // 1. 更新用户基本资料 (如果输入了)
+            if (age != null && height != null) {
+                updateProfile(age, height, gender ?: 0)
+            }
 
-        val currentSettings = userProfile.value
-        val newSettings = currentSettings.copy(
-            age = age ?: currentSettings.age,
-            height = height ?: currentSettings.height,
-            gender = gender ?: currentSettings.gender
-        )
-        dao.saveAppSettings(newSettings)
+            // 2. 创建包含新指标的记录
+            val record = WeightRecord(
+                date = LocalDate.now().toString(),
+                weight = weight,
+                bodyFatKg = bodyFat,
+                skeletalMuscleKg = muscle,
+                bodyWaterPercentage = water,
+                waistCircumference = waist,
+                hipCircumference = hip
+            )
+            dao.insertWeight(record)
+        }
     }
 
     fun updateProfile(age: Int, height: Float, gender: Int) = viewModelScope.launch {

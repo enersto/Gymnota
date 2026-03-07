@@ -149,4 +149,8 @@ interface WorkoutDao {
     @Query("SELECT * FROM ai_provider_configs")
     suspend fun getAllAiProviderConfigs(): List<AiProviderConfig>
 
+    // 确保有获取最近一条记录的方法，用于判断是否是“本周已填”
+    @Query("SELECT * FROM weight_records ORDER BY date DESC LIMIT 1")
+    suspend fun getLastWeightRecord(): WeightRecord?
+
 }

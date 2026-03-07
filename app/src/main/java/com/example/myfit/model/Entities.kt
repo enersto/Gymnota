@@ -82,8 +82,24 @@ data class WorkoutTask(
 data class WeightRecord(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val date: String,
-    val weight: Float
-)
+    val weight: Float,
+    // --- 新增选填字段 ---
+    val bodyFatKg: Float? = null,
+    val skeletalMuscleKg: Float? = null,
+    val bodyWaterPercentage: Float? = null,
+    val waistCircumference: Float? = null,
+    val hipCircumference: Float? = null
+) {
+    // 逻辑计算属性：体脂率 (体脂肪/体重)
+    // 优先使用计算值，如果 UI 需要显示此项，直接调用此属性
+    val bodyFatRate: Float?
+        get() = if (bodyFatKg != null && weight > 0) (bodyFatKg / weight) * 100f else null
+
+    // 逻辑计算属性：腰臀比 (腰围/臀围)
+    val waistHipRatio: Float?
+        get() = if (waistCircumference != null && (hipCircumference ?: 0f) > 0f)
+            waistCircumference / hipCircumference!! else null
+}
 
 @Entity(tableName = "weekly_routine")
 data class WeeklyRoutineItem(

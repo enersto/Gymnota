@@ -309,6 +309,36 @@ fun HistoryCharts(viewModel: MainViewModel) {
             }
         }
 
+        // --- 模块 1.4: 深度身体指标 (新增) ---
+        item {
+            ChartSection(title = stringResource(R.string.chart_title_body_fat)) { granularity ->
+                //💡 显式指定 List<ChartDataPoint>
+                val data: List<ChartDataPoint> by viewModel.getBodyFatChartData(granularity).collectAsState(initial = emptyList())
+                LineChart(data = data)
+            }
+        }
+
+        item {
+            ChartSection(title = stringResource(R.string.chart_title_skeletal_muscle)) { granularity ->
+                val data: List<ChartDataPoint> by viewModel.getSkeletalMuscleChartData(granularity).collectAsState(initial = emptyList())
+                LineChart(data = data)
+            }
+        }
+
+        item {
+            ChartSection(title = stringResource(R.string.chart_title_body_water)) { granularity ->
+                val data: List<ChartDataPoint> by viewModel.getBodyWaterChartData(granularity).collectAsState(initial = emptyList())
+                LineChart(data = data)
+            }
+        }
+
+        item {
+            ChartSection(title = stringResource(R.string.chart_title_whr)) { granularity ->
+                val data: List<ChartDataPoint> by viewModel.getWHRChartData(granularity).collectAsState(initial = emptyList())
+                LineChart(data = data)
+            }
+        }
+
         item { Spacer(modifier = Modifier.height(20.dp)) }
     }
 }

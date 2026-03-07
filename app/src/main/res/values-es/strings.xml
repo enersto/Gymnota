@@ -372,5 +372,20 @@
     <string name="ai_no_reply">La IA no devolvió ningún contenido.</string>
     <string name="ai_request_error">Error en la solicitud: %s</string>
 
+    <string name="weekly_metrics_title">Métricas Corporales Semanales</string>
+    <string name="weekly_metrics_subtitle">Añadir más datos para mayor precisión (Opcional)</string>
+    <string name="label_body_fat_kg">Grasa Corporal (kg)</string>
+    <string name="label_skeletal_muscle_kg">Músculo Esquelético (kg)</string>
+    <string name="label_body_water">Agua Corporal (%)</string>
+    <string name="label_waist_circumference">Cintura (cm)</string>
+    <string name="label_hip_circumference">Cadera (cm)</string>
+    <string name="label_body_fat_rate">Tasa de Grasa: %1$.1f%%</string>
+    <string name="label_whr">RCA (WHR): %1$.2f</string>
+    <string name="header_body_composition">Análisis de Composición</string>
+    <string name="chart_title_body_fat">Grasa Corporal (kg)</string>
+    <string name="chart_title_skeletal_muscle">Músculo Esquelético (kg)</string>
+    <string name="chart_title_body_water">Agua Corporal (%)</string>
+    <string name="chart_title_whr">Relación Cintura-Cadera (RCA)</string>
+
 
 </resources>

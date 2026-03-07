@@ -371,6 +371,21 @@
     <string name="ai_no_reply">KI hat keinen Inhalt zurückgegeben.</string>
     <string name="ai_request_error">Anfragefehler: %s</string>
 
+    <string name="weekly_metrics_title">Wöchentliche Körperwerte</string>
+    <string name="weekly_metrics_subtitle">Zusätzliche Daten für tiefere Einblicke (Optional)</string>
+    <string name="label_body_fat_kg">Körperfett (kg)</string>
+    <string name="label_skeletal_muscle_kg">Skelettmuskelmasse (kg)</string>
+    <string name="label_body_water">Körperwasser (%)</string>
+    <string name="label_waist_circumference">Taillenumfang (cm)</string>
+    <string name="label_hip_circumference">Hüftumfang (cm)</string>
+    <string name="label_body_fat_rate">Körperfettanteil: %1$.1f%%</string>
+    <string name="label_whr">WHR (Taille-Hüfte): %1$.2f</string>
+    <string name="header_body_composition">Körperanalyse</string>
+    <string name="chart_title_body_fat">Körperfett (kg)</string>
+    <string name="chart_title_skeletal_muscle">Skelettmuskel (kg)</string>
+    <string name="chart_title_body_water">Körperwasser (%)</string>
+    <string name="chart_title_whr">Taille-Hüfte-Verhältnis (WHR)</string>
+
 
 
 

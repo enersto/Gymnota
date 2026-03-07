@@ -134,6 +134,17 @@ val MIGRATION_15_16 = object : Migration(15, 16) {
     }
 }
 
+// [新增] 迁移策略 16 -> 17
+val MIGRATION_16_17 = object : Migration(16, 17) {
+    override fun migrate(database: SupportSQLiteDatabase) {
+        database.execSQL("ALTER TABLE weight_records ADD COLUMN bodyFatKg REAL")
+        database.execSQL("ALTER TABLE weight_records ADD COLUMN skeletalMuscleKg REAL")
+        database.execSQL("ALTER TABLE weight_records ADD COLUMN bodyWaterPercentage REAL")
+        database.execSQL("ALTER TABLE weight_records ADD COLUMN waistCircumference REAL")
+        database.execSQL("ALTER TABLE weight_records ADD COLUMN hipCircumference REAL")
+    }
+}
+
 
 @Database(
     entities = [
@@ -146,7 +157,7 @@ val MIGRATION_15_16 = object : Migration(15, 16) {
         AiChatRecord::class,
         AiProviderConfig::class
     ],
-    version = 16, // 🔴 升级版本号
+    version = 17, // 🔴 升级版本号
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -161,7 +172,7 @@ abstract class AppDatabase : RoomDatabase() {
                 Room.databaseBuilder(context, AppDatabase::class.java, "myfit_v7.db")
                     .addMigrations(MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11,
                         MIGRATION_11_12, MIGRATION_12_13,MIGRATION_13_14, MIGRATION_14_15,
-                        MIGRATION_15_16
+                        MIGRATION_15_16, MIGRATION_16_17
                         ) // 🔴 添加新迁移
                     .addCallback(PrepopulateCallback(context.applicationContext))
                     .build().also { instance = it }

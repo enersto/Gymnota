@@ -62,6 +62,10 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 // UI 基础库
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.platform.LocalConfiguration
@@ -131,7 +135,9 @@ fun DailyPlanScreen(viewModel: MainViewModel, navController: NavController) {
                 }
             }
         ) { padding ->
-            Column(modifier = Modifier.padding(padding).padding(16.dp)) {
+            Column(modifier = Modifier
+                .padding(padding)
+                .padding(16.dp)) {
 
                 HeaderSection(
                     date = date,
@@ -526,7 +532,9 @@ fun SetRow(
                         text = stringResource(R.string.label_side_left),
                         fontSize = 10.sp,
                         color = Color.Gray,
-                        modifier = Modifier.defaultMinSize(minWidth = 20.dp).padding(end = 4.dp)
+                        modifier = Modifier
+                            .defaultMinSize(minWidth = 20.dp)
+                            .padding(end = 4.dp)
                     )
                     if (!isRepsOnly) {
                         InputBox(weightInput, color, Modifier.weight(1f)) {
@@ -546,7 +554,9 @@ fun SetRow(
                         text = stringResource(R.string.label_side_right),
                         fontSize = 10.sp,
                         color = Color.Gray,
-                        modifier = Modifier.defaultMinSize(minWidth = 20.dp).padding(end = 4.dp)
+                        modifier = Modifier
+                            .defaultMinSize(minWidth = 20.dp)
+                            .padding(end = 4.dp)
                     )
                     if (!isRepsOnly) {
                         InputBox(rightWeightInput, color, Modifier.weight(1f)) {
@@ -563,7 +573,9 @@ fun SetRow(
             }
         } else {
             if (!isRepsOnly) {
-                InputBox(weightInput, color, Modifier.weight(1f).padding(end = 8.dp)) {
+                InputBox(weightInput, color, Modifier
+                    .weight(1f)
+                    .padding(end = 8.dp)) {
                 weightInput = it
                 onUpdate(set.copy(weightOrDuration = it))
             }
@@ -619,7 +631,9 @@ fun TimerSetRow(
     var inputSeconds by remember { mutableStateOf(if (showSeconds) "30" else "0") } // 秒数默认值
 
     Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
@@ -631,7 +645,9 @@ fun TimerSetRow(
             fontWeight = FontWeight.Bold
         )
 
-        Box(modifier = Modifier.weight(1f).padding(horizontal = 8.dp), contentAlignment = Alignment.CenterStart) {
+        Box(modifier = Modifier
+            .weight(1f)
+            .padding(horizontal = 8.dp), contentAlignment = Alignment.CenterStart) {
             if (isActive) {
                 // --- 倒计时显示逻辑 ---
                 val s = timerState.remainingSeconds
@@ -736,7 +752,9 @@ fun HeaderSection(date: LocalDate, dayType: DayType,
             Button(
                 onClick = onWeightClick,
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF9800)),
-                modifier = Modifier.height(36.dp).align(Alignment.Start),
+                modifier = Modifier
+                    .height(36.dp)
+                    .align(Alignment.Start),
                 contentPadding = PaddingValues(horizontal = 12.dp)
             ) {
                 Text(stringResource(R.string.log_weight), fontSize = 14.sp)
@@ -757,7 +775,10 @@ fun HeaderSection(date: LocalDate, dayType: DayType,
 
         LinearProgressIndicator(
             progress = { progress },
-            modifier = Modifier.fillMaxWidth().height(12.dp).clip(RoundedCornerShape(6.dp)),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(12.dp)
+                .clip(RoundedCornerShape(6.dp)),
             color = color,
             trackColor = MaterialTheme.colorScheme.surfaceVariant
         )
@@ -785,7 +806,9 @@ fun AddExerciseSheet(viewModel: MainViewModel, navController: NavController, onD
         Column(modifier = Modifier.fillMaxWidth()) {
             Button(
                 onClick = { onDismiss(); navController.navigate("exercise_manager") },
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
             ) {
                 Text(stringResource(R.string.new_manage_lib))
             }
@@ -823,7 +846,9 @@ fun AddExerciseSheet(viewModel: MainViewModel, navController: NavController, onD
 
                 if (filtered.isEmpty()) {
                     item {
-                        Box(Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
+                        Box(Modifier
+                            .fillMaxWidth()
+                            .padding(32.dp), contentAlignment = Alignment.Center) {
                             Text(stringResource(R.string.chart_no_data), color = Color.Gray)
                         }
                     }
@@ -858,11 +883,21 @@ fun WeightDialog(viewModel: MainViewModel, onDismiss: () -> Unit) {
     var heightInput by remember { mutableStateOf(if (profile.height > 0) profile.height.toString() else "") }
     var selectedGender by remember { mutableStateOf(profile.gender) }
 
+    // [新增] 周度指标状态
+    var bodyFatInput by remember { mutableStateOf("") }
+    var muscleInput by remember { mutableStateOf("") }
+    var waterInput by remember { mutableStateOf("") }
+    var waistInput by remember { mutableStateOf("") }
+    var hipInput by remember { mutableStateOf("") }
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(if (needFullInfo) R.string.dialog_profile_title else R.string.dialog_weight_title)) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
                 OutlinedTextField(
                     value = weightInput,
                     onValueChange = { weightInput = it },
@@ -909,18 +944,81 @@ fun WeightDialog(viewModel: MainViewModel, onDismiss: () -> Unit) {
                         )
                     }
                 }
+
+
+                // 3. [新增指标区] 无论是否 needFullInfo 都会显示
+                HorizontalDivider()
+                Text(
+                    text = stringResource(R.string.weekly_metrics_subtitle),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary
+                )
+
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = bodyFatInput,
+                        onValueChange = { bodyFatInput = it },
+                        label = { Text(stringResource(R.string.label_body_fat_kg)) },
+                        modifier = Modifier.weight(1f),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        singleLine = true
+                    )
+                    OutlinedTextField(
+                        value = muscleInput,
+                        onValueChange = { muscleInput = it },
+                        label = { Text(stringResource(R.string.label_skeletal_muscle_kg)) },
+                        modifier = Modifier.weight(1f),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        singleLine = true
+                    )
+                }
+
+                OutlinedTextField(
+                    value = waterInput,
+                    onValueChange = { waterInput = it },
+                    label = { Text(stringResource(R.string.label_body_water)) },
+                    modifier = Modifier.fillMaxWidth(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    singleLine = true
+                )
+
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = waistInput,
+                        onValueChange = { waistInput = it },
+                        label = { Text(stringResource(R.string.label_waist_circumference)) },
+                        modifier = Modifier.weight(1f),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        singleLine = true
+                    )
+                    OutlinedTextField(
+                        value = hipInput,
+                        onValueChange = { hipInput = it },
+                        label = { Text(stringResource(R.string.label_hip_circumference)) },
+                        modifier = Modifier.weight(1f),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        singleLine = true
+                    )
+                }
+
             }
         },
         confirmButton = {
             Button(onClick = {
-                val w = weightInput.toFloatOrNull()
-                if (w != null) {
-                    val a = if (needFullInfo) ageInput.toIntOrNull() else null
-                    val h = if (needFullInfo) heightInput.toFloatOrNull() else null
-                    val g = if (needFullInfo) selectedGender else null
-
-                    viewModel.logWeightAndProfile(w, a, h, g)
-                    onDismiss()
+                val weight = weightInput.toFloatOrNull()
+                if (weight != null) {
+                    // 💡 关键修改点 2: 统一调用 ViewModel 的新方法
+                    viewModel.logWeightAndProfile(
+                        weight = weight,
+                        age = ageInput.toIntOrNull(),
+                        height = heightInput.toFloatOrNull(),
+                        gender = selectedGender,
+                        bodyFat = bodyFatInput.toFloatOrNull(),
+                        muscle = muscleInput.toFloatOrNull(),
+                        water = waterInput.toFloatOrNull(),
+                        waist = waistInput.toFloatOrNull(),
+                        hip = hipInput.toFloatOrNull()
+                    )
                 }
             }) {
                 Text(stringResource(R.string.btn_save))
@@ -935,7 +1033,9 @@ fun WeightDialog(viewModel: MainViewModel, onDismiss: () -> Unit) {
 @Composable
 fun PillCheckButton(isCompleted: Boolean, color: Color, onClick: () -> Unit) {
     val scale by animateFloatAsState(if (isCompleted) 0.95f else 1f)
-    Surface(onClick = onClick, modifier = Modifier.height(36.dp).scale(scale), shape = RoundedCornerShape(50), color = if (isCompleted) Color.LightGray else color) {
+    Surface(onClick = onClick, modifier = Modifier
+        .height(36.dp)
+        .scale(scale), shape = RoundedCornerShape(50), color = if (isCompleted) Color.LightGray else color) {
         Box(modifier = Modifier.padding(horizontal = 16.dp), contentAlignment = Alignment.Center) {
             Text(if (isCompleted) stringResource(R.string.btn_done) else stringResource(R.string.btn_check), color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
         }
@@ -1007,11 +1107,13 @@ fun <T> SwipeToDeleteContainer(
                                     offsetX.snapTo(0f)
                                 }
                             }
+
                             currentX >= revealThresholdPx / 2 -> {
                                 launch {
                                     offsetX.animateTo(-revealThresholdPx, tween(300))
                                 }
                             }
+
                             else -> {
                                 launch {
                                     offsetX.animateTo(0f, tween(300))

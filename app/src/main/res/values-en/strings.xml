@@ -370,6 +370,21 @@
     <string name="ai_no_reply">AI did not return any content.</string>
     <string name="ai_request_error">Request error: %s</string>
 
+    <string name="weekly_metrics_title">Weekly Body Metrics</string>
+    <string name="weekly_metrics_subtitle">Add more data for deeper insights (Optional)</string>
+    <string name="label_body_fat_kg">Body Fat (kg)</string>
+    <string name="label_skeletal_muscle_kg">Muscle Mass (kg)</string>
+    <string name="label_body_water">Body Water (%)</string>
+    <string name="label_waist_circumference">Waist (cm)</string>
+    <string name="label_hip_circumference">Hip (cm)</string>
+    <string name="label_body_fat_rate">Body Fat: %1$.1f%%</string>
+    <string name="label_whr">WHR: %1$.2f</string>
+    <string name="header_body_composition">Body Composition</string>
+    <string name="chart_title_body_fat">Body Fat (kg)</string>
+    <string name="chart_title_skeletal_muscle">Muscle Mass (kg)</string>
+    <string name="chart_title_body_water">Body Water (%)</string>
+    <string name="chart_title_whr">WHR (Waist-Hip Ratio)</string>
+
 
 
 </resources>
