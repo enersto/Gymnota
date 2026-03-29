@@ -29,7 +29,7 @@
 
 **🔍 UI 转向 Liquid Glass**
 * **李逵的玻璃**：开始替代原有UI风格，转向Liquid Glass设计
-![Screenshot_2026-03-29-22-15-43-806_com example myfit-edit](https://github.com/user-attachments/assets/25ec48de-69b6-464d-ba09-34aee3a00cb9)
+![Screenshot_2026-03-29-22-15-43-806_com example myfit-edit](https://github.com/user-attachments/assets/25ec48de-69b6-464d-ba09-34aee3a00cb9){:height="50%" width="50%"}
 
 ---
 
