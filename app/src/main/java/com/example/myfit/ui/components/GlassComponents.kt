@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -223,28 +224,35 @@ fun GlassButton(
         Surface(
             onClick = onClick,
             enabled = enabled,
-            modifier = modifier.height(48.dp),
+            modifier = modifier
+                .height(48.dp)
+                .widthIn(min = 120.dp), // Increased min width
             shape = Capsule(),
             color = if (enabled) containerColor.copy(alpha = 0.85f) else Color.Gray.copy(alpha = 0.3f),
             contentColor = if (enabled) contentColor else Color.White.copy(alpha = 0.5f),
             border = if (enabled) BorderStroke(1.dp, Color.White.copy(alpha = 0.2f)) else null
         ) {
-            Box(contentAlignment = Alignment.Center) {
-                Text(text = text, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+            Box(
+                modifier = Modifier.padding(horizontal = 24.dp), // Added internal padding
+                contentAlignment = Alignment.Center
+            ) {
+                Text(text = text, fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1)
             }
         }
     } else {
         androidx.compose.material3.Button(
             onClick = onClick,
             enabled = enabled,
-            modifier = modifier.height(48.dp),
+            modifier = modifier
+                .height(48.dp)
+                .widthIn(min = 120.dp), // Increased min width
             shape = RoundedCornerShape(12.dp),
             colors = androidx.compose.material3.ButtonDefaults.buttonColors(
                 containerColor = containerColor,
                 contentColor = contentColor
             )
         ) {
-            Text(text = text, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+            Text(text = text, fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1)
         }
     }
 }

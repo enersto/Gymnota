@@ -35,9 +35,11 @@ import androidx.navigation.NavGraph.Companion.findStartDestination
 import coil.compose.AsyncImage
 import com.example.myfit.R
 import com.example.myfit.model.AiChatRecord
+import com.example.myfit.ui.components.GlassButton
 import com.example.myfit.ui.components.GlassCard
 import com.example.myfit.ui.components.GlassChatBubble
 import com.example.myfit.ui.components.GlassScaffoldContent
+import com.example.myfit.ui.components.LocalGlassMode
 import com.example.myfit.viewmodel.MainViewModel
 import java.io.File
 import java.text.SimpleDateFormat
@@ -58,6 +60,9 @@ fun AICoachScreen(viewModel: MainViewModel, navController: NavController) {
     var tempCsvData by remember { mutableStateOf("") }
     var showRefineDialog by remember { mutableStateOf(false) }
     var chatImageUri by remember { mutableStateOf<Uri?>(null) }
+
+    val glassMode = LocalGlassMode.current
+    val useGlassTabs = glassMode && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S
 
     val chatGalleryLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         if (uri != null) {
@@ -106,36 +111,43 @@ fun AICoachScreen(viewModel: MainViewModel, navController: NavController) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .statusBarsPadding() // [新增] 防信号栏侵入
-                .padding(top = 24.dp) // [新增] 保持与历史页一致的顶部间距
+                .statusBarsPadding()
+                .padding(top = 24.dp)
         ) {
-            // 1. Page Title
-            Text(
-                text = stringResource(R.string.tab_ai_coach),
-                style = MaterialTheme.typography.headlineSmall,
-                color = MaterialTheme.colorScheme.onBackground,
-                modifier = Modifier.padding(bottom = 16.dp)
-            )
-
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 16.dp)
-                    .verticalScroll(scrollState) // [滚动仅限此区域]
-            ) {
-
-            // 2. Status Row
+            // Fixed Header
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 12.dp),
+                    .padding(horizontal = 16.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
+                Text(
+                    text = stringResource(R.string.tab_ai_coach),
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+                
+                FilledTonalIconButton(
+                    onClick = { showHistoryDialog = true },
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Icon(Icons.Default.History, contentDescription = "History")
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Scrollable Content
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(horizontal = 16.dp)
+                    .verticalScroll(scrollState)
+            ) {
+                // Status Row
                 GlassCard(
-                    modifier = Modifier
-                        .weight(1f)
-                        .padding(end = 8.dp),
+                    modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(24.dp)
                 ) {
                     Row(
@@ -182,188 +194,175 @@ fun AICoachScreen(viewModel: MainViewModel, navController: NavController) {
                     }
                 }
 
-                FilledTonalIconButton(
-                    onClick = { showHistoryDialog = true },
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Icon(Icons.Default.History, contentDescription = "History")
-                }
-            }
+                Spacer(modifier = Modifier.height(12.dp))
 
-            // 3. Quick Toolbar
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                OutlinedButton(
-                    onClick = {
-                        val permission = Manifest.permission.CAMERA
-                        if (ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED) {
-                            val uri = createTempPictureUri()
-                            if (uri != null) {
-                                tempCameraUri = uri
-                                cameraLauncher.launch(uri)
+                // Quick Toolbar
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = {
+                            val permission = Manifest.permission.CAMERA
+                            if (ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED) {
+                                val uri = createTempPictureUri()
+                                if (uri != null) {
+                                    tempCameraUri = uri
+                                    cameraLauncher.launch(uri)
+                                }
+                            } else {
+                                permissionLauncher.launch(permission)
                             }
-                        } else {
-                            permissionLauncher.launch(permission)
-                        }
-                    },
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(12.dp),
-                    contentPadding = PaddingValues(vertical = 10.dp)
-                ) {
-                    Icon(Icons.Default.PhotoCamera, null, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(stringResource(R.string.btn_snap_photo), fontSize = 13.sp)
-                }
-
-                Button(
-                    onClick = {
-                        isFreeChatMode = !isFreeChatMode
-                        if (isFreeChatMode) viewModel.currentTrainingGoal = ""
-                    },
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(12.dp),
-                    contentPadding = PaddingValues(vertical = 10.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = if (isFreeChatMode) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
-                        contentColor = if (isFreeChatMode) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary
-                    )
-                ) {
-                    Icon(Icons.Default.Chat, null, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(stringResource(R.string.btn_free_chat), fontSize = 13.sp)
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // 4. Input Area
-            if (isFreeChatMode) {
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    if (chatImageUri != null) {
-                        Box(
-                            modifier = Modifier
-                                .padding(bottom = 8.dp)
-                                .size(80.dp)
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(MaterialTheme.colorScheme.surfaceVariant)
-                        ) {
-                            AsyncImage(
-                                model = chatImageUri,
-                                contentDescription = null,
-                                modifier = Modifier.fillMaxSize(),
-                                contentScale = ContentScale.Crop
-                            )
-                            IconButton(
-                                onClick = { chatImageUri = null },
-                                modifier = Modifier
-                                    .align(Alignment.TopEnd)
-                                    .size(24.dp)
-                                    .background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(0.dp, 0.dp, 0.dp, 8.dp))
-                            ) {
-                                Icon(Icons.Default.Close, null, tint = Color.White, modifier = Modifier.size(16.dp))
-                            }
-                        }
+                        },
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp),
+                        contentPadding = PaddingValues(vertical = 10.dp)
+                    ) {
+                        Icon(Icons.Default.PhotoCamera, null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(stringResource(R.string.btn_snap_photo), fontSize = 13.sp)
                     }
 
+                    Button(
+                        onClick = {
+                            isFreeChatMode = !isFreeChatMode
+                            if (isFreeChatMode) viewModel.currentTrainingGoal = ""
+                        },
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp),
+                        contentPadding = PaddingValues(vertical = 10.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (isFreeChatMode) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                            contentColor = if (isFreeChatMode) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary
+                        )
+                    ) {
+                        Icon(Icons.Default.Chat, null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(stringResource(R.string.btn_free_chat), fontSize = 13.sp)
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Input Area
+                if (isFreeChatMode) {
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        if (chatImageUri != null) {
+                            Box(
+                                modifier = Modifier
+                                    .padding(bottom = 8.dp)
+                                    .size(80.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                            ) {
+                                AsyncImage(
+                                    model = chatImageUri,
+                                    contentDescription = null,
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = ContentScale.Crop
+                                )
+                                IconButton(
+                                    onClick = { chatImageUri = null },
+                                    modifier = Modifier
+                                        .align(Alignment.TopEnd)
+                                        .size(24.dp)
+                                        .background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(0.dp, 0.dp, 0.dp, 8.dp))
+                                ) {
+                                    Icon(Icons.Default.Close, null, tint = Color.White, modifier = Modifier.size(16.dp))
+                                }
+                            }
+                        }
+
+                        OutlinedTextField(
+                            value = viewModel.currentTrainingGoal,
+                            onValueChange = { viewModel.currentTrainingGoal = it },
+                            label = { Text(stringResource(R.string.btn_free_chat)) },
+                            placeholder = { Text(stringResource(R.string.hint_input_chat)) },
+                            modifier = Modifier.fillMaxWidth(),
+                            maxLines = 3,
+                            trailingIcon = {
+                                IconButton(onClick = { chatGalleryLauncher.launch("image/*") }) {
+                                    Icon(
+                                        Icons.Default.Image,
+                                        contentDescription = "Add Image",
+                                        tint = if (chatImageUri != null) MaterialTheme.colorScheme.primary else Color.Gray
+                                    )
+                                }
+                            },
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                    }
+                } else {
+                    PlanConfigCard(viewModel)
+                    Spacer(modifier = Modifier.height(16.dp))
                     OutlinedTextField(
                         value = viewModel.currentTrainingGoal,
                         onValueChange = { viewModel.currentTrainingGoal = it },
-                        label = { Text(stringResource(R.string.btn_free_chat)) },
-                        placeholder = { Text(stringResource(R.string.hint_input_chat)) },
+                        label = { Text(stringResource(R.string.label_current_goal)) },
+                        placeholder = { Text(stringResource(R.string.hint_input_goal)) },
                         modifier = Modifier.fillMaxWidth(),
                         maxLines = 3,
-                        trailingIcon = {
-                            IconButton(onClick = { chatGalleryLauncher.launch("image/*") }) {
-                                Icon(
-                                    Icons.Default.Image,
-                                    contentDescription = "Add Image",
-                                    tint = if (chatImageUri != null) MaterialTheme.colorScheme.primary else Color.Gray
-                                )
-                            }
-                        },
                         shape = RoundedCornerShape(12.dp)
                     )
                 }
-            } else {
-                PlanConfigCard(viewModel)
+
                 Spacer(modifier = Modifier.height(16.dp))
-                OutlinedTextField(
-                    value = viewModel.currentTrainingGoal,
-                    onValueChange = { viewModel.currentTrainingGoal = it },
-                    label = { Text(stringResource(R.string.label_current_goal)) },
-                    placeholder = { Text(stringResource(R.string.hint_input_goal)) },
+
+                // [更新点]：使用 GlassButton
+                GlassButton(
+                    text = if (isFreeChatMode) stringResource(R.string.btn_send_message) else stringResource(R.string.btn_get_advice),
                     modifier = Modifier.fillMaxWidth(),
-                    maxLines = 3,
-                    shape = RoundedCornerShape(12.dp)
-                )
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Button(
-                onClick = {
-                    if (isFreeChatMode) {
-                        if (viewModel.currentTrainingGoal.isNotBlank() || chatImageUri != null) {
-                            viewModel.sendFreeChat(context, viewModel.currentTrainingGoal, chatImageUri)
-                            chatImageUri = null
+                    enabled = !isLoading,
+                    onClick = {
+                        if (isFreeChatMode) {
+                            if (viewModel.currentTrainingGoal.isNotBlank() || chatImageUri != null) {
+                                viewModel.sendFreeChat(context, viewModel.currentTrainingGoal, chatImageUri)
+                                chatImageUri = null
+                            } else {
+                                Toast.makeText(context, context.getString(R.string.hint_input_chat), Toast.LENGTH_SHORT).show()
+                            }
                         } else {
-                            Toast.makeText(context, context.getString(R.string.hint_input_chat), Toast.LENGTH_SHORT).show()
+                            viewModel.generateWeeklyPlan(context)
                         }
-                    } else {
-                        viewModel.generateWeeklyPlan(context)
                     }
-                },
-                enabled = !isLoading,
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                contentPadding = PaddingValues(vertical = 12.dp)
-            ) {
-                if (isLoading) {
-                    CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Color.White, strokeWidth = 2.dp)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(stringResource(R.string.msg_processing))
-                } else {
-                    Text(if (isFreeChatMode) stringResource(R.string.btn_send_message) else stringResource(R.string.btn_get_advice))
-                }
-            }
+                )
 
-            Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(24.dp))
 
-            // 5. Result Area
-            if (!aiResponse.isNullOrBlank()) {
-                GlassChatBubble(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp)
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(
-                            text = stringResource(R.string.ai_response_title),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
-                        )
-                        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-                        MarkdownText(markdown = aiResponse!!)
-                        
-                        if (!isFreeChatMode) {
-                            Spacer(modifier = Modifier.height(16.dp))
-                            FilledTonalButton(
-                                onClick = { showRefineDialog = true },
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(12.dp)
-                            ) {
-                                Icon(Icons.Default.Download, null, modifier = Modifier.size(18.dp))
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(stringResource(R.string.btn_generate_and_import))
+                // Result Area
+                if (!aiResponse.isNullOrBlank()) {
+                    GlassChatBubble(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text(
+                                text = stringResource(R.string.ai_response_title),
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                            MarkdownText(markdown = aiResponse!!)
+                            
+                            if (!isFreeChatMode) {
+                                Spacer(modifier = Modifier.height(16.dp))
+                                FilledTonalButton(
+                                    onClick = { showRefineDialog = true },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Icon(Icons.Default.Download, null, modifier = Modifier.size(18.dp))
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(stringResource(R.string.btn_generate_and_import))
+                                }
                             }
                         }
                     }
                 }
-            }
 
-            Spacer(modifier = Modifier.height(32.dp))
-        }}
+                Spacer(modifier = Modifier.height(if (useGlassTabs) 120.dp else 32.dp))
+            }
+        }
     }
 
     // Dialogs

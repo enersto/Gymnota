@@ -39,6 +39,7 @@ import androidx.navigation.NavController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.example.myfit.R
 import com.example.myfit.model.*
+import com.example.myfit.ui.components.GlassButton
 import com.example.myfit.ui.components.GlassCard
 import com.example.myfit.ui.components.GlassScaffoldContent
 import com.example.myfit.ui.components.LocalBackdrop
@@ -201,7 +202,7 @@ fun ScheduleScreen(navController: NavController, viewModel: MainViewModel) {
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.onBackground
                         )
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(12.dp))
                         Row(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
                             AppTheme.entries.forEach { theme ->
                                 GlassThemeCircle(theme, currentTheme == theme) {
@@ -354,8 +355,9 @@ fun ProfileEditDialog(viewModel: MainViewModel, onDismiss: () -> Unit) {
             }
         },
         confirmButton = {
-            Button(onClick = { viewModel.updateProfile(ageInput.toIntOrNull() ?: 0, heightInput.toFloatOrNull() ?: 0f, selectedGender); onDismiss() }) {
-                Text(stringResource(R.string.btn_save))
+            GlassButton(text = stringResource(R.string.btn_save)) {
+                viewModel.updateProfile(ageInput.toIntOrNull() ?: 0, heightInput.toFloatOrNull() ?: 0f, selectedGender)
+                onDismiss()
             }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.btn_cancel)) } }
@@ -479,9 +481,11 @@ fun AiConfigSection(viewModel: MainViewModel) {
                             Text(stringResource(R.string.btn_test_connection))
                         }
                     }
-                    Button({ viewModel.saveAiConfig(selectedProvider, apiKey, model, baseUrl) }, shape = RoundedCornerShape(12.dp)) {
-                        Text(stringResource(R.string.btn_save_config))
-                    }
+                    // [修复点]：使用 GlassButton
+                    GlassButton(
+                        text = stringResource(R.string.btn_save_config),
+                        onClick = { viewModel.saveAiConfig(selectedProvider, apiKey, model, baseUrl) }
+                    )
                 }
                 if (connectionState is MainViewModel.ConnectionState.Error) Text((connectionState as MainViewModel.ConnectionState.Error).message, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
             }
@@ -521,7 +525,12 @@ fun AboutSection() {
 @Composable
 fun ImportDialog(defaultText: String, onDismiss: () -> Unit, onImport: (String) -> Unit) {
     var text by remember { mutableStateOf(defaultText) }
-    AlertDialog(onDismissRequest = onDismiss, title = { Text(stringResource(R.string.import_dialog_title)) }, text = { Column { Text(stringResource(R.string.import_dialog_hint), fontSize = 12.sp, color = Color.Gray); OutlinedTextField(text, { text = it }, Modifier.fillMaxWidth().height(200.dp), textStyle = MaterialTheme.typography.bodySmall, shape = RoundedCornerShape(12.dp)) } }, confirmButton = { Button(onClick = { onImport(text) }) { Text(stringResource(R.string.import_btn)) } }, dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.btn_cancel)) } })
+    AlertDialog(onDismissRequest = onDismiss, title = { Text(stringResource(R.string.import_dialog_title)) }, 
+        text = { Column { Text(stringResource(R.string.import_dialog_hint), fontSize = 12.sp, color = Color.Gray); OutlinedTextField(text, { text = it }, Modifier.fillMaxWidth().height(200.dp), textStyle = MaterialTheme.typography.bodySmall, shape = RoundedCornerShape(12.dp)) } }, 
+        confirmButton = { 
+            GlassButton(text = stringResource(R.string.import_btn)) { onImport(text) }
+        }, 
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.btn_cancel)) } })
 }
 
 @Composable
@@ -546,7 +555,18 @@ private fun KeyReferenceDialog(onDismiss: () -> Unit) {
                 }
             }
         },
-        confirmButton = { Button(onClick = { if(selectedKeys.isNotEmpty()) { (context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("Keys", selectedKeys.joinToString(", "))); Toast.makeText(context, context.getString(R.string.msg_copied_count, selectedKeys.size), Toast.LENGTH_SHORT).show(); selectedKeys.clear() } else onDismiss() }) { Text(if(selectedKeys.isNotEmpty()) stringResource(R.string.btn_copy_selected, selectedKeys.size) else stringResource(R.string.btn_done)) } },
+        confirmButton = { 
+            GlassButton(
+                text = if(selectedKeys.isNotEmpty()) stringResource(R.string.btn_copy_selected, selectedKeys.size) else stringResource(R.string.btn_done),
+                onClick = { 
+                    if(selectedKeys.isNotEmpty()) { 
+                        (context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("Keys", selectedKeys.joinToString(", ")))
+                        Toast.makeText(context, context.getString(R.string.msg_copied_count, selectedKeys.size), Toast.LENGTH_SHORT).show()
+                        selectedKeys.clear() 
+                    } else onDismiss()
+                }
+            )
+        },
         dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.btn_cancel)) } }
     )
 }
@@ -582,10 +602,19 @@ fun ManualRoutineDialog(viewModel: MainViewModel, onDismiss: () -> Unit) {
                 HorizontalPager(state = pagerState, modifier = Modifier.weight(1f)) {
                     Box(Modifier.fillMaxSize(), Alignment.TopStart) {
                         if (routineItems.isEmpty()) Box(Modifier.fillMaxSize(), Alignment.Center) { Text(stringResource(R.string.no_plan), color = Color.Gray) }
-                        else LazyColumn(Modifier.fillMaxSize()) { items(routineItems) { item -> Row(Modifier.fillMaxWidth().padding(8.dp), Arrangement.SpaceBetween, Alignment.CenterVertically) { Column { Text(item.name, style = MaterialTheme.typography.titleMedium); Text(item.target, style = MaterialTheme.typography.bodySmall, color = Color.Gray) }; IconButton(onClick = { viewModel.removeRoutineItem(item); routineItems.remove(item) }) { Icon(Icons.Default.Delete, null, tint = Color.Red.copy(0.5f)) } }; HorizontalDivider() } }
+                        else LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 16.dp)) { 
+                            items(routineItems) { item -> 
+                                GlassCard(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp), shape = RoundedCornerShape(12.dp)) {
+                                    Row(Modifier.padding(12.dp), Arrangement.SpaceBetween, Alignment.CenterVertically) { 
+                                        Column { Text(item.name, style = MaterialTheme.typography.titleMedium); Text(item.target, style = MaterialTheme.typography.bodySmall, color = Color.Gray) }
+                                        IconButton(onClick = { viewModel.removeRoutineItem(item); routineItems.remove(item) }) { Icon(Icons.Default.Delete, null, tint = Color.Red.copy(0.5f)) } 
+                                    }
+                                }
+                            } 
+                        }
                     }
                 }
-                Button(onClick = { showTemplateSelector = true }, Modifier.fillMaxWidth().padding(top = 8.dp)) { Icon(Icons.Default.Add, null); Spacer(Modifier.width(8.dp)); Text(stringResource(R.string.btn_add)) }
+                GlassButton(text = stringResource(R.string.btn_add), modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) { showTemplateSelector = true }
             }
         }, confirmButton = {}
     )

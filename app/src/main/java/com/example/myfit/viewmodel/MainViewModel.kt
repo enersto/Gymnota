@@ -95,11 +95,23 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val availableProviders = listOf(
         AiProviderPreset("OpenAI", "https://api.openai.com/", "gpt-4o-mini"),
         AiProviderPreset("DeepSeek", "https://api.deepseek.com/", "deepseek-chat"),
-        AiProviderPreset("Gemini", "https://generativelanguage.googleapis.com/v1beta/openai/", "gemini-1.5-flash"),
+        AiProviderPreset(
+            "Gemini",
+            "https://generativelanguage.googleapis.com/v1beta/openai/",
+            "gemini-1.5-flash"
+        ),
         AiProviderPreset("Xiaomi MiMo", "https://api.xiaomimimo.com/", "mimo-v2-flash"),
         AiProviderPreset("Kimi (Moonshot)", "https://api.moonshot.cn/", "moonshot-v1-8k"),
-        AiProviderPreset("Qwen (Aliyun)", "https://dashscope.aliyuncs.com/compatible-mode/", "qwen-turbo"),
-        AiProviderPreset("SiliconFlow", "https://api.siliconflow.cn/", "deepseek-ai/DeepSeek-V3"), // 硅基流动
+        AiProviderPreset(
+            "Qwen (Aliyun)",
+            "https://dashscope.aliyuncs.com/compatible-mode/",
+            "qwen-turbo"
+        ),
+        AiProviderPreset(
+            "SiliconFlow",
+            "https://api.siliconflow.cn/",
+            "deepseek-ai/DeepSeek-V3"
+        ), // 硅基流动
         AiProviderPreset("Custom", "", "")
     )
 
@@ -133,20 +145,23 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     // [新增] 读取和保存设置的辅助方法
     fun getTimerPrepEnabled() = prefs.getBoolean(KEY_TIMER_PREP_ENABLED, true)
-    fun setTimerPrepEnabled(enable: Boolean) = prefs.edit().putBoolean(KEY_TIMER_PREP_ENABLED, enable).apply()
+    fun setTimerPrepEnabled(enable: Boolean) =
+        prefs.edit().putBoolean(KEY_TIMER_PREP_ENABLED, enable).apply()
 
     fun getTimerPrepSeconds() = prefs.getInt(KEY_TIMER_PREP_SECS, 10)
     fun setTimerPrepSeconds(secs: Int) = prefs.edit().putInt(KEY_TIMER_PREP_SECS, secs).apply()
 
     fun getTimerFinalEnabled() = prefs.getBoolean(KEY_TIMER_FINAL_ENABLED, true)
-    fun setTimerFinalEnabled(enable: Boolean) = prefs.edit().putBoolean(KEY_TIMER_FINAL_ENABLED, enable).apply()
+    fun setTimerFinalEnabled(enable: Boolean) =
+        prefs.edit().putBoolean(KEY_TIMER_FINAL_ENABLED, enable).apply()
 
     fun getTimerFinalSeconds() = prefs.getInt(KEY_TIMER_FINAL_SECS, 5)
     fun setTimerFinalSeconds(secs: Int) = prefs.edit().putInt(KEY_TIMER_FINAL_SECS, secs).apply()
 
     // [新增] 音效开关读写方法
     fun getTimerSoundEnabled() = prefs.getBoolean(KEY_TIMER_SOUND_ENABLED, true)
-    fun setTimerSoundEnabled(enable: Boolean) = prefs.edit().putBoolean(KEY_TIMER_SOUND_ENABLED, enable).apply()
+    fun setTimerSoundEnabled(enable: Boolean) =
+        prefs.edit().putBoolean(KEY_TIMER_SOUND_ENABLED, enable).apply()
 
     private val _selectedDate = MutableStateFlow(LocalDate.now())
     val selectedDate: StateFlow<LocalDate> = _selectedDate.asStateFlow()
@@ -174,7 +189,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }.stateIn(viewModelScope, SharingStarted.Lazily, DayType.CORE)
 
     val showWeightAlert = dao.getLatestWeight().map { record ->
-        if (record == null) true else ChronoUnit.DAYS.between(LocalDate.parse(record.date), LocalDate.now()) > 7
+        if (record == null) true else ChronoUnit.DAYS.between(
+            LocalDate.parse(record.date),
+            LocalDate.now()
+        ) > 7
     }.stateIn(viewModelScope, SharingStarted.Lazily, false)
 
     val todayTasks: Flow<List<WorkoutTask>> = _selectedDate.flatMapLatest { date ->
@@ -186,7 +204,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val weightHistory: Flow<List<WeightRecord>> = dao.getAllWeightRecords()
 
     private val prefs = application.getSharedPreferences("myfit_prefs", Context.MODE_PRIVATE)
-    private val _hasShownLockScreenGuide = MutableStateFlow(prefs.getBoolean("key_lockscreen_guide_shown", false))
+    private val _hasShownLockScreenGuide =
+        MutableStateFlow(prefs.getBoolean("key_lockscreen_guide_shown", false))
     val hasShownLockScreenGuide = _hasShownLockScreenGuide.asStateFlow()
 
     // [修改] 肌肉热力图数据：返回 HeatmapPoint (包含 intensity 和 raw volume)
@@ -218,7 +237,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 taskVolume += if (targetVal > 0) targetVal else 1f
             }
 
-            currentVolumeMap[task.bodyPart] = currentVolumeMap.getOrDefault(task.bodyPart, 0f) + taskVolume
+            currentVolumeMap[task.bodyPart] =
+                currentVolumeMap.getOrDefault(task.bodyPart, 0f) + taskVolume
         }
 
         val globalMaxVolume = currentVolumeMap.values.maxOrNull() ?: 1f
@@ -269,7 +289,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     // [新增] 启动准备阶段
-    private fun startPrepPhase(context: Context, taskId: Long, setIndex: Int, durationMinutes: Float) {
+    private fun startPrepPhase(
+        context: Context,
+        taskId: Long,
+        setIndex: Int,
+        durationMinutes: Float
+    ) {
         val prepSeconds = getTimerPrepSeconds()
         val now = SystemClock.elapsedRealtime() // 【核心】使用精准时间
         val endTime = now + (prepSeconds * 1000L)
@@ -292,7 +317,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     // [重构] 启动正式训练阶段 (对应原本的 startTimer 逻辑)
-    private fun startWorkPhase(context: Context, taskId: Long, setIndex: Int, durationMinutes: Float) {
+    private fun startWorkPhase(
+        context: Context,
+        taskId: Long,
+        setIndex: Int,
+        durationMinutes: Float
+    ) {
         val current = _timerState.value
         val now = SystemClock.elapsedRealtime() // 【核心】使用精准时间
 
@@ -300,11 +330,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val durationMillis = (durationMinutes * 60 * 1000).toLong()
 
         // 判断是否是“暂停后继续”：任务ID一致、Set一致、处于暂停状态、且之前是在WORK阶段暂停的
-        val endTimeMillis = if (current.taskId == taskId && current.setIndex == setIndex && current.isPaused && current.phase == TimerPhase.WORK) {
-            now + (current.remainingSeconds * 1000L)
-        } else {
-            now + durationMillis
-        }
+        val endTimeMillis =
+            if (current.taskId == taskId && current.setIndex == setIndex && current.isPaused && current.phase == TimerPhase.WORK) {
+                now + (current.remainingSeconds * 1000L)
+            } else {
+                now + durationMillis
+            }
 
         val initialRemSeconds = ((endTimeMillis - now) / 1000).toInt()
 
@@ -362,7 +393,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
                 // --- 判断是否显示大弹窗和播放声音 ---
                 // 条件：是准备阶段，或者 (是正式阶段 且 开启了倒数 且 时间进入倒数范围)
-                val isFinalCountdown = displaySeconds > 0 && displaySeconds <= if (isPrep) 3 else finalSeconds
+                val isFinalCountdown =
+                    displaySeconds > 0 && displaySeconds <= if (isPrep) 3 else finalSeconds
 
                 _timerState.update {
                     it.copy(
@@ -377,7 +409,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     try {
                         // 发出短促的“滴”声
                         toneGenerator.startTone(ToneGenerator.TONE_CDMA_PIP, 150)
-                    } catch (e: Exception) { e.printStackTrace() }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
                     lastBeepSecond = displaySeconds
                 }
 
@@ -388,13 +422,23 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     if (soundEnabled) {
                         try {
                             toneGenerator.startTone(ToneGenerator.TONE_CDMA_ALERT_CALL_GUARD, 400)
-                        } catch (e: Exception) { e.printStackTrace() }
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                        }
                     }
                     try {
                         toneGenerator.startTone(ToneGenerator.TONE_CDMA_ALERT_CALL_GUARD, 400)
-                    } catch (e: Exception) { e.printStackTrace() }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
 
-                    _timerState.update { it.copy(remainingSeconds = 0, isRunning = false, showBigAlert = false) }
+                    _timerState.update {
+                        it.copy(
+                            remainingSeconds = 0,
+                            isRunning = false,
+                            showBigAlert = false
+                        )
+                    }
 
                     withContext(Dispatchers.Main) {
                         if (!isPrep) stopService(context) // 只有正式结束才关 Service
@@ -412,7 +456,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun pauseTimer(context: Context) {
         _timerState.update { it.copy(isRunning = false, isPaused = true) }
         timerJob?.cancel()
-        try { NotificationHelper.updateTimerNotification(context, null, null) } catch (e: Exception) { e.printStackTrace() }
+        try {
+            NotificationHelper.updateTimerNotification(context, null, null)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
     fun stopTimer(context: Context) {
@@ -534,13 +582,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun getWHRChartData(granularity: ChartGranularity): Flow<List<ChartDataPoint>> {
         return weightHistory.map { records ->
-            val raw = records.filter { it.waistCircumference != null && it.hipCircumference != null }
-                .map { Pair(LocalDate.parse(it.date), it.waistHipRatio ?: 0f) }
+            val raw =
+                records.filter { it.waistCircumference != null && it.hipCircumference != null }
+                    .map { Pair(LocalDate.parse(it.date), it.waistHipRatio ?: 0f) }
             groupAndFormatData(raw, granularity)
         }
     }
 
-    private fun groupAndFormatData(raw: List<Pair<LocalDate, Float>>, granularity: ChartGranularity): List<ChartDataPoint> {
+    private fun groupAndFormatData(
+        raw: List<Pair<LocalDate, Float>>,
+        granularity: ChartGranularity
+    ): List<ChartDataPoint> {
         val grouped = when (granularity) {
             ChartGranularity.DAILY -> raw.groupBy { it.first }
             ChartGranularity.MONTHLY -> raw.groupBy { it.first.withDayOfMonth(1) }
@@ -610,19 +662,21 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun addTaskFromTemplate(t: ExerciseTemplate) = viewModelScope.launch {
-        dao.insertTask(WorkoutTask(
-            date = _selectedDate.value.toString(),
-            templateId = t.id,
-            name = t.name,
-            category = t.category,
-            target = t.defaultTarget,
-            bodyPart = t.bodyPart,
-            equipment = t.equipment,
-            isUnilateral = t.isUnilateral,
-            logType = t.logType, // [新增] 传递 logType
-            // [修复] 显式指定参数名，消除歧义
-            sets = listOf(WorkoutSet(setNumber = 1, weightOrDuration = "", reps = ""))
-        ))
+        dao.insertTask(
+            WorkoutTask(
+                date = _selectedDate.value.toString(),
+                templateId = t.id,
+                name = t.name,
+                category = t.category,
+                target = t.defaultTarget,
+                bodyPart = t.bodyPart,
+                equipment = t.equipment,
+                isUnilateral = t.isUnilateral,
+                logType = t.logType, // [新增] 传递 logType
+                // [修复] 显式指定参数名，消除歧义
+                sets = listOf(WorkoutSet(setNumber = 1, weightOrDuration = "", reps = ""))
+            )
+        )
     }
 
     fun updateTask(t: WorkoutTask) = viewModelScope.launch { dao.updateTask(t) }
@@ -633,34 +687,38 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val dayOfWeek = _selectedDate.value.dayOfWeek.value
         val routineItems = dao.getRoutineForDaySync(dayOfWeek)
         routineItems.forEach { item ->
-            dao.insertTask(WorkoutTask(
-                date = dateStr,
-                templateId = item.templateId,
-                name = item.name,
-                category = item.category,
-                target = item.target,
-                bodyPart = item.bodyPart,
-                equipment = item.equipment,
-                isUnilateral = item.isUnilateral,
-                logType = item.logType, // [新增] 传递 logType
-                // [修复] 显式指定参数名
-                sets = listOf(WorkoutSet(setNumber = 1, weightOrDuration = "", reps = ""))
-            ))
+            dao.insertTask(
+                WorkoutTask(
+                    date = dateStr,
+                    templateId = item.templateId,
+                    name = item.name,
+                    category = item.category,
+                    target = item.target,
+                    bodyPart = item.bodyPart,
+                    equipment = item.equipment,
+                    isUnilateral = item.isUnilateral,
+                    logType = item.logType, // [新增] 传递 logType
+                    // [修复] 显式指定参数名
+                    sets = listOf(WorkoutSet(setNumber = 1, weightOrDuration = "", reps = ""))
+                )
+            )
         }
     }
 
     fun addRoutineItem(day: Int, template: ExerciseTemplate) = viewModelScope.launch {
-        dao.insertRoutineItem(WeeklyRoutineItem(
-            dayOfWeek = day,
-            templateId = template.id,
-            name = template.name,
-            target = template.defaultTarget,
-            category = template.category,
-            bodyPart = template.bodyPart,
-            equipment = template.equipment,
-            isUnilateral = template.isUnilateral,
-            logType = template.logType// [新增]
-        ))
+        dao.insertRoutineItem(
+            WeeklyRoutineItem(
+                dayOfWeek = day,
+                templateId = template.id,
+                name = template.name,
+                target = template.defaultTarget,
+                category = template.category,
+                bodyPart = template.bodyPart,
+                equipment = template.equipment,
+                isUnilateral = template.isUnilateral,
+                logType = template.logType// [新增]
+            )
+        )
     }
 
     fun removeRoutineItem(item: WeeklyRoutineItem) = viewModelScope.launch {
@@ -709,12 +767,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 }
 
                 withContext(Dispatchers.Main) {
-                    Toast.makeText(context, context.getString(R.string.msg_backup_success), Toast.LENGTH_SHORT).show()
+                    Toast.makeText(
+                        context,
+                        context.getString(R.string.msg_backup_success),
+                        Toast.LENGTH_SHORT
+                    ).show()
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
                 withContext(Dispatchers.Main) {
-                    Toast.makeText(context, "Export failed: ${e.message}", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "Export failed: ${e.message}", Toast.LENGTH_SHORT)
+                        .show()
                 }
             }
         }
@@ -847,7 +910,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     // [局部替换] 支持 "mode=3" 获取右侧重量数据
-    fun getSingleExerciseChartData(name: String, mode: Int, granularity: ChartGranularity): Flow<List<ChartDataPoint>> {
+    fun getSingleExerciseChartData(
+        name: String,
+        mode: Int,
+        granularity: ChartGranularity
+    ): Flow<List<ChartDataPoint>> {
         return historyRecords.map { tasks ->
             val targetTasks = tasks.filter { it.name == name }
             val raw = targetTasks.groupBy { LocalDate.parse(it.date) }.map { (date, tList) ->
@@ -865,11 +932,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     }
                 }
 
-                val dailyVal = when(mode) {
-                    0 -> values.sumOf { parseDuration(it.weightOrDuration).toDouble() }.toFloat() // 有氧时长
+                val dailyVal = when (mode) {
+                    0 -> values.sumOf { parseDuration(it.weightOrDuration).toDouble() }
+                        .toFloat() // 有氧时长
                     1 -> values.maxOfOrNull { parseValue(it.weightOrDuration) } ?: 0f // 力量：左边/双边 重量
                     2 -> values.sumOf { parseValue(it.reps).toDouble() }.toFloat() // 核心：次数
-                    3 -> values.maxOfOrNull { parseValue(it.rightWeight ?: "0") } ?: 0f // [新增] 力量：右边 重量
+                    3 -> values.maxOfOrNull { parseValue(it.rightWeight ?: "0") }
+                        ?: 0f // [新增] 力量：右边 重量
                     else -> 0f
                 }
                 Pair(date, dailyVal)
@@ -922,13 +991,21 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         val name = parts[1]
                         val category = parts[2]
                         val target = parts[3]
-                        val bodyPart = if (parts.size > 4 && parts[4].isNotBlank()) parts[4] else "part_other"
-                        val equipment = if (parts.size > 5 && parts[5].isNotBlank()) parts[5] else "equip_other"
+                        val bodyPart =
+                            if (parts.size > 4 && parts[4].isNotBlank()) parts[4] else "part_other"
+                        val equipment =
+                            if (parts.size > 5 && parts[5].isNotBlank()) parts[5] else "equip_other"
                         val isUni = if (parts.size > 6) parts[6].toBoolean() else false
                         // [新增] 解析 LogType，如果 CSV 没这列(旧版)，则根据 Category 推断
                         val inferredLogType = when {
-                            category.equals("CARDIO", ignoreCase = true) || category.contains("有氧") -> 1 // DURATION
-                            category.equals("CORE", ignoreCase = true) || category.contains("核心") -> 2 // REPS_ONLY
+                            category.equals(
+                                "CARDIO",
+                                ignoreCase = true
+                            ) || category.contains("有氧") -> 1 // DURATION
+                            category.equals(
+                                "CORE",
+                                ignoreCase = true
+                            ) || category.contains("核心") -> 2 // REPS_ONLY
                             else -> 0 // WEIGHT_REPS
                         }
                         // [优化] 加强 LogType 解析的健壮性
@@ -942,8 +1019,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
 
                         daysToOverwrite.add(day) // 标记这一天需要被覆盖
-                        pendingItems.add(PendingItem(day, name, category, target, bodyPart, equipment, isUni,logType,
-                            instructionText))
+                        pendingItems.add(
+                            PendingItem(
+                                day, name, category, target, bodyPart, equipment, isUni, logType,
+                                instructionText
+                            )
+                        )
                     }
                 }
 
@@ -979,27 +1060,37 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     }
 
                     // 插入到周计划
-                    dao.insertRoutineItem(WeeklyRoutineItem(
-                        dayOfWeek = item.day,
-                        templateId = templateId,
-                        name = item.name,
-                        target = item.target,
-                        category = item.category,
-                        bodyPart = item.bodyPart,
-                        equipment = item.equipment,
-                        isUnilateral = item.isUni,
-                        logType = item.logType
-                    ))
+                    dao.insertRoutineItem(
+                        WeeklyRoutineItem(
+                            dayOfWeek = item.day,
+                            templateId = templateId,
+                            name = item.name,
+                            target = item.target,
+                            category = item.category,
+                            bodyPart = item.bodyPart,
+                            equipment = item.equipment,
+                            isUnilateral = item.isUni,
+                            logType = item.logType
+                        )
+                    )
                     successCount++
                 }
 
                 withContext(Dispatchers.Main) {
-                    Toast.makeText(context, context.getString(R.string.import_success) + ": $successCount", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(
+                        context,
+                        context.getString(R.string.import_success) + ": $successCount",
+                        Toast.LENGTH_SHORT
+                    ).show()
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
                 withContext(Dispatchers.Main) {
-                    Toast.makeText(context, context.getString(R.string.import_error) + "\n${e.message}", Toast.LENGTH_LONG).show()
+                    Toast.makeText(
+                        context,
+                        context.getString(R.string.import_error) + "\n${e.message}",
+                        Toast.LENGTH_LONG
+                    ).show()
                 }
             }
         }
@@ -1025,10 +1116,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 } catch (e: Exception) {
                     // 如果找不到特定语言文件，尝试加载英文版作为保底
                     try {
-                        context.assets.open("default_exercises.json").bufferedReader().use { it.readText() }
+                        context.assets.open("default_exercises.json").bufferedReader()
+                            .use { it.readText() }
                     } catch (e2: Exception) {
                         // 如果英文版也没有，尝试 exercises_en.json
-                        context.assets.open("exercises_en.json").bufferedReader().use { it.readText() }
+                        context.assets.open("exercises_en.json").bufferedReader()
+                            .use { it.readText() }
                     }
                 }
                 // 3. [关键步骤] 获取现有动作的 ID 映射表 (Name -> ID)
@@ -1051,7 +1144,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 dao.insertTemplates(finalTemplates)
 
                 withContext(Dispatchers.Main) {
-                    Toast.makeText(context, context.getString(R.string.import_success), Toast.LENGTH_SHORT).show()
+                    Toast.makeText(
+                        context,
+                        context.getString(R.string.import_success),
+                        Toast.LENGTH_SHORT
+                    ).show()
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -1063,7 +1160,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
     }
+
     suspend fun optimizeExerciseLibrary(): Int = 0
+
     // [新增 3] 获取动作的 LogType，用于图表页自动判断显示模式
     fun getLogTypeForExercise(name: String): Flow<Int> {
         return historyRecords.map { list ->
@@ -1145,7 +1244,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun testAiConnection(provider: String, apiKey: String, model: String, baseUrl: String) {
         if (apiKey.isBlank()) {
-            _connectionState.value = ConnectionState.Error(getApplication<Application>().getString(R.string.msg_config_missing))
+            _connectionState.value =
+                ConnectionState.Error(getApplication<Application>().getString(R.string.msg_config_missing))
             return
         }
 
@@ -1189,12 +1289,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 if (response.choices.isNotEmpty()) {
                     _connectionState.value = ConnectionState.Success
                 } else {
-                    _connectionState.value = ConnectionState.Error(getApplication<Application>().getString(R.string.import_error))
+                    _connectionState.value =
+                        ConnectionState.Error(getApplication<Application>().getString(R.string.import_error))
                 }
 
             } catch (e: Exception) {
                 e.printStackTrace()
-                _connectionState.value = ConnectionState.Error(getApplication<Application>().getString(R.string.msg_connection_failed, e.message))
+                _connectionState.value = ConnectionState.Error(
+                    getApplication<Application>().getString(
+                        R.string.msg_connection_failed,
+                        e.message
+                    )
+                )
             }
         }
     }
@@ -1234,7 +1340,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun generateWeeklyPlan(context: Context) {
         val settings = userProfile.value
         if (settings.aiApiKey.isBlank()) {
-            Toast.makeText(context, context.getString(R.string.msg_config_missing), Toast.LENGTH_SHORT).show()
+            Toast.makeText(
+                context,
+                context.getString(R.string.msg_config_missing),
+                Toast.LENGTH_SHORT
+            ).show()
             return
         }
 
@@ -1273,8 +1383,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     .writeTimeout(30, TimeUnit.SECONDS)
                     .build()
 
-                val defaultUrl = availableProviders.find { it.name == settings.aiProvider }?.defaultBaseUrl
-                    ?: "https://api.openai.com/"
+                val defaultUrl =
+                    availableProviders.find { it.name == settings.aiProvider }?.defaultBaseUrl
+                        ?: "https://api.openai.com/"
 
                 val rawUrl = if (settings.aiBaseUrl.isNotBlank()) settings.aiBaseUrl else defaultUrl
 
@@ -1302,7 +1413,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     )
                 )
 
-                val content = response.choices.firstOrNull()?.message?.content?.toString() ?: "未识别到内容"
+                val content =
+                    response.choices.firstOrNull()?.message?.content?.toString() ?: "未识别到内容"
                 _aiResponse.value = content
 
                 saveAiChatRecord(
@@ -1314,22 +1426,31 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
             } catch (e: Exception) {
                 e.printStackTrace()
-                _aiResponse.value = "生成失败: ${e.message}\n(如果是 timeout，请检查网络或模型响应速度)"
+                _aiResponse.value =
+                    "生成失败: ${e.message}\n(如果是 timeout，请检查网络或模型响应速度)"
             } finally {
                 _aiIsLoading.value = false
             }
         }
     }
+
     // 在类方法区添加
-    fun saveAiChatRecord(content: String, role: String, userGoal: String? = null, model: String? = null) {
+    fun saveAiChatRecord(
+        content: String,
+        role: String,
+        userGoal: String? = null,
+        model: String? = null
+    ) {
         viewModelScope.launch(Dispatchers.IO) {
-            dao.insertAiChatRecord(AiChatRecord(
-                timestamp = System.currentTimeMillis(),
-                role = role,
-                content = content,
-                userGoal = userGoal,
-                modelUsed = model
-            ))
+            dao.insertAiChatRecord(
+                AiChatRecord(
+                    timestamp = System.currentTimeMillis(),
+                    role = role,
+                    content = content,
+                    userGoal = userGoal,
+                    modelUsed = model
+                )
+            )
         }
     }
 
@@ -1374,8 +1495,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     .writeTimeout(30, TimeUnit.SECONDS)
                     .build()
 
-                val defaultUrl = availableProviders.find { it.name == settings.aiProvider }?.defaultBaseUrl
-                    ?: "https://api.openai.com/"
+                val defaultUrl =
+                    availableProviders.find { it.name == settings.aiProvider }?.defaultBaseUrl
+                        ?: "https://api.openai.com/"
 
                 val rawUrl = if (settings.aiBaseUrl.isNotBlank()) settings.aiBaseUrl else defaultUrl
 
@@ -1403,7 +1525,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     )
                 )
 
-                val content = response.choices.firstOrNull()?.message?.content?.toString() ?: context.getString(R.string.no_search_results)
+                val content = response.choices.firstOrNull()?.message?.content?.toString()
+                    ?: context.getString(R.string.no_search_results)
                 _aiResponse.value = content
 
                 // 5. 保存记录 (注明是图片识别)
@@ -1416,7 +1539,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
             } catch (e: Exception) {
                 e.printStackTrace()
-                _aiResponse.value = "识别失败: ${e.message}\n(请确认当前模型是否支持图片输入，如 gpt-4o 或 gemini-1.5-pro)"
+                _aiResponse.value =
+                    "识别失败: ${e.message}\n(请确认当前模型是否支持图片输入，如 gpt-4o 或 gemini-1.5-pro)"
             } finally {
                 _aiIsLoading.value = false
             }
@@ -1424,10 +1548,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     // [新增] 发送自由对话
-    fun sendFreeChat(context: Context, query: String,imageUri: Uri? = null) {
+    fun sendFreeChat(context: Context, query: String, imageUri: Uri? = null) {
         val settings = userProfile.value
         if (settings.aiApiKey.isBlank()) {
-            Toast.makeText(context, context.getString(R.string.msg_config_missing), Toast.LENGTH_SHORT).show()
+            Toast.makeText(
+                context,
+                context.getString(R.string.msg_config_missing),
+                Toast.LENGTH_SHORT
+            ).show()
             return
         }
 
@@ -1444,8 +1572,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     } else {
                         // 图片处理失败则回退到纯文本，并提示用户
                         withContext(Dispatchers.Main) {
-                            Toast.makeText(context, context.getString(R.string.image_processing_failed_fallback),
-                                Toast.LENGTH_LONG).show()
+                            Toast.makeText(
+                                context,
+                                context.getString(R.string.image_processing_failed_fallback),
+                                Toast.LENGTH_LONG
+                            ).show()
                         }
                         PromptManager.buildFreeChatPrompt(context, query)
                     }
@@ -1459,8 +1590,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     .readTimeout(60, TimeUnit.SECONDS)
                     .build()
 
-                val defaultUrl = availableProviders.find { it.name == settings.aiProvider }?.defaultBaseUrl
-                    ?: "https://api.openai.com/"
+                val defaultUrl =
+                    availableProviders.find { it.name == settings.aiProvider }?.defaultBaseUrl
+                        ?: "https://api.openai.com/"
 
                 val rawUrl = if (settings.aiBaseUrl.isNotBlank()) settings.aiBaseUrl else defaultUrl
 
@@ -1488,7 +1620,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     )
                 )
 
-                val content = response.choices.firstOrNull()?.message?.content?.toString() ?: "AI 无回复"
+                val content =
+                    response.choices.firstOrNull()?.message?.content?.toString() ?: "AI 无回复"
                 _aiResponse.value = content
 
                 // 保存记录 (如果带图，在 Log 里标注一下)
@@ -1510,7 +1643,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     // [新增] 基于建议生成 CSV (意图 B)
     // onResult: 回调返回 CSV 字符串
-    fun generateCsvFromAdvice(context: Context, advice: String,userFeedback: String, onResult: (String) -> Unit) {
+    fun generateCsvFromAdvice(
+        context: Context,
+        advice: String,
+        userFeedback: String,
+        onResult: (String) -> Unit
+    ) {
         val settings = userProfile.value
         if (settings.aiApiKey.isBlank()) return
 
@@ -1524,9 +1662,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
                 // 2. 复用 Retrofit (略，建议抽取 getAiApi())
                 val client = OkHttpClient.Builder().connectTimeout(30, TimeUnit.SECONDS).build()
-                val baseUrl = if (settings.aiBaseUrl.isNotBlank()) settings.aiBaseUrl else "[https://api.openai.com/](https://api.openai.com/)"
+                val baseUrl =
+                    if (settings.aiBaseUrl.isNotBlank()) settings.aiBaseUrl else "[https://api.openai.com/](https://api.openai.com/)"
                 val finalUrl = if (baseUrl.endsWith("/")) baseUrl else "$baseUrl/"
-                val retrofit = Retrofit.Builder().baseUrl(finalUrl).client(client).addConverterFactory(GsonConverterFactory.create()).build()
+                val retrofit = Retrofit.Builder().baseUrl(finalUrl).client(client)
+                    .addConverterFactory(GsonConverterFactory.create()).build()
                 val api = retrofit.create(com.example.myfit.data.api.AiService::class.java)
 
                 // 3. 调用 API

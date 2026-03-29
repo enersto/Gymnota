@@ -272,9 +272,28 @@ fun AdvancedTaskItem(
                 PillCheckButton(isCompleted = isCompleted, color = themeColor, onClick = {
                     val newState = !task.isCompleted
                     var updatedTask = task.copy(isCompleted = newState)
-                    val isAutoFill = task.logType == LogType.DURATION.value || task.logType == LogType.REPS_ONLY.value || task.category.contains("有氧") || task.category.contains("核心")
+                    
+                    val isAutoFill = task.logType == LogType.DURATION.value || 
+                                   task.logType == LogType.REPS_ONLY.value || 
+                                   task.category.contains("有氧") || 
+                                   task.category.contains("核心")
+                    
                     if (newState && isAutoFill) {
-                        updatedTask = updatedTask.copy(sets = task.sets.map { it.copy(weightOrDuration = task.target.replace(" ", ""), reps = "Done") })
+                        val targetValue = task.target.replace(" ", "")
+                        val filledSets = task.sets.map { set ->
+                            // 核心修复：仅当用户未填写次数/时间时才尝试填充默认值
+                            val hasInput = set.weightOrDuration.isNotBlank() || set.reps.isNotBlank()
+                            
+                            if (!hasInput) {
+                                set.copy(
+                                    weightOrDuration = targetValue,
+                                    reps = if (task.logType == LogType.DURATION.value) "Done" else targetValue
+                                )
+                            } else {
+                                set // 保留用户输入
+                            }
+                        }
+                        updatedTask = updatedTask.copy(sets = filledSets)
                     }
                     viewModel.updateTask(updatedTask)
                     if (newState) onComplete()
@@ -446,7 +465,7 @@ fun EmptyState(dayType: DayType, onApplyRoutine: () -> Unit) {
             else {
                 Text(stringResource(R.string.no_plan), color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f), style = MaterialTheme.typography.bodyLarge)
                 Spacer(modifier = Modifier.height(12.dp))
-                Button(onClick = onApplyRoutine, shape = RoundedCornerShape(12.dp)) { Text(stringResource(R.string.apply_routine)) }
+                GlassButton(text = stringResource(R.string.apply_routine), onClick = onApplyRoutine)
             }
         }
     }
