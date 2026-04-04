@@ -35,11 +35,7 @@ import androidx.navigation.NavGraph.Companion.findStartDestination
 import coil.compose.AsyncImage
 import com.example.myfit.R
 import com.example.myfit.model.AiChatRecord
-import com.example.myfit.ui.components.GlassButton
-import com.example.myfit.ui.components.GlassCard
-import com.example.myfit.ui.components.GlassChatBubble
-import com.example.myfit.ui.components.GlassScaffoldContent
-import com.example.myfit.ui.components.LocalGlassMode
+import com.example.myfit.ui.components.*
 import com.example.myfit.viewmodel.MainViewModel
 import java.io.File
 import java.text.SimpleDateFormat
@@ -308,7 +304,6 @@ fun AICoachScreen(viewModel: MainViewModel, navController: NavController) {
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // [更新点]：使用 GlassButton
                 GlassButton(
                     text = if (isFreeChatMode) stringResource(R.string.btn_send_message) else stringResource(R.string.btn_get_advice),
                     modifier = Modifier.fillMaxWidth(),
@@ -436,19 +431,11 @@ fun RefinePlanDialog(
             }
         },
         confirmButton = {
-            Button(
-                onClick = { onGenerate(feedback) },
+            GlassButton(
+                text = stringResource(R.string.btn_confirm),
                 enabled = !isGenerating,
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                if (isGenerating) {
-                    CircularProgressIndicator(modifier = Modifier.size(16.dp), color = MaterialTheme.colorScheme.onPrimary, strokeWidth = 2.dp)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(stringResource(R.string.msg_processing))
-                } else {
-                    Text(stringResource(R.string.btn_confirm))
-                }
-            }
+                onClick = { onGenerate(feedback) }
+            )
         },
         dismissButton = {
             if (!isGenerating) {
@@ -553,18 +540,15 @@ fun PlanConfigCard(viewModel: MainViewModel) {
                 modifier = Modifier.padding(top = 4.dp)
             ) {
                 (1..4).forEach { weeks ->
-                    FilterChip(
+                    GlassChoiceChip(
+                        text = when (weeks) {
+                            1 -> stringResource(R.string.option_1_week)
+                            2 -> stringResource(R.string.option_2_weeks)
+                            3 -> stringResource(R.string.option_3_weeks)
+                            else -> stringResource(R.string.option_4_weeks)
+                        },
                         selected = viewModel.historyWeeks == weeks,
-                        onClick = { viewModel.historyWeeks = weeks },
-                        label = {
-                            val labelRes = when (weeks) {
-                                1 -> R.string.option_1_week
-                                2 -> R.string.option_2_weeks
-                                3 -> R.string.option_3_weeks
-                                else -> R.string.option_4_weeks
-                            }
-                            Text(stringResource(labelRes))
-                        }
+                        onClick = { viewModel.historyWeeks = weeks }
                     )
                 }
             }
@@ -585,7 +569,8 @@ fun PlanConfigCard(viewModel: MainViewModel) {
 
                 focusOptions.forEach { (key, resId) ->
                     val isSelected = viewModel.selectedFocus.contains(key)
-                    FilterChip(
+                    GlassChoiceChip(
+                        text = stringResource(resId),
                         selected = isSelected,
                         onClick = {
                             val current = viewModel.selectedFocus.toMutableSet()
@@ -598,8 +583,7 @@ fun PlanConfigCard(viewModel: MainViewModel) {
                                 if (current.isEmpty()) current.add("COMPREHENSIVE")
                             }
                             viewModel.selectedFocus = current
-                        },
-                        label = { Text(stringResource(resId)) }
+                        }
                     )
                 }
             }
@@ -623,15 +607,15 @@ fun PlanConfigCard(viewModel: MainViewModel) {
                 )
                 sceneOptions.forEach { (key, resId) ->
                     val isSelected = viewModel.selectedScene.contains(key)
-                    FilterChip(
+                    GlassChoiceChip(
+                        text = stringResource(resId),
                         selected = isSelected,
                         onClick = {
                             val current = viewModel.selectedScene.toMutableSet()
                             if (current.contains(key)) current.remove(key) else current.add(key)
                             if (current.isEmpty()) current.add("GYM")
                             viewModel.selectedScene = current
-                        },
-                        label = { Text(stringResource(resId)) }
+                        }
                     )
                 }
             }

@@ -13,11 +13,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.compositionLocalOf
@@ -52,7 +48,6 @@ val LocalBackdrop = compositionLocalOf<Backdrop?> { null }
 
 /**
  * Wraps page content with a background gradient layer for glass effects.
- * The gradient is captured by layerBackdrop; page content is a sibling (not child).
  */
 @Composable
 fun GlassScaffoldContent(
@@ -67,7 +62,6 @@ fun GlassScaffoldContent(
         val secondary = MaterialTheme.colorScheme.primaryContainer
         val bg = MaterialTheme.colorScheme.background
 
-        // Gradient colors for the background layer
         val gradientBrush = remember(primary, secondary, bg) {
             Brush.linearGradient(
                 colors = listOf(
@@ -81,34 +75,27 @@ fun GlassScaffoldContent(
         }
 
         Box(modifier = modifier.fillMaxSize()) {
-            // Layer 1: Background gradient captured by layerBackdrop
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    // 关键：确保 layerBackdrop 捕获的是全屏背景
                     .layerBackdrop(backdrop)
                     .background(gradientBrush)
             )
-
-            // Layer 2: Actual page content (sibling, not child of layerBackdrop)
             Box(modifier = Modifier.fillMaxSize()) {
-                CompositionLocalProvider(
-                    LocalBackdrop provides backdrop
-                ) {
+                CompositionLocalProvider(LocalBackdrop provides backdrop) {
                     content()
                 }
             }
         }
     } else {
-        Box(modifier = modifier.fillMaxSize()) {
+        Box(modifier = Modifier.fillMaxSize()) {
             content()
         }
     }
 }
 
 /**
- * A card that renders as frosted glass (blurring the background gradient)
- * when glass mode is on, or as a normal Material3 Card when off.
+ * Enhanced Glass Card with better readability.
  */
 @Composable
 fun GlassCard(
@@ -125,8 +112,8 @@ fun GlassCard(
         val surfaceOverlay: DrawScope.() -> Unit = remember(isDark) {
             {
                 drawRect(
-                    if (isDark) Color.Black.copy(alpha = 0.15f)
-                    else Color.White.copy(alpha = 0.2f)
+                    if (isDark) Color.Black.copy(alpha = 0.25f)
+                    else Color.White.copy(alpha = 0.35f)
                 )
             }
         }
@@ -136,12 +123,14 @@ fun GlassCard(
                 .fillMaxWidth()
                 .drawBackdrop(
                     backdrop = backdrop,
-                    shape = { RoundedRectangle(32f.dp) },
+                    shape = { shape },
                     effects = {
                         vibrancy()
-                        lens(16f.dp.toPx(), 32f.dp.toPx())
+                        lens(12f.dp.toPx(), 24f.dp.toPx())
                     },
-                    onDrawSurface = surfaceOverlay
+                    onDrawSurface = surfaceOverlay,
+                    highlight = { Highlight.Ambient.copy(alpha = 0.4f) },
+                    shadow = { Shadow(radius = 8.dp, color = Color.Black.copy(alpha = 0.1f)) }
                 ),
             content = content
         )
@@ -173,8 +162,8 @@ fun GlassChatBubble(
         val surfaceOverlay: DrawScope.() -> Unit = remember(isDark) {
             {
                 drawRect(
-                    if (isDark) Color.Black.copy(alpha = 0.12f)
-                    else Color.White.copy(alpha = 0.25f)
+                    if (isDark) Color.Black.copy(alpha = 0.25f)
+                    else Color.White.copy(alpha = 0.35f)
                 )
             }
         }
@@ -205,9 +194,6 @@ fun GlassChatBubble(
     }
 }
 
-/**
- * A Liquid Glass styled button.
- */
 @Composable
 fun GlassButton(
     text: String,
@@ -224,35 +210,137 @@ fun GlassButton(
         Surface(
             onClick = onClick,
             enabled = enabled,
-            modifier = modifier
-                .height(48.dp)
-                .widthIn(min = 120.dp), // Increased min width
+            modifier = modifier.height(48.dp).widthIn(min = 140.dp),
             shape = Capsule(),
             color = if (enabled) containerColor.copy(alpha = 0.85f) else Color.Gray.copy(alpha = 0.3f),
             contentColor = if (enabled) contentColor else Color.White.copy(alpha = 0.5f),
-            border = if (enabled) BorderStroke(1.dp, Color.White.copy(alpha = 0.2f)) else null
+            border = if (enabled) BorderStroke(1.dp, Color.White.copy(alpha = 0.25f)) else null
         ) {
-            Box(
-                modifier = Modifier.padding(horizontal = 24.dp), // Added internal padding
-                contentAlignment = Alignment.Center
-            ) {
+            Box(modifier = Modifier.padding(horizontal = 28.dp), contentAlignment = Alignment.Center) {
                 Text(text = text, fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1)
             }
         }
     } else {
-        androidx.compose.material3.Button(
+        Button(
             onClick = onClick,
             enabled = enabled,
-            modifier = modifier
-                .height(48.dp)
-                .widthIn(min = 120.dp), // Increased min width
+            modifier = modifier.height(48.dp).widthIn(min = 140.dp),
             shape = RoundedCornerShape(12.dp),
-            colors = androidx.compose.material3.ButtonDefaults.buttonColors(
-                containerColor = containerColor,
-                contentColor = contentColor
-            )
+            colors = ButtonDefaults.buttonColors(containerColor = containerColor, contentColor = contentColor)
         ) {
             Text(text = text, fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun GlassChoiceChip(
+    text: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val glassMode = LocalGlassMode.current
+    val backdrop = LocalBackdrop.current
+
+    if (glassMode && backdrop != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        Surface(
+            onClick = onClick,
+            modifier = modifier.height(38.dp),
+            shape = Capsule(),
+            color = if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.9f)
+                    else Color.White.copy(alpha = 0.15f),
+            border = if (selected) null else BorderStroke(1.dp, Color.White.copy(alpha = 0.2f)),
+            contentColor = if (selected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
+        ) {
+            Box(modifier = Modifier.padding(horizontal = 18.dp), contentAlignment = Alignment.Center) {
+                Text(text = text, style = MaterialTheme.typography.labelLarge, fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal)
+            }
+        }
+    } else {
+        FilterChip(selected = selected, onClick = onClick, label = { Text(text) }, modifier = modifier.height(38.dp))
+    }
+}
+
+/**
+ * 专门用于 Dialog 内部的 Glass 容器。
+ * 解决 Dialog 独立窗口层导致 LocalBackdrop 断链的问题。
+ * 不会 fillMaxSize，不影响 Dialog 的居中布局。
+ */
+@Composable
+fun GlassDialogCard(
+    modifier: Modifier = Modifier,
+    shape: Shape = RoundedCornerShape(24.dp),
+    content: @Composable BoxScope.() -> Unit
+) {
+    val glassMode = LocalGlassMode.current
+
+    if (glassMode && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        val backdrop = rememberLayerBackdrop()
+        val isDark = isSystemInDarkTheme()
+
+        val gradientBrush = remember(isDark) {
+            if (isDark) Brush.linearGradient(
+                colors = listOf(Color.White.copy(0.07f), Color.White.copy(0.03f)),
+                start = Offset.Zero,
+                end = Offset(Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY)
+            ) else Brush.linearGradient(
+                colors = listOf(Color.White.copy(0.55f), Color.White.copy(0.25f)),
+                start = Offset.Zero,
+                end = Offset(Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY)
+            )
+        }
+
+        val surfaceOverlay: DrawScope.() -> Unit = remember(isDark) {
+            {
+                drawRect(
+                    if (isDark) Color.Black.copy(alpha = 0.18f)
+                    else Color.White.copy(alpha = 0.45f)
+                )
+            }
+        }
+
+        // 第一层：提供 backdrop 捕获源（局部渐变背景）
+        Box(modifier = modifier) {
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .layerBackdrop(backdrop)
+                    .clip(shape)
+                    .background(gradientBrush)
+            )
+            // 第二层：GlassCard 效果，backdrop 由上方局部层捕获
+            CompositionLocalProvider(LocalBackdrop provides backdrop) {
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .drawBackdrop(
+                            backdrop = backdrop,
+                            shape = { shape },
+                            effects = {
+                                vibrancy()
+                                lens(10f.dp.toPx(), 20f.dp.toPx())
+                            },
+                            onDrawSurface = surfaceOverlay,
+                            highlight = { Highlight.Ambient.copy(alpha = 0.5f) },
+                            shadow = { Shadow(radius = 12.dp, color = Color.Black.copy(alpha = 0.15f)) }
+                        )
+                )
+                Box(modifier = Modifier.clip(shape), content = content)
+            }
+        }
+    } else {
+        // Fallback：用更亮的 surface 而非 surfaceVariant，减轻 scrim 压暗效果
+        Card(
+            modifier = modifier,
+            shape = shape,
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surface
+            ),
+            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+        ) {
+            Box(content = content)
         }
     }
 }

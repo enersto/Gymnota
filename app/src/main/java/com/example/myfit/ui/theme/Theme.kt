@@ -33,7 +33,8 @@ fun MyFitTheme(
             surface = Color(0xFF1E1E1E), // 深灰
             onPrimary = Color.White,
             onBackground = Color.White,
-            onSurface = Color.White
+            onSurface = Color.White,
+            scrim = Color.Black.copy(alpha = 0.32f)
         )
     } else {
         lightColorScheme(
@@ -42,7 +43,8 @@ fun MyFitTheme(
             surface = Color.White,
             onPrimary = Color.White,
             onBackground = onBackground,
-            onSurface = onBackground
+            onSurface = onBackground,
+            scrim = Color.Black.copy(alpha = 0.2f)
         )
     }
 

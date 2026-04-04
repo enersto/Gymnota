@@ -31,11 +31,15 @@ import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.OutlinedTextField
 
-import androidx.compose.ui.focus.onFocusChanged // [新增 import]
-import androidx.compose.material.icons.filled.Clear // [新增]
-import androidx.compose.material3.MenuAnchorType // 确保有这个 import
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material3.MenuAnchorType
 
-import com.example.myfit.model.LogType           // [新增]
+import com.example.myfit.model.LogType
+import com.example.myfit.ui.components.GlassCard
+import com.example.myfit.ui.components.GlassChoiceChip
+import com.kyant.shapes.Capsule
+import androidx.compose.ui.draw.clip
 
 enum class ChartGranularity { DAILY, MONTHLY }
 data class ChartDataPoint(val date: LocalDate, val value: Float, val label: String)
@@ -48,10 +52,9 @@ fun ChartSection(
 ) {
     var granularity by remember { mutableStateOf(ChartGranularity.DAILY) }
 
-    Card(
+    GlassCard(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        shape = RoundedCornerShape(20.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
@@ -63,23 +66,26 @@ fun ChartSection(
                     text = title,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.weight(1f).padding(end = 8.dp)
                 )
 
-                Row(
-                    modifier = Modifier
-                        .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(8.dp))
-                        .padding(4.dp)
+                Surface(
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                    shape = Capsule(),
+                    modifier = Modifier.height(32.dp)
                 ) {
-                    GranularityButton(
-                        stringResource(R.string.chart_granularity_day),
-                        granularity == ChartGranularity.DAILY
-                    ) { granularity = ChartGranularity.DAILY }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        GranularityButton(
+                            stringResource(R.string.chart_granularity_day),
+                            granularity == ChartGranularity.DAILY
+                        ) { granularity = ChartGranularity.DAILY }
 
-                    GranularityButton(
-                        stringResource(R.string.chart_granularity_month),
-                        granularity == ChartGranularity.MONTHLY
-                    ) { granularity = ChartGranularity.MONTHLY }
+                        GranularityButton(
+                            stringResource(R.string.chart_granularity_month),
+                            granularity == ChartGranularity.MONTHLY
+                        ) { granularity = ChartGranularity.MONTHLY }
+                    }
                 }
             }
             Spacer(modifier = Modifier.height(16.dp))
@@ -92,19 +98,22 @@ fun ChartSection(
 
 @Composable
 fun GranularityButton(text: String, isSelected: Boolean, onClick: () -> Unit) {
-    Text(
-        text = text,
+    Box(
         modifier = Modifier
+            .fillMaxHeight()
+            .clip(Capsule())
+            .background(if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent)
             .clickable { onClick() }
-            .background(
-                if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
-                RoundedCornerShape(4.dp)
-            )
-            .padding(horizontal = 12.dp, vertical = 6.dp),
-        color = if (isSelected) Color.White else Color.Gray,
-        fontSize = 12.sp,
-        fontWeight = FontWeight.Bold
-    )
+            .padding(horizontal = 12.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = text,
+            color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Bold
+        )
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -132,33 +141,24 @@ fun SingleExerciseSection(
         viewModel.getLogTypeForExercise(selectedExercise)
     }.collectAsStateWithLifecycle(initialValue = LogType.WEIGHT_REPS.value)
 
-    // --- 下拉框状态管理 ---
     var expanded by remember { mutableStateOf(false) }
     var searchText by remember { mutableStateOf("") }
-    // 标记是否由用户正在输入（用于区分“选中后的回显”和“用户正在打字”）
     var isUserInput by remember { mutableStateOf(false) }
 
-    // 初始化默认值 (仅当未选中且有数据时执行一次)
     LaunchedEffect(exercises) {
         if (selectedExercise.isEmpty() && exercises.isNotEmpty()) {
             selectedExercise = exercises.first()
             searchText = exercises.first()
-            isUserInput = false // 这是系统自动填入的
+            isUserInput = false
         }
     }
 
-    // 过滤逻辑优化：
-    // 1. 如果下拉框未展开，不进行过滤计算（节省资源）。
-    // 2. 如果是用户正在输入 (isUserInput=true)，则按输入内容过滤。
-    // 3. 如果不是用户输入 (例如刚选中，或者刚点开但内容是完整的动作名)，则显示所有选项，方便切换。
     val filteredOptions = remember(exercises, searchText, expanded, isUserInput) {
         if (!expanded) exercises
         else {
             if (isUserInput && searchText.isNotEmpty()) {
-                // 用户正在打字，进行过滤
                 exercises.filter { it.contains(searchText, ignoreCase = true) }
             } else {
-                // 刚点开，或者内容为空，显示所有
                 exercises
             }
         }
@@ -166,7 +166,6 @@ fun SingleExerciseSection(
 
     if (exercises.isNotEmpty()) {
         Column {
-            // 1. 可搜索的下拉选择器
             ExposedDropdownMenuBox(
                 expanded = expanded,
                 onExpandedChange = { expanded = !expanded }
@@ -175,34 +174,24 @@ fun SingleExerciseSection(
                     value = searchText,
                     onValueChange = {
                         searchText = it
-                        expanded = true // 输入时自动展开
-                        isUserInput = true // 标记为用户正在输入
+                        expanded = true
+                        isUserInput = true
                     },
                     modifier = Modifier
                         .fillMaxWidth()
                         .menuAnchor(MenuAnchorType.PrimaryNotEditable, true)
-                        .onFocusChanged { focusState ->
-                            // 当获得焦点时，如果内容就是当前选中的动作，标记为非用户输入，以便显示全列表
-                            if (focusState.isFocused) {
-                                isUserInput = false
-                                expanded = true
-                            }
-                        },
+                        .onFocusChanged { if (it.isFocused) { isUserInput = false; expanded = true } },
                     label = { Text(stringResource(R.string.title_select_exercise)) },
                     trailingIcon = {
-                        // 如果有文字且正在输入/获得焦点，显示清除按钮；否则显示下拉箭头
                         if (searchText.isNotEmpty() && expanded) {
-                            IconButton(onClick = {
-                                searchText = ""
-                                isUserInput = true
-                                expanded = true
-                            }) {
-                                Icon(Icons.Default.Clear, contentDescription = "Clear") // 需确保 import Icons.Default.Clear
+                            IconButton(onClick = { searchText = ""; isUserInput = true; expanded = true }) {
+                                Icon(Icons.Default.Clear, contentDescription = null)
                             }
                         } else {
                             ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
                         }
                     },
+                    shape = RoundedCornerShape(16.dp),
                     colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
                     singleLine = true
                 )
@@ -226,7 +215,7 @@ fun SingleExerciseSection(
                                 onClick = {
                                     selectedExercise = selectionOption
                                     searchText = selectionOption
-                                    isUserInput = false // 选中后，不再视为用户正在输入
+                                    isUserInput = false
                                     expanded = false
                                     selectedSide = 0
                                 },
@@ -237,38 +226,31 @@ fun SingleExerciseSection(
                 }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
-            // 2. 左右切换开关 (恢复判断逻辑：仅当 category 为 STRENGTH 且 isUnilateral 为 true 时显示)
             if (category == "STRENGTH" && isUnilateral) {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Start) {
-                    FilterChip(
+                    GlassChoiceChip(
+                        text = stringResource(R.string.label_side_left),
                         selected = selectedSide == 0,
-                        onClick = { selectedSide = 0 },
-                        label = { Text(stringResource(R.string.label_side_left)) },
-                        modifier = Modifier.padding(end = 8.dp)
+                        onClick = { selectedSide = 0 }
                     )
-                    FilterChip(
+                    Spacer(modifier = Modifier.width(8.dp))
+                    GlassChoiceChip(
+                        text = stringResource(R.string.label_side_right),
                         selected = selectedSide == 1,
-                        onClick = { selectedSide = 1 },
-                        label = { Text(stringResource(R.string.label_side_right)) }
+                        onClick = { selectedSide = 1 }
                     )
                 }
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(12.dp))
             }
 
-            // 3. 计算 Mode (如果选了右边，请求 mode=3)
-            // --- 动态计算 effectiveMode ---
             val effectiveMode = when (logType) {
-                LogType.DURATION.value -> 0   // 计时 -> 显示总时长
-                LogType.REPS_ONLY.value -> 2  // 自重 -> 显示左侧/总次数 (暂不支持右侧次数图表)
-                else -> {                     // 计重 (WEIGHT_REPS)
-                    // [关键逻辑] 如果选了右边(1)，则使用 mode 3 (右侧重量)，否则 mode 1 (左侧重量)
-                    if (selectedSide == 1) 3 else 1
-                }
+                LogType.DURATION.value -> 0
+                LogType.REPS_ONLY.value -> 2
+                else -> if (selectedSide == 1) 3 else 1
             }
 
-            // 4. 图表渲染
             ChartSection(title = title) { granularity ->
                 val data by viewModel.getSingleExerciseChartData(selectedExercise, effectiveMode, granularity).collectAsStateWithLifecycle(initialValue = emptyList())
                 LineChart(data = data)
@@ -299,6 +281,7 @@ fun LineChart(
         color = android.graphics.Color.GRAY
         textSize = 28f
         textAlign = android.graphics.Paint.Align.CENTER
+        alpha = 180
     }
     val valuePaint = android.graphics.Paint().apply {
         color = lineColor.toArgb()
@@ -312,7 +295,7 @@ fun LineChart(
         val height = size.height
         val pointSpacing = if (data.size > 1) width / (data.size - 1) else 0f
 
-        drawLine(Color.LightGray.copy(alpha = 0.5f), Offset(0f, height), Offset(width, height), 2f)
+        drawLine(Color.Gray.copy(alpha = 0.2f), Offset(0f, height), Offset(width, height), 1f)
 
         if (data.size > 1) {
             for (i in 0 until data.size - 1) {
@@ -324,8 +307,8 @@ fun LineChart(
                 drawLine(
                     start = Offset(x1, y1),
                     end = Offset(x2, y2),
-                    color = lineColor,
-                    strokeWidth = 5f
+                    color = lineColor.copy(alpha = 0.8f),
+                    strokeWidth = 6f
                 )
             }
         }
@@ -343,12 +326,12 @@ fun LineChart(
                 drawContext.canvas.nativeCanvas.drawText(
                     String.format("%.1f", data[i].value),
                     x,
-                    y - 20f,
+                    y - 25f,
                     valuePaint
                 )
             }
 
-            if (data.size < 8 || i % (data.size / 5) == 0) {
+            if (data.size < 8 || i % (data.indices.last.coerceAtLeast(1) / 4).coerceAtLeast(1) == 0) {
                 drawContext.canvas.nativeCanvas.drawText(
                     data[i].label,
                     x,
@@ -379,6 +362,7 @@ fun BarChart(
         color = android.graphics.Color.GRAY
         textSize = 28f
         textAlign = android.graphics.Paint.Align.CENTER
+        alpha = 180
     }
     val valuePaint = android.graphics.Paint().apply {
         color = barColor.toArgb()
@@ -392,7 +376,7 @@ fun BarChart(
         val barWidth = (width / data.size) * 0.5f
         val spacing = width / data.size
 
-        drawLine(Color.LightGray.copy(alpha = 0.5f), Offset(0f, height), Offset(width, height), 2f)
+        drawLine(Color.Gray.copy(alpha = 0.2f), Offset(0f, height), Offset(width, height), 1f)
 
         for (i in data.indices) {
             val barHeight = (data[i].value / maxVal) * height
@@ -400,7 +384,7 @@ fun BarChart(
             val y = height - barHeight
 
             drawRect(
-                color = barColor,
+                color = barColor.copy(alpha = 0.7f),
                 topLeft = Offset(x - barWidth/2, y),
                 size = Size(barWidth, barHeight)
             )
@@ -409,12 +393,12 @@ fun BarChart(
                 drawContext.canvas.nativeCanvas.drawText(
                     String.format("%.0f", data[i].value),
                     x,
-                    y - 10f,
+                    y - 15f,
                     valuePaint
                 )
             }
 
-            if (data.size < 8 || i % (data.size / 5) == 0) {
+            if (data.size < 8 || i % (data.indices.last.coerceAtLeast(1) / 4).coerceAtLeast(1) == 0) {
                 drawContext.canvas.nativeCanvas.drawText(
                     data[i].label,
                     x,
@@ -426,23 +410,20 @@ fun BarChart(
     }
 }
 
-// [修改] 像素人热力图组件：改为 Layout 布局以支持点击交互
 @Composable
 fun PixelBodyHeatmap(
     viewModel: MainViewModel,
     modifier: Modifier = Modifier
 ) {
     val heatMap by viewModel.muscleHeatMapData.collectAsStateWithLifecycle(initialValue = emptyMap())
-
-    // 状态：当前选中的部位信息 (名称, 原始数值)
     var selectedPartInfo by remember { mutableStateOf<Pair<String, String>?>(null) }
 
     fun getColorForIntensity(intensity: Float): Color {
         return when {
-            intensity <= 0f -> Color.LightGray.copy(alpha = 0.3f)
-            intensity < 0.5f -> Color(0xFF81C784) // Light Green
-            intensity < 0.8f -> Color(0xFFFFB74D) // Orange
-            else -> Color(0xFFE57373) // Red
+            intensity <= 0f -> Color.Gray.copy(alpha = 0.15f)
+            intensity < 0.5f -> Color(0xFF81C784).copy(alpha = 0.8f)
+            intensity < 0.8f -> Color(0xFFFFB74D).copy(alpha = 0.8f)
+            else -> Color(0xFFE57373).copy(alpha = 0.8f)
         }
     }
 
@@ -457,26 +438,21 @@ fun PixelBodyHeatmap(
             color = MaterialTheme.colorScheme.primary
         )
 
-        // [新增] 显示点击选中的部位数据
         Spacer(modifier = Modifier.height(4.dp))
-        val infoText = selectedPartInfo?.let { (name, value) ->
-            "$name: $value"
-        } ?: "" // 默认空
+        val infoText = selectedPartInfo?.let { (name, value) -> "$name: $value" } ?: ""
         Text(
             text = infoText,
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.secondary,
             fontWeight = FontWeight.Bold,
-            modifier = Modifier.height(20.dp) // 占位高度防止跳动
+            modifier = Modifier.height(20.dp)
         )
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
-        // 使用 Column/Row 布局代替 Canvas
-        val blockSize = 20.dp
-        val gap = 4.dp
+        val blockSize = 24.dp
+        val gap = 6.dp
 
-        // 网格定义：null 代表空位，String 代表部位 Key
         val gridRows = listOf(
             listOf(null, null, "decoration_head", null, null),
             listOf(null, "part_shoulders", "part_chest", "part_shoulders", null),
@@ -493,30 +469,22 @@ fun PixelBodyHeatmap(
                 Row(horizontalArrangement = Arrangement.spacedBy(gap)) {
                     rowParts.forEach { partKey ->
                         if (partKey == null) {
-                            // 空位占位符
                             Spacer(modifier = Modifier.size(blockSize))
                         } else {
-                            // 实际方块
                             val data = heatMap[partKey]
                             val intensity = data?.intensity ?: 0f
                             val rawValue = data?.volume ?: 0f
-                            // 头部作为装饰，特殊处理颜色 (或默认0)
                             val isDecoration = partKey.startsWith("decoration")
-                            val color = if (isDecoration) Color.LightGray else getColorForIntensity(intensity)
-
-                            // 获取部位名称资源ID (需要 ExerciseManagerScreen.kt 中的 helper)
-                            // 注意：这里需要 ensure getBodyPartResId 是可访问的
+                            
                             val labelRes = getBodyPartResId(partKey)
                             val label = if (labelRes != 0) stringResource(labelRes) else partKey
 
                             Box(
                                 modifier = Modifier
                                     .size(blockSize)
-                                    .background(color, RoundedCornerShape(4.dp))
+                                    .background(if (isDecoration) Color.Gray.copy(alpha = 0.2f) else getColorForIntensity(intensity), RoundedCornerShape(6.dp))
                                     .clickable(enabled = !isDecoration) {
-                                        // 使用 String.format 给数字加千分位 (%,.0f) 并加上单位
-                                        val formattedValue = String.format("%,.0f kg", rawValue)
-                                        selectedPartInfo = label to formattedValue
+                                        selectedPartInfo = label to String.format("%,.0f kg", rawValue)
                                     }
                             )
                         }
@@ -525,40 +493,17 @@ fun PixelBodyHeatmap(
             }
         }
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
-        Column(
-            modifier = Modifier.fillMaxWidth(), // 或者根据需要调整
-            horizontalAlignment = Alignment.CenterHorizontally  // 根据需要调整对齐方式
-        ) {
-        // 图例
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    Modifier.size(12.dp)
-                        .background(Color.LightGray.copy(alpha = 0.3f), RoundedCornerShape(2.dp))
-                )
-                Text(" 0 ", fontSize = 10.sp, color = Color.Gray)
-                Spacer(modifier = Modifier.width(8.dp))
-                Box(Modifier.size(12.dp).background(Color(0xFF81C784), RoundedCornerShape(2.dp)))
-                Text(" <50% ", fontSize = 10.sp, color = Color.Gray)
-                Spacer(modifier = Modifier.width(8.dp))
-                Box(Modifier.size(12.dp).background(Color(0xFFE57373), RoundedCornerShape(2.dp)))
-                Text(" Max ", fontSize = 10.sp, color = Color.Gray)
-            }
-
-            Spacer(modifier = Modifier.height(4.dp))
-
-            // [新增] 解释性文本
-            Text(
-                text = stringResource(R.string.hint_heatmap_volume), // "数值为历史总容量 (重量 x 次数)"
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.7f),
-                fontSize = 10.sp,
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                lineHeight = 14.sp
-            )
-
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(12.dp).background(Color.Gray.copy(alpha = 0.15f), RoundedCornerShape(3.dp)))
+            Text(" 0 ", fontSize = 10.sp, color = Color.Gray)
+            Spacer(modifier = Modifier.width(12.dp))
+            Box(Modifier.size(12.dp).background(Color(0xFF81C784).copy(alpha = 0.8f), RoundedCornerShape(3.dp)))
+            Text(" Low ", fontSize = 10.sp, color = Color.Gray)
+            Spacer(modifier = Modifier.width(12.dp))
+            Box(Modifier.size(12.dp).background(Color(0xFFE57373).copy(alpha = 0.8f), RoundedCornerShape(3.dp)))
+            Text(" Max ", fontSize = 10.sp, color = Color.Gray)
         }
-
-        }
+    }
 }

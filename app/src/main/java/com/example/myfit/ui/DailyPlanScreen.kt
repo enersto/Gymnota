@@ -541,7 +541,14 @@ fun WeightDialog(viewModel: MainViewModel, onDismiss: () -> Unit) {
                 }
             }
         },
-        confirmButton = { Button(onClick = { weightInput.toFloatOrNull()?.let { viewModel.logWeightAndProfile(it, ageInput.toIntOrNull(), heightInput.toFloatOrNull(), selectedGender, bodyFatInput.toFloatOrNull(), muscleInput.toFloatOrNull(), waterInput.toFloatOrNull(), waistInput.toFloatOrNull(), hipInput.toFloatOrNull()); onDismiss() } }) { Text(stringResource(R.string.btn_save)) } },
+        confirmButton = { 
+            GlassButton(text = stringResource(R.string.btn_save)) {
+                weightInput.toFloatOrNull()?.let { 
+                    viewModel.logWeightAndProfile(it, ageInput.toIntOrNull(), heightInput.toFloatOrNull(), selectedGender, bodyFatInput.toFloatOrNull(), muscleInput.toFloatOrNull(), waterInput.toFloatOrNull(), waistInput.toFloatOrNull(), hipInput.toFloatOrNull())
+                    onDismiss()
+                }
+            }
+        },
         dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.btn_cancel)) } }
     )
 }
