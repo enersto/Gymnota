@@ -70,7 +70,7 @@ fun MyFitTheme(
             // insetsController.isAppearanceLightStatusBars = false
 
             // 按照您之前的逻辑（浅色主题用黑字）：
-            insetsController.isAppearanceLightStatusBars = (appTheme.id != 0)
+            insetsController.isAppearanceLightStatusBars = true
         }
     }
 

@@ -4,7 +4,7 @@ import android.os.Build
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.isSystemInDarkTheme
+//import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.fillMaxSize
@@ -108,13 +108,10 @@ fun GlassCard(
     val backdrop = LocalBackdrop.current
 
     if (glassMode && backdrop != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-        val isDark = isSystemInDarkTheme()
-        val surfaceOverlay: DrawScope.() -> Unit = remember(isDark) {
+//        val isDark = isSystemInDarkTheme()
+        val surfaceOverlay: DrawScope.() -> Unit = remember {
             {
-                drawRect(
-                    if (isDark) Color.Black.copy(alpha = 0.25f)
-                    else Color.White.copy(alpha = 0.35f)
-                )
+                drawRect(Color.White.copy(alpha = 0.35f))
             }
         }
 
@@ -158,13 +155,10 @@ fun GlassChatBubble(
     val backdrop = LocalBackdrop.current
 
     if (glassMode && backdrop != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-        val isDark = isSystemInDarkTheme()
-        val surfaceOverlay: DrawScope.() -> Unit = remember(isDark) {
+//        val isDark = isSystemInDarkTheme()
+        val surfaceOverlay: DrawScope.() -> Unit = remember {
             {
-                drawRect(
-                    if (isDark) Color.Black.copy(alpha = 0.25f)
-                    else Color.White.copy(alpha = 0.35f)
-                )
+                drawRect(Color.White.copy(alpha = 0.35f))
             }
         }
 
@@ -278,26 +272,19 @@ fun GlassDialogCard(
 
     if (glassMode && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
         val backdrop = rememberLayerBackdrop()
-        val isDark = isSystemInDarkTheme()
+//        val isDark = isSystemInDarkTheme()
 
-        val gradientBrush = remember(isDark) {
-            if (isDark) Brush.linearGradient(
-                colors = listOf(Color.White.copy(0.07f), Color.White.copy(0.03f)),
-                start = Offset.Zero,
-                end = Offset(Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY)
-            ) else Brush.linearGradient(
+        val gradientBrush = remember {
+            Brush.linearGradient(
                 colors = listOf(Color.White.copy(0.55f), Color.White.copy(0.25f)),
                 start = Offset.Zero,
                 end = Offset(Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY)
             )
         }
 
-        val surfaceOverlay: DrawScope.() -> Unit = remember(isDark) {
+        val surfaceOverlay: DrawScope.() -> Unit = remember {
             {
-                drawRect(
-                    if (isDark) Color.Black.copy(alpha = 0.18f)
-                    else Color.White.copy(alpha = 0.45f)
-                )
+                drawRect(Color.White.copy(alpha = 0.35f))
             }
         }
 

@@ -244,6 +244,12 @@ object PromptManager {
             (Rule: Map 'Strength Training'/'Power'/'Hypertrophy' -> 'STRENGTH'. 
             Map 'Aerobic'/'HIIT'/'Running' -> 'CARDIO'. 
             Map 'Abs'/'Plank'/'Stability' -> 'CORE'.)
+            STRICT RULES FOR COMMAS AND FORMAT:
+            - The output MUST be strictly in CSV format with exactly 9 columns.
+            - Do NOT use any half-width commas (,) inside the cell values (such as Target, Name, or Instruction). Half-width commas must ONLY be used to separate columns.
+            - For the 「Target」 column, format it strictly without commas, for example: 「30kg x 8 reps x 3 sets」 or 「3组*8次*30kg」.
+            - For text columns, if you need to pause or list items, ONLY use full-width commas (，) or spaces.
+                    
             
             1. For 'BodyPart' column, you MUST ONLY use one of these exact keys:
             [${validBodyParts.joinToString(", ")}]

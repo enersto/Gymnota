@@ -985,7 +985,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     if (index == 0) return@forEachIndexed // 跳过标题
                     if (line.isBlank()) return@forEachIndexed
 
-                    val parts = line.split(",").map { it.trim() }
+                    val parts = line.split(Regex(",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)"))
+                        .map { it.trim().removeSurrounding("\"") }
                     if (parts.size >= 4) {
                         val day = parts[0].toIntOrNull() ?: 1
                         val name = parts[1]
