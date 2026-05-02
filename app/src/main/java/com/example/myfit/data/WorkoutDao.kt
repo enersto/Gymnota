@@ -73,7 +73,6 @@ interface WorkoutDao {
     suspend fun getScheduleCount(): Int
 
     // --- Weekly Routine ---
-    // ✅ Keep both suspend (for ViewModel/prepopulate) and non-suspend (if sync required, though risky)
     @Query("SELECT * FROM weekly_routine WHERE dayOfWeek = :day")
     suspend fun getRoutineForDay(day: Int): List<WeeklyRoutineItem>
 
@@ -96,6 +95,9 @@ interface WorkoutDao {
     @Query("SELECT * FROM weight_records ORDER BY date DESC LIMIT 1")
     fun getLatestWeight(): Flow<WeightRecord?>
 
+    @Query("SELECT * FROM weight_records ORDER BY date DESC LIMIT 1")
+    suspend fun getLatestWeightSync(): WeightRecord?
+
     @Query("SELECT * FROM weight_records WHERE date = :date LIMIT 1")
     suspend fun getWeightForDate(date: String): WeightRecord?
 
@@ -106,7 +108,6 @@ interface WorkoutDao {
     @Query("SELECT * FROM workout_tasks WHERE isCompleted = 1 ORDER BY date DESC")
     fun getHistoryRecords(): Flow<List<WorkoutTask>>
 
-    // [保留这一个，删除另一个重复的]
     @Query("SELECT * FROM workout_tasks WHERE isCompleted = 1 ORDER BY date DESC")
     suspend fun getHistoryRecordsSync(): List<WorkoutTask>
 
@@ -131,15 +132,27 @@ interface WorkoutDao {
     @Query("SELECT * FROM ai_chat_history ORDER BY timestamp DESC")
     fun getAllAiChatRecords(): Flow<List<AiChatRecord>>
 
+    // 获取最近 N 条记录作为上下文
+    @Query("SELECT * FROM ai_chat_history ORDER BY timestamp DESC LIMIT :limit")
+    suspend fun getRecentAiChatRecords(limit: Int): List<AiChatRecord>
+
     @Query("DELETE FROM ai_chat_history WHERE id = :id")
     suspend fun deleteAiChatRecord(id: Long)
 
-    // [新增] 同步获取所有日程配置，用于 AI Prompt 构建
-    @Query("SELECT * FROM schedule_config")
-    suspend fun getAllSchedulesSync(): List<ScheduleConfig>
+    @Query("DELETE FROM ai_chat_history")
+    suspend fun clearAiChatHistory()
+
+    // --- AI Memory (Long-term Context) ---
+    @Query("SELECT * FROM ai_memory WHERE id = 0")
+    fun getAiMemory(): Flow<AiMemory?>
+
+    @Query("SELECT * FROM ai_memory WHERE id = 0")
+    suspend fun getAiMemorySync(): AiMemory?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun saveAiMemory(memory: AiMemory)
 
     // --- AI Provider Configs ---
-
     @Query("SELECT * FROM ai_provider_configs WHERE providerName = :name")
     suspend fun getAiProviderConfig(name: String): AiProviderConfig?
 
@@ -149,8 +162,10 @@ interface WorkoutDao {
     @Query("SELECT * FROM ai_provider_configs")
     suspend fun getAllAiProviderConfigs(): List<AiProviderConfig>
 
-    // 确保有获取最近一条记录的方法，用于判断是否是“本周已填”
+    // [新增] 同步获取所有日程配置，用于 AI Prompt 构建
+    @Query("SELECT * FROM schedule_config")
+    suspend fun getAllSchedulesSync(): List<ScheduleConfig>
+
     @Query("SELECT * FROM weight_records ORDER BY date DESC LIMIT 1")
     suspend fun getLastWeightRecord(): WeightRecord?
-
 }

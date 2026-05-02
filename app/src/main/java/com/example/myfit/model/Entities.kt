@@ -20,7 +20,6 @@ data class AppSetting(
     val themeId: Int = 1, // 1) 修改默认值为 1 (GREEN)
     val languageCode: String = "zh",
     // 3) 新增字段：年龄、身高(cm)、性别(0=男, 1=女)
-    // 给定默认值以兼容旧数据，虽然数据库迁移会处理，但对象实例化需要默认值
     val age: Int = 0,
     val height: Float = 0f,
     val gender: Int = 0,
@@ -28,7 +27,18 @@ data class AppSetting(
     val aiProvider: String = "OpenAI", // "OpenAI", "DeepSeek", "Gemini"
     val aiApiKey: String = "",
     val aiModel: String = "gpt-3.5-turbo", // 默认模型
-    val aiBaseUrl: String = "" // 自定义 URL
+    val aiBaseUrl: String = "", // 自定义 URL
+    // [新增 V18] AI 缓存控制
+    val useLocalAiCache: Boolean = true,
+    val maxHistoryLimit: Int = 10
+)
+
+// [新增 V18] AI 长期记忆摘要
+@Entity(tableName = "ai_memory")
+data class AiMemory(
+    @PrimaryKey val id: Int = 0,
+    val longTermContext: String = "", // 提取的长期偏好摘要
+    val lastSyncTime: Long = 0
 )
 
 // V5.0 更新：动作模板增加部位和器械
@@ -154,14 +164,13 @@ data class ImageUrl(
 )
 
 enum class AppTheme(val id: Int, val primary: Long, val background: Long, val onBackground: Long) {
-    DARK(0, 0xFFFF5722, 0xFF121212, 0xFFFFFFFF),
     GREEN(1, 0xFF4CAF50, 0xFFF1F8E9, 0xFF1B5E20),
     BLUE(2, 0xFF2196F3, 0xFFE3F2FD, 0xFF0D47A1),
     YELLOW(3, 0xFFFFC107, 0xFFFFFDE7, 0xFFBF360C),
     GREY(4, 0xFF607D8B, 0xFFECEFF1, 0xFF263238);
 
     companion object {
-        fun fromId(id: Int): AppTheme = values().find { it.id == id } ?: GREEN
+        fun fromId(id: Int): AppTheme = entries.find { it.id == id } ?: GREEN
     }
 }
 

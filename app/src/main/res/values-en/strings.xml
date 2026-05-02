@@ -21,6 +21,7 @@
 
     <string name="history_title">History Records</string>
     <string name="no_history">No records yet, go workout!</string>
+    <string name="history_no_train">（No training recorded）</string>
 
     <string name="settings_language">Language</string>
     <string name="export_csv">Export CSV</string>
@@ -370,6 +371,10 @@
     <string name="ai_no_reply">AI did not return any content.</string>
     <string name="ai_request_error">Request error: %s</string>
 
+    <string name="label_ai_cache_title">Conversation Context Memory</string>
+    <string name="label_ai_cache_desc">When enabled, AI will remember recent conversation context and body metrics.</string>
+    <string name="label_max_history">Context History Limit</string>
+
     <string name="weekly_metrics_title">Weekly Body Metrics</string>
     <string name="weekly_metrics_subtitle">Add more data for deeper insights (Optional)</string>
     <string name="label_body_fat_kg">Body Fat (kg)</string>
@@ -384,7 +389,5 @@
     <string name="chart_title_skeletal_muscle">Muscle Mass (kg)</string>
     <string name="chart_title_body_water">Body Water (%)</string>
     <string name="chart_title_whr">WHR (Waist-Hip Ratio)</string>
-
-
 
 </resources>

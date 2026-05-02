@@ -867,6 +867,31 @@ fun AiConfigSection(viewModel: MainViewModel) {
                     singleLine = true,
                     shape = RoundedCornerShape(12.dp)
                 )
+
+                // 🌟 [新增] AI 缓存记忆控制 🌟
+                HorizontalDivider(
+                    Modifier.padding(vertical = 4.dp),
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(0.3f)
+                )
+                Row(
+                    Modifier.fillMaxWidth(),
+                    Arrangement.SpaceBetween,
+                    Alignment.CenterVertically
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text(stringResource(R.string.label_ai_cache_title), fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.label_ai_cache_desc), style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                    }
+                    Switch(settings.useLocalAiCache, { viewModel.toggleAiCache(it) })
+                }
+                AnimatedVisibility(settings.useLocalAiCache) {
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 8.dp)) {
+                        Text(stringResource(R.string.label_max_history), fontSize = 12.sp)
+                        Spacer(Modifier.width(16.dp))
+                        NumberAdjuster(settings.maxHistoryLimit, 1..20) { viewModel.updateMaxHistoryLimit(it) }
+                    }
+                }
+
                 Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         when (connectionState) {

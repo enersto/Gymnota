@@ -372,6 +372,10 @@
     <string name="ai_no_reply">La IA no devolvió ningún contenido.</string>
     <string name="ai_request_error">Error en la solicitud: %s</string>
 
+    <string name="label_ai_cache_title">Memoria de contexto de conversación</string>
+    <string name="label_ai_cache_desc">Cuando está activado, la IA recordará el contexto de las conversaciones recientes y las métricas corporales.</string>
+    <string name="label_max_history">Límite del historial de contexto</string>
+
     <string name="weekly_metrics_title">Métricas Corporales Semanales</string>
     <string name="weekly_metrics_subtitle">Añadir más datos para mayor precisión (Opcional)</string>
     <string name="label_body_fat_kg">Grasa Corporal (kg)</string>

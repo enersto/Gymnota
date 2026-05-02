@@ -371,6 +371,10 @@
     <string name="ai_no_reply">KI hat keinen Inhalt zurückgegeben.</string>
     <string name="ai_request_error">Anfragefehler: %s</string>
 
+    <string name="label_ai_cache_title">Gesprächskontext-Speicher</string>
+    <string name="label_ai_cache_desc">Wenn aktiviert, merkt sich die KI den aktuellen Gesprächskontext und die Körperwerte.</string>
+    <string name="label_max_history">Limit für Verlaufshistorie</string>
+
     <string name="weekly_metrics_title">Wöchentliche Körperwerte</string>
     <string name="weekly_metrics_subtitle">Zusätzliche Daten für tiefere Einblicke (Optional)</string>
     <string name="label_body_fat_kg">Körperfett (kg)</string>
@@ -385,8 +389,5 @@
     <string name="chart_title_skeletal_muscle">Skelettmuskel (kg)</string>
     <string name="chart_title_body_water">Körperwasser (%)</string>
     <string name="chart_title_whr">Taille-Hüfte-Verhältnis (WHR)</string>
-
-
-
 
 </resources>

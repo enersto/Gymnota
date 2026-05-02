@@ -372,11 +372,15 @@
     <string name="scene_yoga">瑜伽/普拉提房</string>
     <string name="scene_limited_gym">酒店/简易健身房</string>
     <string name="scene_crossfit">综合体能馆 (CrossFit)</string>
-    
+
     <string name="ai_is_thinking">AI 正在思考中…</string>
     <string name="image_processing_failed_fallback">图片处理失败，已转为纯文本消息发送。</string>
     <string name="ai_no_reply">AI 未返回任何内容。</string>
     <string name="ai_request_error">请求出错: %s</string>
+
+    <string name="label_ai_cache_title">对话上下文记忆</string>
+    <string name="label_ai_cache_desc">开启后 AI 将记住最近的对话上下文和身体指标。</string>
+    <string name="label_max_history">上下文携带条数</string>
 
     <!-- 标题和标签 -->
     <string name="weekly_metrics_title">本周身体深度指标</string>
@@ -397,20 +401,4 @@
     <string name="chart_title_skeletal_muscle">骨骼肌 (kg)</string>
     <string name="chart_title_body_water">身体水分 (%)</string>
     <string name="chart_title_whr">腰臀比 (WHR)</string>
-
-
-
-    <!-- <string name="weekly_metrics_title">週間の詳細体組成</string> -->
-
-    <!-- <string name="weekly_metrics_subtitle">より詳細な変化を把握（任意入力）</string> -->
-
-    <!-- <string name="label_body_fat_kg">体脂肪量 (kg)</string> -->
-
-    <!-- <string name="label_skeletal_muscle_kg">骨格筋量 (kg)</string> -->
-
-    <!-- <string name="label_body_water">体水分率 (%)</string> -->
-
-    <!-- <string name="label_waist_circumference">ウエスト (cm)</string> -->
-
-    <!-- <string name="label_hip_circumference">ヒップ (cm)</string> -->
 </resources>

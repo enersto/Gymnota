@@ -371,6 +371,10 @@
     <string name="ai_no_reply">AIから返信がありませんでした。</string>
     <string name="ai_request_error">リクエストエラー: %s</string>
 
+    <string name="label_ai_cache_title">会話コンテキストの記憶</string>
+    <string name="label_ai_cache_desc">有効にすると、AIは最近の会話内容と身体指標を記憶します。</string>
+    <string name="label_max_history">コンテキスト履歴件数</string>
+
     <string name="weekly_metrics_title">週間の詳細体組成</string>
     <string name="weekly_metrics_subtitle">より詳細な変化を把握（任意入力）</string>
     <string name="label_body_fat_kg">体脂肪量 (kg)</string>

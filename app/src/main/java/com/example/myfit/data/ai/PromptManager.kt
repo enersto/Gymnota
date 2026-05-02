@@ -3,19 +3,20 @@ package com.example.myfit.data.ai
 import android.content.Context
 import com.example.myfit.R
 import com.example.myfit.data.api.ChatMessage
-import com.example.myfit.model.AppSetting
-import com.example.myfit.model.ContentPart // ✅ 确保引用了这个
-import com.example.myfit.model.DayType
-import com.example.myfit.model.ImageUrl   // ✅ 确保引用了这个
-import com.example.myfit.model.ScheduleConfig
-import com.example.myfit.model.WorkoutTask
+import com.example.myfit.model.*
+import java.util.Locale
 
 object PromptManager {
 
-
+    /**
+     * 构建周计划生成 Prompt
+     * 集成了用户基础档案、最新的身体成分指标、长期记忆上下文以及训练偏好
+     */
     fun buildWeeklyPlanPrompt(
         context: Context,
         profile: AppSetting,
+        latestWeight: WeightRecord?,    // [新增] 最新体重及成分数据
+        memory: String?,                // [新增] 长期记忆上下文
         schedules: List<ScheduleConfig>,
         history: List<WorkoutTask>,
         goal: String,
@@ -32,21 +33,51 @@ object PromptManager {
         // 2. 构建 User Content
         val sb = StringBuilder()
 
-        // (A) 用户档案
-        val genderStr = if (profile.gender == 0) resources.getString(R.string.gender_male) else resources.getString(R.string.gender_female)
-        sb.append(resources.getString(R.string.prompt_user_profile, genderStr, profile.age, profile.height)).append("\n\n")
+        // (A) 用户档案 + 身体指标 (解决问题 1)
+        val genderStr =
+            if (profile.gender == 0) resources.getString(R.string.gender_male) else resources.getString(
+                R.string.gender_female
+            )
+        sb.append("【").append(resources.getString(R.string.settings_profile)).append("】\n")
+        // 使用 profile.height.toString() 确保类型匹配或使用 formatted string
+        sb.append(
+            resources.getString(
+                R.string.prompt_user_profile,
+                genderStr,
+                profile.age,
+                profile.height
+            )
+        ).append("\n")
 
-        // (B) 训练目标
-        // [新增] (B-1) 结构化训练约束
+        latestWeight?.let {
+            sb.append("- ").append(resources.getString(R.string.label_weight_kg)).append(": ")
+                .append(it.weight).append("kg\n")
+            it.bodyFatKg?.let { bf ->
+                val rate = it.bodyFatRate ?: 0f
+                sb.append("- ").append(resources.getString(R.string.label_body_fat_kg)).append(": ")
+                    .append(bf).append("kg (")
+                    .append(String.format(Locale.getDefault(), "%.1f", rate)).append("%)\n")
+            }
+            it.skeletalMuscleKg?.let { sm ->
+                sb.append("- ").append(resources.getString(R.string.label_skeletal_muscle_kg))
+                    .append(": ").append(sm).append("kg\n")
+            }
+        }
+        sb.append("\n")
+
+        // (B) 插入长期记忆上下文 (解决问题 2)
+        if (!memory.isNullOrBlank()) {
+            sb.append("【历史偏好/长期记忆 (Long-term Context)】\n")
+            sb.append(memory).append("\n\n")
+        }
+
+        // (C) 训练偏好与限制
         sb.append("【训练偏好与限制】\n")
-
-        // 1. 训练重心
         val focusText = if (focusAreas.contains("COMPREHENSIVE") || focusAreas.isEmpty()) {
             resources.getString(R.string.focus_comprehensive)
         } else {
-            // 将 STRENGTH, CARDIO 等转换为自然语言
             val labels = focusAreas.joinToString("、") {
-                when(it) {
+                when (it) {
                     "STRENGTH" -> resources.getString(R.string.category_strength)
                     "CARDIO" -> resources.getString(R.string.category_cardio)
                     "CORE" -> resources.getString(R.string.category_core)
@@ -57,14 +88,12 @@ object PromptManager {
         }
         sb.append("- 训练重心: $focusText\n")
 
-        // 2. 器械场景
         val sceneText = equipmentScene.map { scene ->
-            when(scene) {
+            when (scene) {
                 "GYM" -> resources.getString(R.string.scene_gym)
                 "HOME_EQUIP" -> resources.getString(R.string.scene_home_equip)
                 "HOME_NONE" -> resources.getString(R.string.scene_home_none)
                 "OUTDOOR" -> resources.getString(R.string.scene_outdoor)
-                // [新增] 新场景映射
                 "POOL" -> resources.getString(R.string.scene_pool)
                 "YOGA_STUDIO" -> resources.getString(R.string.scene_yoga)
                 "LIMITED_GYM" -> resources.getString(R.string.scene_limited_gym)
@@ -72,65 +101,106 @@ object PromptManager {
                 else -> resources.getString(R.string.scene_gym)
             }
         }.joinToString(" + ")
-
         sb.append("- Scene: $sceneText\n")
 
-        // 3. 伤病禁忌
         if (injuredAreas.isNotEmpty()) {
             val injuryText = injuredAreas.joinToString("、")
-            sb.append("- ⚠️ 严重禁忌 (受伤部位): $injuryText。请务必避开对该部位有高冲击或高负荷的动作！\n")
+            sb.append("- ⚠️ 严重禁忌 (受伤部位): $injuryText\n")
         }
         sb.append("\n")
 
-        // (B-2) 用户备注目标 (原 User Goal)
-        val finalGoal = if (goal.isBlank()) "综合体能提升" else goal
+        // (D) 目标
+        val finalGoal = if (goal.isBlank()) resources.getString(R.string.val_default_goal) else goal
         sb.append(resources.getString(R.string.prompt_user_goal, finalGoal)).append("\n\n")
 
-        // (C) [新增] 作息设定 (Hard Constraints)
+        // (E) 作息设定
         sb.append(resources.getString(R.string.prompt_schedule_title)).append("\n")
-        // 确保按周一到周日排序
-        val sortedSchedules = schedules.sortedBy { it.dayOfWeek }
-        sortedSchedules.forEach { config ->
-            val dayName = getDayName(config.dayOfWeek) // 简易转换，或者用资源
-            val typeName = getDayTypeName(config.dayType)
-            sb.append("- $dayName: $typeName\n")
+        schedules.sortedBy { it.dayOfWeek }.forEach { config ->
+            sb.append("- ${getDayName(config.dayOfWeek)}: ${getDayTypeName(config.dayType)}\n")
         }
         sb.append("\n")
 
-        // (D) 历史记录
+        // (F) 历史记录
         sb.append(resources.getString(R.string.prompt_history_title, weeks)).append("\n")
         if (history.isEmpty()) {
             sb.append("(无近期记录)\n")
         } else {
-            // [修复] 不再计算总容量，而是输出具体的 "重量 x 次数"，让 AI 能分析力量水平
             history.forEach { task ->
                 val setsDetails = task.sets.joinToString(", ") { set ->
-                    // 格式示例: "60kg*12" 或 "30min"
                     if (set.weightOrDuration.contains("min") || set.weightOrDuration.contains("sec")) {
-                        set.weightOrDuration // 有氧/计时直接显示时长
+                        set.weightOrDuration
                     } else {
-                        "${set.weightOrDuration}kg*${set.reps}" // 力量显示 重量*次数
+                        "${set.weightOrDuration}kg*${set.reps}"
                     }
                 }
-                // 输出格式: "- 2023-10-27: 卧推 (60kg*12, 65kg*10, 65kg*8)"
                 sb.append("- ${task.date}: ${task.name} ($setsDetails)\n")
             }
         }
 
         val langInstruction = getLanguageInstruction(context)
-
         return listOf(
-            ChatMessage("system", systemContent+ langInstruction),
+            ChatMessage("system", systemContent + langInstruction),
             ChatMessage("user", sb.toString())
         )
     }
 
-    // [新增] 构建图片分析 Prompt
-    fun buildImageAnalysisPrompt(context: Context, base64Image: String): List<ChatMessage> {
+    /**
+     * 自由对话 Prompt：集成上下文历史 (解决问题 2)
+     */
+    fun buildFreeChatPrompt(
+        context: Context,
+        userQuery: String,
+        history: List<AiChatRecord> = emptyList(), // [新增] 历史对话
+        memory: String? = null                       // [新增] 长期记忆
+    ): List<ChatMessage> {
+        val systemPrompt = context.getString(R.string.prompt_system_free_chat)
+        val langInstruction = getLanguageInstruction(context)
 
+        val messages = mutableListOf<ChatMessage>()
+
+        // 1. 系统角色 + 长期记忆
+        val fullSystemPrompt = if (!memory.isNullOrBlank()) {
+            "$systemPrompt\n\n【Known User Context / Long-term Memory】:\n$memory\n$langInstruction"
+        } else {
+            systemPrompt + langInstruction
+        }
+        messages.add(ChatMessage("system", fullSystemPrompt))
+
+        // 2. 注入历史对话 (按时间正序排列给 AI)
+        history.reversed().forEach { record ->
+            messages.add(ChatMessage(record.role, record.content))
+        }
+
+        // 3. 当前用户输入
+        messages.add(ChatMessage("user", userQuery))
+
+        return messages
+    }
+
+    /**
+     * [新增] 生成记忆摘要的 Prompt (解决问题 3 - 节省 Token)
+     * 用于从对话历史中提取关键信息存入本地 AiMemory
+     */
+    fun buildMemorySummaryPrompt(context: Context, history: List<AiChatRecord>): List<ChatMessage> {
+        val systemPrompt =
+            "You are a fitness assistant. Summarize the user's preferences, injuries, and goals from the provided chat history. " +
+                    "Keep it concise (under 200 words). Focus on: 1. Training likes/dislikes 2. Physical constraints 3. Specific equipment availability. " +
+                    "Output ONLY the summary text in the user's language."
+
+        val historyText = history.reversed().joinToString("\n") { "${it.role}: ${it.content}" }
+
+        return listOf(
+            ChatMessage("system", systemPrompt),
+            ChatMessage("user", "Please summarize this conversation history:\n\n$historyText")
+        )
+    }
+
+    /**
+     * 构建图片分析 Prompt
+     */
+    fun buildImageAnalysisPrompt(context: Context, base64Image: String): List<ChatMessage> {
         val systemPrompt = context.getString(R.string.prompt_system_vision)
         val userQuery = context.getString(R.string.prompt_user_vision_query)
-        // 构建多模态消息体
         val contentParts = listOf(
             ContentPart(type = "text", text = userQuery),
             ContentPart(
@@ -138,25 +208,23 @@ object PromptManager {
                 image_url = ImageUrl(url = "data:image/jpeg;base64,$base64Image")
             )
         )
-
         return listOf(
             ChatMessage("system", systemPrompt),
-            // 关键：这里直接传 List<ContentPart>，因为 ChatMessage.content 已经是 Any 类型
             ChatMessage("user", contentParts as Any)
         )
     }
 
     private fun getDayName(day: Int): String {
-        return when(day) {
+        return when (day) {
             1 -> "Mon"; 2 -> "Tue"; 3 -> "Wed"; 4 -> "Thu"; 5 -> "Fri"; 6 -> "Sat"; 7 -> "Sun"
             else -> "Day $day"
         }
     }
 
     private fun getDayTypeName(type: DayType): String {
-        return type.name // 直接返回枚举名，AI通常能理解 (CORE, REST, STRENGTH...)
+        return type.name
     }
-    // [新增] 根据当前语言环境，追加强制语言指令
+
     private fun getLanguageInstruction(context: Context): String {
         val locale = context.resources.configuration.locales[0]
         return when (locale.language) {
@@ -168,60 +236,47 @@ object PromptManager {
         }
     }
 
-    // [修改] 自由对话 Prompt：增加语言强制指令
-    fun buildFreeChatPrompt(context: Context, userQuery: String): List<ChatMessage> {
-        val systemPrompt = context.getString(R.string.prompt_system_free_chat)
-        val langInstruction = getLanguageInstruction(context) // [新增] 获取语言指令
-        return listOf(
-            ChatMessage("system", systemPrompt + langInstruction), // [修改] 拼接指令
-            ChatMessage("user", userQuery)
-        )
-    }
-    // [新增] 自由对话的多模态 Prompt (自定义文本 + 图片)
-    fun buildMultimodalChatPrompt(context: Context, userQuery: String, base64Image: String): List<ChatMessage> {
+    /**
+     * 自由对话的多模态 Prompt
+     */
+    fun buildMultimodalChatPrompt(
+        context: Context,
+        userQuery: String,
+        base64Image: String
+    ): List<ChatMessage> {
         val systemPrompt = context.getString(R.string.prompt_system_free_chat)
         val langInstruction = getLanguageInstruction(context)
-
-        // 1. 创建一个可变的 contentParts 列表
         val contentParts = mutableListOf<ContentPart>()
-
-        // 2. 如果用户输入了文本，则添加文本部分
         if (userQuery.isNotBlank()) {
             contentParts.add(ContentPart(type = "text", text = userQuery))
         }
-
-        // 3. 总是添加图片部分
         contentParts.add(
             ContentPart(
                 type = "image_url",
                 image_url = ImageUrl(url = "data:image/jpeg;base64,$base64Image")
             )
         )
-
-        // 4. 返回构建好的消息列表
         return listOf(
             ChatMessage("system", systemPrompt + langInstruction),
-            // 将包含一个或两个元素的 contentParts 列表作为 user 的 content
             ChatMessage("user", contentParts as Any)
         )
     }
 
     private fun getUserLanguageName(context: Context): String {
         val locale = context.resources.configuration.locales[0]
-        return locale.displayLanguage // 自动返回 "中文", "English", "日本語" 等
-        // 或者如果你想强制控制，也可以用你之前的 when 逻辑返回 "Simplified Chinese" 等
+        return locale.displayLanguage
     }
 
-    // [新增] 构建 CSV 生成请求
-    // 注意：这里需要把之前的建议内容作为 context 传回去，或者依赖多轮对话 (如果是多轮对话架构)
-    // 鉴于目前是单次请求架构，我们需要把之前的建议拼接在 User Prompt 里
-    // [修改] 增加 userFeedback 参数
-    fun buildCsvPlanPrompt(context: Context, adviceContent: String,
-                           userFeedback: String = ""): List<ChatMessage> {
+    /**
+     * 构建 CSV 生成请求
+     */
+    fun buildCsvPlanPrompt(
+        context: Context,
+        adviceContent: String,
+        userFeedback: String = ""
+    ): List<ChatMessage> {
         val systemPrompt = context.getString(R.string.prompt_system_csv_generator)
-
         val userLang = getUserLanguageName(context)
-        // 1. 定义 App 支持的合法 Key (白名单)
         val validBodyParts = listOf(
             "part_chest", "part_back", "part_shoulders",
             "part_arms", "part_abs", "part_cardio",
@@ -234,58 +289,31 @@ object PromptManager {
             "equip_trx", "equip_bench", "equip_other"
         )
 
-        // 2. 构建约束指令
-        // 显式告诉 AI：如果遇到 "Triceps"，必须映射到 "part_arms"；遇到 "Core"，必须映射到 "part_abs"
         val constraintPrompt = """
-            
             IMPORTANT - STRICT FORMAT RULES:
-            0. For 'Category' column, you MUST ONLY use one of these exact keys:
-            ['STRENGTH', 'CARDIO', 'CORE']
-            (Rule: Map 'Strength Training'/'Power'/'Hypertrophy' -> 'STRENGTH'. 
-            Map 'Aerobic'/'HIIT'/'Running' -> 'CARDIO'. 
-            Map 'Abs'/'Plank'/'Stability' -> 'CORE'.)
-            STRICT RULES FOR COMMAS AND FORMAT:
+            0. For 'Category' column, you MUST ONLY use one of these exact keys: ['STRENGTH', 'CARDIO', 'CORE']
             - The output MUST be strictly in CSV format with exactly 9 columns.
-            - Do NOT use any half-width commas (,) inside the cell values (such as Target, Name, or Instruction). Half-width commas must ONLY be used to separate columns.
-            - For the 「Target」 column, format it strictly without commas, for example: 「30kg x 8 reps x 3 sets」 or 「3组*8次*30kg」.
-            - For text columns, if you need to pause or list items, ONLY use full-width commas (，) or spaces.
-                    
-            
-            1. For 'BodyPart' column, you MUST ONLY use one of these exact keys:
-            [${validBodyParts.joinToString(", ")}]
-            (Rule: Map 'triceps'/'biceps'/'forearms' -> 'part_arms'. 
-            Map 'core' -> 'part_abs'. Map 'glutes' -> 'part_hips'. 
-            Map 'quads'/'hamstrings' -> 'part_thighs'.)
-            
-            2. For 'Equipment' column, you MUST ONLY use one of these exact keys:
-            [${validEquipment.joinToString(", ")}]
-            
-            3. OUTPUT CSV COLUMNS MUST BE EXACTLY:
-            Day,Name,Category,Target,BodyPart,Equipment,IsUni,LogType,Instruction
-            (The 'Instruction' column must be a tip within 100 words based on the records of users if there are records, 
-            e.g., "Keep back straight and feel the back strength when you're doing".)
-            
-            4. STRICT RULES for 'IsUni' (Is Unilateral?):
-            - Set to 'true' IF the exercise is performed one side at a time (e.g., Dumbbell Bicep Curls, Lunges, Single-arm Rows, Split Squats, Lateral Raises).
-            - Set to 'false' for Barbell exercises (Squats, Bench Press) or Machine exercises using both limbs simultaneously.
-            - SPECIFICALLY: "Dumbbell Bicep Curl" (哑铃弯举) MUST be true. "Dumbbell Row" (哑铃划船) MUST be true.
-            
-            5. LANGUAGE & CONTENT CONSTRAINT:
-            - Columns 'Category', 'BodyPart', 'Equipment' MUST remain in ENGLISH keys (as defined above).
-            - Columns 'Name' and 'Instruction' MUST be in $userLang (User's Language).
-            - For 'Instruction': Provide specific technique tips in $userLang.
+            - Do NOT use any half-width commas (,) inside the cell values. Use full-width commas (，) if needed.
+            1. For 'BodyPart' column, you MUST ONLY use one of these exact keys: [${
+            validBodyParts.joinToString(
+                ", "
+            )
+        }]
+            2. For 'Equipment' column, you MUST ONLY use one of these exact keys: [${
+            validEquipment.joinToString(
+                ", "
+            )
+        }]
+            3. OUTPUT CSV COLUMNS MUST BE EXACTLY: Day,Name,Category,Target,BodyPart,Equipment,IsUni,LogType,Instruction
+            4. STRICT RULES for 'IsUni': true if one side at a time, false otherwise.
+            5. Columns 'Name' and 'Instruction' MUST be in $userLang.
         """.trimIndent()
 
-        // 3. 拼接用户 Prompt
-        var userPromptContent = context.getString(R.string.prompt_user_generate_csv) +
-                "\n$constraintPrompt" + // 插入约束
-                "\n\nBased on advice:\n" + adviceContent
-
-        // Append user feedback if present
+        var userPromptContent =
+            context.getString(R.string.prompt_user_generate_csv) + "\n$constraintPrompt" + "\n\nBased on advice:\n" + adviceContent
         if (userFeedback.isNotBlank()) {
             userPromptContent += "\n\nUser Feedback/Correction: $userFeedback"
         }
-
         return listOf(
             ChatMessage("system", systemPrompt),
             ChatMessage("user", userPromptContent)
