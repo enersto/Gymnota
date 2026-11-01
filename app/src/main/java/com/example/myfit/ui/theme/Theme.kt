@@ -2,6 +2,7 @@ package com.example.myfit.ui.theme
 
 import android.app.Activity
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
@@ -16,21 +17,36 @@ fun MyFitTheme(
     appTheme: AppTheme,
     content: @Composable () -> Unit
 ) {
+    val isDark = appTheme == AppTheme.DARK
+
     // 根据 AppTheme 枚举生成颜色方案
-    val primaryColor = Color(appTheme.primary)
+    val primaryColor = if (isDark) Color(0xFF90CAF9) else Color(appTheme.primary)
     val background = Color(appTheme.background)
     val onBackground = Color(appTheme.onBackground)
 
-    // 彻底移除深色模式逻辑，统一使用浅色方案
-    val colorScheme = lightColorScheme(
-        primary = primaryColor,
-        background = background,
-        surface = Color.White,
-        onPrimary = Color.White,
-        onBackground = onBackground,
-        onSurface = onBackground,
-        scrim = Color.Black.copy(alpha = 0.2f)
-    )
+    val colorScheme = if (isDark) {
+        darkColorScheme(
+            primary = primaryColor,
+            background = background,
+            surface = Color(0xFF1E1E1E),
+            surfaceVariant = Color(0xFF2C2C2C),
+            onPrimary = Color.Black,
+            onBackground = onBackground,
+            onSurface = onBackground,
+            onSurfaceVariant = Color(0xFFCCCCCC),
+            scrim = Color.Black.copy(alpha = 0.5f)
+        )
+    } else {
+        lightColorScheme(
+            primary = primaryColor,
+            background = background,
+            surface = Color.White,
+            onPrimary = Color.White,
+            onBackground = onBackground,
+            onSurface = onBackground,
+            scrim = Color.Black.copy(alpha = 0.2f)
+        )
+    }
 
     // 设置状态栏颜色
     val view = LocalView.current
@@ -42,8 +58,8 @@ fun MyFitTheme(
             window.statusBarColor = Color.Transparent.toArgb()
 
             val insetsController = WindowCompat.getInsetsController(window, view)
-            // 由于强制浅色背景，状态栏图标统一设为黑色/深色
-            insetsController.isAppearanceLightStatusBars = true
+            // 暗黑模式下状态栏图标设为浅色，浅色模式下设为深色图标
+            insetsController.isAppearanceLightStatusBars = !isDark
         }
     }
 

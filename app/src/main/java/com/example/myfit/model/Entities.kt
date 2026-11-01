@@ -167,7 +167,12 @@ enum class AppTheme(val id: Int, val primary: Long, val background: Long, val on
     GREEN(1, 0xFF4CAF50, 0xFFF1F8E9, 0xFF1B5E20),
     BLUE(2, 0xFF2196F3, 0xFFE3F2FD, 0xFF0D47A1),
     YELLOW(3, 0xFFFFC107, 0xFFFFFDE7, 0xFFBF360C),
-    GREY(4, 0xFF607D8B, 0xFFECEFF1, 0xFF263238);
+    GREY(4, 0xFF607D8B, 0xFFECEFF1, 0xFF263238),
+    PURPLE(5, 0xFF9C27B0, 0xFFF3E5F5, 0xFF4A148C),
+    ORANGE(6, 0xFFFF9800, 0xFFFFF3E0, 0xFFE65100),
+    TEAL(7, 0xFF009688, 0xFFE0F2F1, 0xFF004D40),
+    RED(8, 0xFFF44336, 0xFFFFEBEE, 0xFFB71C1C),
+    DARK(9, 0xFF212121, 0xFF121212, 0xFFE0E0E0);
 
     companion object {
         fun fromId(id: Int): AppTheme = entries.find { it.id == id } ?: GREEN

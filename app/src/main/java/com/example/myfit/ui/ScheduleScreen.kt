@@ -208,7 +208,10 @@ fun ScheduleScreen(navController: NavController, viewModel: MainViewModel) {
                             style = MaterialTheme.typography.titleMedium
                         )
                         Spacer(Modifier.height(12.dp))
-                        Row(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(16.dp),
+                            modifier = Modifier.horizontalScroll(rememberScrollState())
+                        ) {
                             AppTheme.entries.forEach {
                                 GlassThemeCircle(
                                     it,
