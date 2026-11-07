@@ -1,132 +1,128 @@
-# Gymnota - Personal Workout Memo & Tracker (V6.0)
+# Gymnota 6.2
 
-**Gymnota** is a personal fitness tracking and memo application built with **Android Jetpack Compose**. It is designed to help users plan weekly training schedules, log daily workouts, and deeply visualize training volume and body status trends through **native charts**.
+Gymnota is an Android workout tracker built with Kotlin and Jetpack Compose. It supports weekly routines, daily workout logs, body measurements, history charts and an AI coach.
 
-🚀 **V6.0 Major Update: The AI Coach Evolution** — A perfect closed loop from "Advice" to "Actionable Planning".
+[简体中文](README.md) · [6.2 release notes, Chinese](RELEASE_NOTES_6.2.md)
 
----
+<p align="center">
+  <img src="docs/images/gymnota-6.2-workout.jpg" width="360" alt="Gymnota 6.2 workout screen with exercise previews and Liquid Glass controls">
+</p>
 
-## ✨ New in V6.0
+## New in 6.2
 
-**🧠 AI Coach Integration**
-* **Context-Aware Planning**: The AI no longer provides generic advice. It reads your **User Profile**, **Training Volume from the last 3 weeks**, and **Weekly Schedule Configuration** to tailor a specific plan for the upcoming week.
-* **Multi-Dimensional Constraints**: Supports custom **Training Focus** (Strength/Cardio/Core), **Equipment Scenario** (Gym/Home/Outdoor), and **Injury Avoidance**, ensuring the plan is safe and feasible.
-* **Execution Loop (Generate & Import)**: Introducing the exclusive "Refine & Import" flow. AI-generated suggestions can be converted into structured data with one click and automatically written into your weekly schedule, eliminating manual entry.
-* **AI Visual Assistant (Snap & Ask)**: Encountered an unfamiliar machine? Snap a photo, and the AI will immediately identify it and explain the target muscle groups and operation techniques.
+### Offline exercise catalogue and animations
 
-**⚙️ Model Freedom & Enhanced Connectivity**
-* **Multi-Provider Support**: Pre-configured support for mainstream large model services including **OpenAI, DeepSeek, Kimi (Moonshot), Qwen (Aliyun), Gemini, and SiliconFlow**.
-* **Smart Configuration Memory**: Automatically remembers API Keys and Base URLs for different providers, allowing seamless switching.
-* **Connectivity Enhancement**: Built-in smart URL cleaning logic (automatically handles `v1/` suffixes) to significantly improve connection success rates for custom Base URLs.
+- Bundle 1,324 exercises and their 180×180 GIF animations for offline browsing.
+- Switch between My exercises and Exercise catalogue within the management page using the glass tab slider. The personal library retains Strength, Cardio and Core categories.
+- Filter by body part and search translated names, original English names, exercise IDs or instructions.
+- Preview an exercise, then confirm its training category, logging type, unilateral setting and target before adding it to the personal library.
+- Associate supported existing exercise names with animations while preserving personal names. Animations can also be selected manually in the editor.
+- Store custom photo and animation references separately. Remove a custom photo while retaining the associated animation.
 
-**🎨 Markdown Rendering Engine 2.0**
-* **Perfect Typography**: Comprehensively upgraded text display, supporting code block highlighting, multi-level headers, blockquotes, and list formats (essential for weekly plan details).
-* **Enhanced Interaction**: Added long-press to copy and text selection functions, making it easy to extract key information from AI responses.
+### Names and interface in five languages
 
-**🔒 Privacy First**
-* **Local Storage**: API Keys are stored strictly locally via SharedPreferences and never pass through intermediate servers.
-* **Data Masking**: Historical data sent to the AI includes only concise summaries (e.g., total volume, max weight) to maximize privacy protection.
+The interface supports Simplified Chinese, English, Spanish, German and Japanese. The catalogue includes Chinese, Spanish, German and Japanese exercise names alongside the original English names.
 
----
+These names use the translation draft reviewed during this update. Uncommon terms and variants remain open to correction. Instructions use available translations for the selected language, with English fallback for German and Japanese.
 
-## 🔥 Core Features
+### Liquid Glass interface
 
-**📊 Training Volume Heatmap**
-* **Visual Distribution**: Intuitively displays daily training intensity through color depth on the History page.
-* **Calculation Standard**: Based on "Historical Cumulative Volume Load (Weight × Reps)".
+- Apply shared glass controls to workout completion, Add set and Add exercise.
+- Unify the history exercise selector, list/chart tabs, left/right selection and daily/monthly chart controls.
+- Unify weekly routine and exercise-library entries, language selection and settings switches.
+- Reduce white overlays and adapt materials to the selected light or dark theme. The bottom navigation samples page content, while list cards use lighter effects.
+- Show static first frames in list thumbnails and keep GIF playback in detail views.
+- Adjust duplicated tab-label rendering, gesture-cancellation cleanup and indicator positioning to address overlapping text and lingering deformation.
+- Fix the management Add button overlapping the root navigation and remove the old outline from the focused history selector.
 
-**⏱️ Pro Training Timer**
-* **Lock Screen Persistence**: Real-time countdown in the notification bar, supports lock screen viewing, and keeps running in the background without being killed.
-* **Permission Guide**: Smartly guides users to enable necessary permissions to ensure timer stability.
+## Features
 
-**💪 Body Status & Metrics**
-* **Auto-Calculation**: Automatically calculates **BMI** and **BMR** based on height/age/gender after logging weight.
-* **Local Privacy**: All body profile data is stored only in the local database.
+- **Workout logging**. Weekly routines, templates, daily tasks, sets and completion tracking. Supports weight × reps, duration, reps-only and unilateral records.
+- **Exercise management**. Personal exercises, a bundled catalogue, instructions, custom photos and demonstration animations.
+- **History and charts**. Training heatmaps, body measurements, cardio duration, maximum recorded exercise weight and separate left/right charts for unilateral exercises.
+- **Body measurements**. Weight, fat mass, skeletal muscle mass, body water, waist and hip measurements, plus profile-based BMI and BMR.
+- **Timer**. Preparation time, final countdown, sound effects and notification countdown.
+- **AI coach**. Weekly plan suggestions, chat, image analysis, chat history and long-term memory summaries. Convert advice into a weekly-plan CSV for import.
+- **Data management**. Export training history as CSV, import weekly routines and back up or restore the personal database.
 
-**📈 Visual Statistics Center**
-* **Native Charts**: High-performance line and bar charts drawn with Compose Canvas.
-* **Multi-Dimensional Analysis**: Track trends in Weight, Total Cardio Duration, and 1RM (One Rep Max) for specific exercises.
+## Getting started
 
-**⚖️ Smart Data Logic**
-* **Unilateral Merger**: Automatically identifies and merges volume data for left/right split exercises (e.g., Single-Arm Rows).
-* **Smart Import**: Automatically creates new exercise templates, fills in body part info, and deduplicates during CSV import.
+### Add an exercise from the catalogue
 
-**🌍 Multi-Language Support**
-* Full support for **English, Simplified Chinese, German, Spanish, and Japanese**.
+1. Open exercise management from Settings.
+2. Switch to Exercise catalogue and search or filter by body part.
+3. Open the exercise details and choose Use exercise.
+4. Confirm its name, category, logging type, unilateral setting and target, then save.
 
----
+Personal exercise names are retained. Automatic animation lookup applies to supported name mappings. Other exercises can be assigned an animation manually.
 
-## 📱 User Guide
+### Photos and animations
 
-### 1. Enable AI Coach `NEW`
-* Go to the **AI Coach** tab.
-* Click the status bar at the top to configure your model (DeepSeek or OpenAI is recommended).
-* **Generate Plan**: Click "Generate Weekly Plan", set your Training Focus and Equipment constraints, and wait for the AI analysis.
-* **Import Schedule**: Once satisfied with the AI-generated plan, click the import button at the bottom to apply it directly to your weekly schedule.
+Open an exercise for editing to take a photo, select a gallery image or choose a bundled animation. Remove photo appears when a custom photo is attached. The change takes effect after saving. Photo and animation references are stored independently.
 
-### 2. Visual Assistant & Free Chat `NEW`
-* Click the camera icon on the AI page to snap a photo of equipment or an exercise for guidance.
-* Use the Free Chat mode to ask any fitness-related questions.
+### Workouts and history
 
-### 3. View Training Heatmap
-* Located at the top of the **History** page.
-* The legend displays volume levels from low to high.
+Add exercises to the daily plan, enter set data and mark tasks complete. In History, switch between list and charts, choose an exercise and adjust side or daily/monthly granularity where applicable.
 
-### 4. Training Timer & Lock Screen
-* Enter the time (in minutes) next to the exercise set and click the play button to start.
-* **Lock Screen View**: Light up the screen (no unlock needed) to see the countdown in the notification area.
+### AI coach
 
----
+Configure the provider, API key, model and base URL in Settings or the AI page. Generate weekly-plan advice, chat or analyze an image, then convert a plan into CSV for import.
 
-## 📂 CSV Import Format
+API configuration and training records are stored in the local database. AI features send the relevant context and submitted images to the configured model service.
 
-Supports expanding the exercise library via CSV import. The recommended full format is as follows:
+## Backups and upgrades
 
-**Header**:
-`Day,Name,Category,Target,BodyPart,Equipment,IsUni,LogType`
+Personal data uses Room schema **v19**, with an existing migration chain for older versions. Version 19 adds a separate animation reference and migrates bundled-animation references previously stored in the photo field.
 
-**Notes**:
-* **Day**: 1-7 (Monday to Sunday)
-* **Category**: STRENGTH / CARDIO / CORE
-* **IsUni**: true / false (Unilateral)
-* **LogType**: 0=Weight x Reps, 1=Duration, 2=Reps Only
+The bundled catalogue is a separate SQLite database, extracted to the app's no-backup directory on first use. The catalogue and packaged media are excluded from personal database backups and supplied by the APK after restoration.
 
-**Key Reference**:
-* **BodyPart**:
-    * Upper/Torso: `part_chest`, `part_back`, `part_shoulders`, `part_arms`, `part_abs`
-    * Lower: `part_hips`, `part_thighs`, `part_calves`
-    * Other: `part_cardio`, `part_other`
-* **Equipment**: `equip_barbell`, `equip_dumbbell`, `equip_machine`, `equip_cable`, `equip_smith_machine`, `equip_bodyweight`, `equip_cardio_machine`, `equip_other`
+## Weekly routine CSV
 
-**Example:**
-
-```text
+~~~csv
 Day,Name,Category,Target,BodyPart,Equipment,IsUnilateral,LogType
-1,Bench Press,STRENGTH,3x12,part_chest,equip_machine,false,0 
-1,Plank,CORE,3x60s,part_abs,equip_bodyweight,false,1 
-2,Squat,STRENGTH,4x10,part_thighs,equip_barbell,false,0 
-3,Running,CARDIO,30min,part_cardio,equip_cardio_machine,false,1 
+1,Seated Chest Press,STRENGTH,3x12,part_chest,equip_machine,false,0
+1,Plank,CORE,3x60s,part_abs,equip_bodyweight,false,1
+2,Barbell Squat,STRENGTH,4x10,part_thighs,equip_barbell,false,0
+3,Running,CARDIO,30min,part_cardio,equip_cardio_machine,false,1
 4,Crunches,CORE,4x20,part_abs,equip_bodyweight,false,2
+~~~
 
-```
+- Day is 1–7, Monday to Sunday.
+- Category is STRENGTH, CARDIO or CORE.
+- Target is the default workout prescription, such as 3x12, 30min or 3x60s.
+- IsUnilateral is true or false.
+- LogType is 0 for weight × reps, 1 for duration or 2 for reps-only.
+- Body-part keys include part_chest, part_back, part_shoulders, part_arms, part_abs, part_hips, part_thighs, part_calves, part_cardio and part_other.
+- Common equipment keys include equip_barbell, equip_dumbbell, equip_machine, equip_cable, equip_smith_machine, equip_bodyweight, equip_cardio_machine and equip_other.
 
----
+Import replaces routine entries for the weekdays included in the CSV. Review the days and exercise contents before importing.
 
-## 🛠️ Tech Stack
+## Technology
 
-* **Language**: Kotlin
-* **UI Framework**: Jetpack Compose (Material3)
-* **Architecture**: MVVM (Model-View-ViewModel)
-* **Database**: Room (SQLite) with Migrations (v9)
-* **Service**: Android Foreground Service (Keep-alive Timer)
-* **Graphics**: Compose Canvas (Heatmap & Custom Charts)
-* **Concurrency**: Coroutines & Flow
+| Area | Implementation |
+|---|---|
+| Language and UI | Kotlin, Jetpack Compose, Material 3 |
+| State and concurrency | ViewModel, Coroutines, Flow |
+| Personal data | Room 2.8.4, schema v19 |
+| Bundled catalogue | Separate SQLite, compressed assets, no-backup directory |
+| Images and animations | Coil with GIF decoding |
+| Network | Retrofit, OkHttp |
+| Charts | Compose Canvas |
+| Glass effects | Kyant0 Backdrop |
+| Android | Minimum API 26, target API 35, compile API 36 |
 
----
+## Resources and credits
 
-## 📝 Version Info
+The catalogue is adapted from [hasaneyldrm/exercises-dataset](https://github.com/hasaneyldrm/exercises-dataset), with source attribution retained.
 
-* **Version**: 6.0
-* **Version Code**: 60
-* **Author**: Designed & Built by enersto & Hajimi
+**© Gym visual — [gymvisual.com](https://gymvisual.com/)**
 
+The upstream MIT license covers code, data structure and instruction text. Exercise media has separate terms. The packaged [LICENSE](app/src/main/assets/catalog/LICENSE.txt) and [NOTICE](app/src/main/assets/catalog/NOTICE.md) retain the relevant distinctions and attribution.
+
+Glass effects use [Kyant0/AndroidLiquidGlass](https://github.com/Kyant0/AndroidLiquidGlass). Design and implementation comparisons also referenced [QWEA0/Liquid-Glass-Android](https://github.com/QWEA0/Liquid-Glass-Android).
+
+## Version
+
+- Release series **6.2**, application version **6.2.0**.
+- Version code **6200**.
+- Designed & Built by enersto & Hajimi.
