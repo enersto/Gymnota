@@ -6,6 +6,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.widget.Toast
+import androidx.room.withTransaction
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.myfit.R
@@ -539,8 +540,21 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun deleteTemplate(id: Long) =
         viewModelScope.launch { dao.getTemplateById(id)?.let { dao.deleteTemplate(it) } }
 
-    fun saveTemplate(t: ExerciseTemplate) =
-        viewModelScope.launch { if (t.id == 0L) dao.insertTemplate(t) else dao.updateTemplate(t) }
+    fun saveTemplate(t: ExerciseTemplate) = viewModelScope.launch {
+        if (t.id == 0L) {
+            dao.insertTemplate(t)
+        } else {
+            database.withTransaction {
+                val previous = dao.getTemplateById(t.id)
+                dao.updateTemplate(t)
+                val removedPhoto = previous?.let { com.example.myfit.data.CatalogMedia.photoUri(it) }
+                if (removedPhoto != null && t.imageUri == null) {
+                    dao.clearTaskPhoto(t.id, removedPhoto)
+                    dao.clearRoutinePhoto(t.id, removedPhoto)
+                }
+            }
+        }
+    }
 
     fun addTaskFromTemplate(t: ExerciseTemplate) = viewModelScope.launch {
         dao.insertTask(

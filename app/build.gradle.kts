@@ -14,8 +14,8 @@ android {
         applicationId = "com.example.myfit"
         minSdk = 26
         targetSdk = 35
-        versionCode = 6026
-        versionName = "6.0.26"
+        versionCode = 6200
+        versionName = "6.2.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -79,6 +79,7 @@ dependencies {
 
     implementation("com.google.code.gson:gson:2.10.1")
     implementation("io.coil-kt:coil-compose:2.6.0")
+    implementation("io.coil-kt:coil-gif:2.6.0")
 
     // Networking
     implementation("com.squareup.retrofit2:retrofit:2.9.0")

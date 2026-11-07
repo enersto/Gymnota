@@ -1,6 +1,9 @@
 package com.example.myfit.ui
 
 import android.os.Build
+import com.kyant.backdrop.backdrops.rememberCombinedBackdrop
+import com.kyant.backdrop.backdrops.layerBackdrop
+import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import android.view.HapticFeedbackConstants
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -67,6 +70,7 @@ fun MainScreen(viewModel: MainViewModel) {
         currentDestination?.hierarchy?.any { it.route?.startsWith(screen.route) == true } == true
     }.coerceAtLeast(0)
 
+    val pageBackdrop = rememberLayerBackdrop()
     val glassMode = LocalGlassMode.current
     val useGlassTabs = glassMode && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
 
@@ -102,7 +106,7 @@ fun MainScreen(viewModel: MainViewModel) {
                 NavHost(
                     navController = navController,
                     startDestination = Screen.DailyPlan.route,
-                    modifier = Modifier.padding(
+                    modifier = Modifier.layerBackdrop(pageBackdrop).padding(
                         bottom = if (useGlassTabs) 0.dp else innerPadding.calculateBottomPadding()
                     )
                 ) {
@@ -133,8 +137,9 @@ fun MainScreen(viewModel: MainViewModel) {
                 }
 
                 if (useGlassTabs) {
-                    val backdrop = LocalBackdrop.current
-                    if (backdrop != null) {
+                    val backgroundBackdrop = LocalBackdrop.current
+                    val backdrop = if (backgroundBackdrop != null) rememberCombinedBackdrop(backgroundBackdrop, pageBackdrop) else pageBackdrop
+                    run {
                         LiquidBottomTabs(
                             selectedTabIndex = { selectedIndex },
                             onTabSelected = { index ->

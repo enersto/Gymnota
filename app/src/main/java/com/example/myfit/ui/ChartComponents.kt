@@ -37,6 +37,9 @@ import androidx.compose.material3.MenuAnchorType
 
 import com.example.myfit.model.LogType
 import com.example.myfit.ui.components.GlassCard
+import com.example.myfit.ui.components.GlassSegmentedControl
+import com.example.myfit.ui.components.glassPanel
+import androidx.compose.foundation.BorderStroke
 import com.example.myfit.ui.components.GlassChoiceChip
 import com.kyant.shapes.Capsule
 import androidx.compose.ui.draw.clip
@@ -70,49 +73,20 @@ fun ChartSection(
                     modifier = Modifier.weight(1f).padding(end = 8.dp)
                 )
 
-                Surface(
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-                    shape = Capsule(),
-                    modifier = Modifier.height(32.dp)
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        GranularityButton(
-                            stringResource(R.string.chart_granularity_day),
-                            granularity == ChartGranularity.DAILY
-                        ) { granularity = ChartGranularity.DAILY }
-
-                        GranularityButton(
-                            stringResource(R.string.chart_granularity_month),
-                            granularity == ChartGranularity.MONTHLY
-                        ) { granularity = ChartGranularity.MONTHLY }
-                    }
-                }
+                GlassSegmentedControl(
+                    options = listOf(
+                        stringResource(R.string.chart_granularity_day),
+                        stringResource(R.string.chart_granularity_month)
+                    ),
+                    selectedIndex = if (granularity == ChartGranularity.DAILY) 0 else 1,
+                    onSelected = { granularity = if (it == 0) ChartGranularity.DAILY else ChartGranularity.MONTHLY }
+                )
             }
             Spacer(modifier = Modifier.height(16.dp))
             Box(modifier = Modifier.height(220.dp).fillMaxWidth()) {
                 content(granularity)
             }
         }
-    }
-}
-
-@Composable
-fun GranularityButton(text: String, isSelected: Boolean, onClick: () -> Unit) {
-    Box(
-        modifier = Modifier
-            .fillMaxHeight()
-            .clip(Capsule())
-            .background(if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent)
-            .clickable { onClick() }
-            .padding(horizontal = 12.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = text,
-            color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
-            fontSize = 11.sp,
-            fontWeight = FontWeight.Bold
-        )
     }
 }
 
@@ -170,7 +144,7 @@ fun SingleExerciseSection(
                 expanded = expanded,
                 onExpandedChange = { expanded = !expanded }
             ) {
-                OutlinedTextField(
+                TextField(
                     value = searchText,
                     onValueChange = {
                         searchText = it
@@ -179,7 +153,8 @@ fun SingleExerciseSection(
                     },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .menuAnchor(MenuAnchorType.PrimaryNotEditable, true)
+                        .glassPanel(shape = RoundedCornerShape(16.dp), interactive = false)
+                        .menuAnchor(MenuAnchorType.PrimaryEditable, true)
                         .onFocusChanged { if (it.isFocused) { isUserInput = false; expanded = true } },
                     label = { Text(stringResource(R.string.title_select_exercise)) },
                     trailingIcon = {
@@ -192,7 +167,14 @@ fun SingleExerciseSection(
                         }
                     },
                     shape = RoundedCornerShape(16.dp),
-                    colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = Color.Transparent,
+                        unfocusedContainerColor = Color.Transparent,
+                        focusedIndicatorColor = Color.Transparent,
+                        unfocusedIndicatorColor = Color.Transparent,
+                        disabledIndicatorColor = Color.Transparent,
+                        errorIndicatorColor = Color.Transparent
+                    ),
                     singleLine = true
                 )
 
@@ -200,10 +182,16 @@ fun SingleExerciseSection(
                     ExposedDropdownMenu(
                         expanded = expanded,
                         onDismissRequest = { expanded = false },
-                        modifier = Modifier.heightIn(max = 300.dp)
+                        modifier = Modifier.heightIn(max = 300.dp),
+                        shape = RoundedCornerShape(20.dp),
+                        containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.94f),
+                        border = BorderStroke(0.75.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
                     ) {
                         filteredOptions.forEach { selectionOption ->
                             DropdownMenuItem(
+                                modifier = Modifier.padding(horizontal = 4.dp).clip(RoundedCornerShape(12.dp))
+                                    .background(if (selectionOption == selectedExercise)
+                                        MaterialTheme.colorScheme.primary.copy(alpha = 0.14f) else Color.Transparent),
                                 text = {
                                     val isSelected = selectionOption == selectedExercise
                                     Text(

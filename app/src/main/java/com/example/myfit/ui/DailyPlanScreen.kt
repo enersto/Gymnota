@@ -51,9 +51,14 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import coil.compose.AsyncImage
+import com.example.myfit.ui.components.ExerciseThumbnail
 import com.example.myfit.R
 import com.example.myfit.model.*
 import com.example.myfit.ui.components.GlassButton
+import com.example.myfit.ui.components.GlassControlSurface
+import com.example.myfit.ui.components.LocalBackdrop
+import com.kyant.backdrop.backdrops.layerBackdrop
+import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.example.myfit.ui.components.GlassCard
 import com.example.myfit.ui.components.GlassScaffoldContent
 import com.example.myfit.ui.components.LocalGlassMode
@@ -99,23 +104,27 @@ fun DailyPlanScreen(viewModel: MainViewModel, navController: NavController) {
         }
     )
 
+    val workoutBackdrop = rememberLayerBackdrop()
     GlassScaffoldContent {
         Scaffold(
             containerColor = Color.Transparent,
             floatingActionButton = {
                 if (dayType != DayType.REST) {
-                    FloatingActionButton(
-                        onClick = { navController.navigate("exercise_selector") },
-                        containerColor = themeColor,
-                        shape = RoundedCornerShape(16.dp),
-                        modifier = Modifier.padding(bottom = if (useGlassTabs) 100.dp else 0.dp)
-                    ) {
-                        Icon(Icons.Default.Add, contentDescription = "Add", tint = Color.White)
+                    CompositionLocalProvider(LocalBackdrop provides workoutBackdrop) {
+                        GlassControlSurface(
+                            onClick = { navController.navigate("exercise_selector") },
+                            selected = true,
+                            tint = themeColor,
+                            modifier = Modifier.padding(bottom = if (useGlassTabs) 100.dp else 0.dp).size(56.dp)
+                        ) {
+                            Icon(Icons.Default.Add, contentDescription = stringResource(R.string.btn_add))
+                        }
                     }
                 }
             }
         ) { padding ->
             Column(modifier = Modifier
+                .layerBackdrop(workoutBackdrop)
                 .padding(padding)
                 .padding(16.dp)
                 .statusBarsPadding()) {
@@ -234,9 +243,16 @@ fun AdvancedTaskItem(
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                val liveImageUri = allTemplates.find { it.id == task.templateId }?.imageUri ?: task.imageUri
+                val currentTemplate = allTemplates.find { it.id == task.templateId }
+                val liveImageUri = if (currentTemplate != null) {
+                    com.example.myfit.data.CatalogMedia.photoUri(currentTemplate)
+                        ?: com.example.myfit.data.CatalogMedia.animationUri(context, currentTemplate)
+                } else {
+                    task.imageUri?.takeIf { it.isNotBlank() }
+                        ?: com.example.myfit.data.CatalogMedia.uri(context, task.name)
+                }
                 if (!liveImageUri.isNullOrBlank()) {
-                    AsyncImage(
+                    ExerciseThumbnail(
                         model = if (liveImageUri.startsWith("/")) File(liveImageUri) else liveImageUri,
                         contentDescription = null,
                         modifier = Modifier
@@ -330,7 +346,7 @@ fun AdvancedTaskItem(
                         }
                     }
 
-                    TextButton(onClick = {
+                    GlassControlSurface(onClick = {
                         val lastSet = task.sets.lastOrNull()
                         val newSet = WorkoutSet(setNumber = task.sets.size + 1, weightOrDuration = lastSet?.weightOrDuration ?: "", reps = lastSet?.reps ?: "", rightWeight = lastSet?.rightWeight, rightReps = lastSet?.rightReps)
                         viewModel.updateTask(task.copy(sets = task.sets + newSet))
@@ -555,16 +571,23 @@ fun WeightDialog(viewModel: MainViewModel, onDismiss: () -> Unit) {
 
 @Composable
 fun PillCheckButton(isCompleted: Boolean, color: Color, onClick: () -> Unit) {
-    val scale by animateFloatAsState(if (isCompleted) 0.95f else 1f)
-    val text = if (isCompleted) stringResource(R.string.btn_done) else stringResource(R.string.btn_check)
-    
-    GlassButton(
-        text = text,
-        modifier = Modifier.width(100.dp).height(38.dp).scale(scale),
-        containerColor = if (isCompleted) MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f) else color,
-        contentColor = if (isCompleted) MaterialTheme.colorScheme.onSecondaryContainer else Color.White,
-        onClick = onClick
-    )
+    GlassControlSurface(
+        onClick = onClick,
+        selected = isCompleted,
+        tint = color,
+        role = androidx.compose.ui.semantics.Role.Checkbox,
+        modifier = Modifier.widthIn(min = 92.dp)
+    ) {
+        if (isCompleted) {
+            Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp))
+            Spacer(Modifier.width(4.dp))
+        }
+        Text(
+            stringResource(if (isCompleted) R.string.btn_done else R.string.btn_check),
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.Bold
+        )
+    }
 }
 
 @Composable

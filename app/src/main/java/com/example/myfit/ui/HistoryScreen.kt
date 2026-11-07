@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.sp
 import com.example.myfit.R
 import com.example.myfit.model.*
 import com.example.myfit.ui.components.GlassCard
+import com.example.myfit.ui.components.GlassSegmentedControl
 import com.example.myfit.ui.components.GlassScaffoldContent
 import com.example.myfit.ui.components.LocalBackdrop
 import com.example.myfit.ui.components.LocalGlassMode
@@ -63,37 +64,14 @@ fun HistoryScreen(viewModel: MainViewModel) {
                     color = MaterialTheme.colorScheme.onBackground
                 )
 
-                // Sub-tabs moved to the top right for better layout in glass mode
-                Surface(
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-                    shape = Capsule(),
-                    modifier = Modifier.height(36.dp)
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        tabTitles.forEachIndexed { index, title ->
-                            val isSelected = selectedTabIndex == index
-                            Box(
-                                modifier = Modifier
-                                    .clip(Capsule())
-                                    .background(if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent)
-                                    .clickable {
-                                        if (selectedTabIndex != index) {
-                                            view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
-                                            selectedTabIndex = index
-                                        }
-                                    }
-                                    .padding(horizontal = 16.dp, vertical = 6.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = title,
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
+                GlassSegmentedControl(
+                    options = tabTitles,
+                    selectedIndex = selectedTabIndex,
+                    onSelected = { index ->
+                        view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                        selectedTabIndex = index
                     }
-                }
+                )
             }
 
             Spacer(modifier = Modifier.height(16.dp))

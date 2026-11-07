@@ -23,16 +23,19 @@ suspend fun PointerInputScope.inspectDragGestures(
         val down = awaitFirstDown(false)
         val drag = initialDown
 
-        onDragStart(down)
-        onDrag(drag, Offset.Zero)
-        val upEvent = drag(
-            pointerId = drag.id,
-            onDrag = { onDrag(it, it.positionChange()) }
-        )
-        if (upEvent == null) {
-            onDragCancel()
-        } else {
-            onDragEnd(upEvent)
+        var terminated = false
+        try {
+            onDragStart(down)
+            onDrag(drag, Offset.Zero)
+            val upEvent = drag(
+                pointerId = drag.id,
+                onDrag = { onDrag(it, it.positionChange()) }
+            )
+            terminated = true
+            if (upEvent == null) onDragCancel() else onDragEnd(upEvent)
+        } finally {
+            // pointerInput can be cancelled by layout changes or a parent pager taking the gesture.
+            if (!terminated) onDragCancel()
         }
     }
 }

@@ -1,6 +1,7 @@
 package com.example.myfit.ui
 
 import android.Manifest
+import android.os.Build
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.widget.Toast
@@ -22,6 +23,9 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
+import kotlinx.coroutines.launch
+import com.example.myfit.ui.components.GlassSegmentedControl
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -37,12 +41,16 @@ import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
+import com.example.myfit.ui.components.ExerciseThumbnail
+import com.example.myfit.ui.components.GlassControlSurface
+import com.example.myfit.data.CatalogMedia
 import com.example.myfit.R
 import com.example.myfit.model.ExerciseTemplate
 import com.example.myfit.model.LogType
 import com.example.myfit.ui.components.GlassCard
 import com.example.myfit.ui.components.GlassScaffoldContent
 import com.example.myfit.ui.components.LocalBackdrop
+import com.example.myfit.ui.components.LocalGlassMode
 import com.example.myfit.ui.components.liquidtabs.LiquidBottomTabs
 import com.example.myfit.ui.components.liquidtabs.LocalLiquidBottomTabScale
 import com.example.myfit.viewmodel.MainViewModel
@@ -69,112 +77,183 @@ fun ExerciseManagerScreen(viewModel: MainViewModel, navController: NavController
     val templates by viewModel.allTemplates.collectAsState(initial = emptyList())
     val currentLanguage by viewModel.currentLanguage.collectAsState(initial = "zh")
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val libraries = rememberPagerState(pageCount = { 2 })
+    val categories = listOf("STRENGTH", "CARDIO", "CORE")
+    val categoriesPager = rememberPagerState(pageCount = { categories.size })
+    var selectedCategory by rememberSaveable { mutableIntStateOf(0) }
     var showEditDialog by remember { mutableStateOf(false) }
     var editingTemplate by remember { mutableStateOf<ExerciseTemplate?>(null) }
-    var showDetailDialog by remember { mutableStateOf(false) }
     var viewingTemplate by remember { mutableStateOf<ExerciseTemplate?>(null) }
     var showResetDialog by remember { mutableStateOf(false) }
-    var isSearching by remember { mutableStateOf(false) }
-    var searchQuery by remember { mutableStateOf("") }
-    val categories = listOf("STRENGTH", "CARDIO", "CORE")
-    var selectedCategory by remember { mutableStateOf("STRENGTH") }
-    val pagerState = rememberPagerState(pageCount = { categories.size })
-
-    LaunchedEffect(selectedCategory) { pagerState.animateScrollToPage(categories.indexOf(selectedCategory)) }
-    LaunchedEffect(pagerState.currentPage) { selectedCategory = categories[pagerState.currentPage] }
-
+    var isSearching by rememberSaveable { mutableStateOf(false) }
+    var searchQuery by rememberSaveable { mutableStateOf("") }
     val backdrop = LocalBackdrop.current
+    val useGlassTabs = LocalGlassMode.current && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && backdrop != null
+    val floatingButtonBottomPadding = if (useGlassTabs) 76.dp else 0.dp
+    val libraryTitles = listOf(stringResource(R.string.catalog_personal_title), stringResource(R.string.catalog_title))
+    LaunchedEffect(selectedCategory) { categoriesPager.animateScrollToPage(selectedCategory) }
 
     GlassScaffoldContent {
         Scaffold(
             containerColor = Color.Transparent,
             topBar = {
-                Column(modifier = Modifier.statusBarsPadding().padding(top = 24.dp)) {
+                Column(Modifier.statusBarsPadding().padding(top = 24.dp)) {
                     if (isSearching) {
-                        ExerciseSearchBar(
-                            query = searchQuery,
-                            onQueryChange = { searchQuery = it },
-                            onBack = { isSearching = false; searchQuery = "" },
-                            onClear = { searchQuery = "" }
-                        )
+                        ExerciseSearchBar(searchQuery, { searchQuery = it },
+                            onBack = { isSearching = false; searchQuery = "" }, onClear = { searchQuery = "" })
                     } else {
                         CenterAlignedTopAppBar(
-                            title = { Text(stringResource(R.string.title_manage_exercises), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold) },
-                            navigationIcon = { IconButton(onClick = { navController.popBackStack() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, null) } },
+                            title = { Text(stringResource(R.string.title_manage_exercises), style = MaterialTheme.typography.titleMedium) },
+                            navigationIcon = {
+                                IconButton(onClick = { navController.popBackStack() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, null) }
+                            },
                             actions = {
                                 IconButton(onClick = { isSearching = true }) { Icon(Icons.Default.Search, null) }
-                                IconButton(onClick = { showResetDialog = true }) { Icon(Icons.Default.Refresh, null, tint = MaterialTheme.colorScheme.primary) }
+                                if (libraries.currentPage == 0) {
+                                    IconButton(onClick = { showResetDialog = true }) { Icon(Icons.Default.Refresh, null) }
+                                }
                             },
                             colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.Transparent)
                         )
-                        
-                        if (backdrop != null) {
+                    }
+                    if (useGlassTabs) {
+                        LiquidBottomTabs(
+                            selectedTabIndex = { libraries.currentPage },
+                            onTabSelected = { scope.launch { libraries.animateScrollToPage(it) } },
+                            backdrop = backdrop, tabsCount = 2, refractContent = false,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                        ) {
+                            libraryTitles.forEachIndexed { index, title ->
+                                Box(Modifier.weight(1f).fillMaxHeight(), contentAlignment = Alignment.Center) {
+                                    Text(title, style = MaterialTheme.typography.labelLarge,
+                                        fontWeight = if (libraries.currentPage == index) FontWeight.Bold else FontWeight.Normal)
+                                }
+                            }
+                        }
+                    } else {
+                        GlassSegmentedControl(libraryTitles, libraries.currentPage,
+                            { scope.launch { libraries.animateScrollToPage(it) } }, Modifier.padding(16.dp))
+                    }
+                    if (libraries.currentPage == 0) {
+                        if (useGlassTabs) {
                             LiquidBottomTabs(
-                                selectedTabIndex = { categories.indexOf(selectedCategory) },
-                                onTabSelected = { selectedCategory = categories[it] },
-                                backdrop = backdrop,
-                                tabsCount = categories.size,
+                                selectedTabIndex = { selectedCategory }, onTabSelected = { selectedCategory = it },
+                                backdrop = backdrop, tabsCount = categories.size, refractContent = false,
                                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                             ) {
                                 categories.forEachIndexed { index, category ->
-                                    val scale = LocalLiquidBottomTabScale.current
-                                    Box(
-                                        Modifier
-                                            .clip(Capsule())
-                                            .fillMaxHeight()
-                                            .weight(1f)
-                                            .graphicsLayer {
-                                                val s = scale()
-                                                scaleX = s; scaleY = s
-                                            },
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Text(
-                                            text = stringResource(getCategoryResId(category)),
-                                            style = MaterialTheme.typography.labelMedium,
-                                            fontWeight = if (selectedCategory == category) FontWeight.Bold else FontWeight.Normal,
-                                            color = if (selectedCategory == category) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
+                                    Box(Modifier.weight(1f).fillMaxHeight(), contentAlignment = Alignment.Center) {
+                                        Text(stringResource(getCategoryResId(category)), style = MaterialTheme.typography.labelMedium,
+                                            fontWeight = if (selectedCategory == index) FontWeight.Bold else FontWeight.Normal)
                                     }
                                 }
                             }
+                        } else {
+                            GlassSegmentedControl(categories.map { stringResource(getCategoryResId(it)) },
+                                selectedCategory, { selectedCategory = it }, Modifier.padding(horizontal = 16.dp))
                         }
                     }
                 }
             },
             floatingActionButton = {
-                FloatingActionButton(onClick = { editingTemplate = null; showEditDialog = true }, containerColor = MaterialTheme.colorScheme.primary, shape = RoundedCornerShape(16.dp)) {
-                    Icon(Icons.Default.Add, null, tint = Color.White)
+                if (libraries.currentPage == 0) {
+                    GlassControlSurface(
+                        onClick = { editingTemplate = null; showEditDialog = true },
+                        selected = true,
+                        modifier = Modifier.padding(bottom = floatingButtonBottomPadding).size(56.dp)
+                    ) { Icon(Icons.Default.Add, stringResource(R.string.btn_add)) }
                 }
             }
         ) { padding ->
-            HorizontalPager(state = pagerState, modifier = Modifier.padding(padding)) { page ->
-                val category = categories[page]
-                val filtered = templates.filter { it.category == category && (searchQuery.isBlank() || it.name.contains(searchQuery, ignoreCase = true)) }
-                LazyColumn(modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    item { Spacer(Modifier.height(8.dp)) }
-                    items(filtered, key = { it.id }) { template ->
-                        ExerciseMinimalCard(template = template, onClick = { viewingTemplate = template; showDetailDialog = true }, onDelete = { viewModel.deleteTemplate(template.id) })
+            HorizontalPager(libraries, Modifier.padding(padding)) { library ->
+                if (library == 0) {
+                    // Horizontal page gestures switch libraries; the category slider controls this inner pager.
+                    HorizontalPager(categoriesPager, userScrollEnabled = false) { page ->
+                        val filtered = templates.filter {
+                            it.category == categories[page] &&
+                                (searchQuery.isBlank() || it.name.contains(searchQuery, ignoreCase = true))
+                        }
+                        LazyColumn(
+                            Modifier.fillMaxSize().padding(horizontal = 16.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                            contentPadding = PaddingValues(top = 8.dp, bottom = 120.dp)
+                        ) {
+                            items(filtered, key = { it.id }) { template ->
+                                ExerciseMinimalCard(template, { viewingTemplate = template }, { viewModel.deleteTemplate(template.id) })
+                            }
+                        }
                     }
-                    item { Spacer(Modifier.height(100.dp)) }
+                } else {
+                    ExerciseCatalogContent(
+                        language = currentLanguage,
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                        searchQuery = searchQuery,
+                        onSelect = { template ->
+                            editingTemplate = templates.firstOrNull { it.name.equals(template.name, ignoreCase = true) }
+                                ?: templates.firstOrNull {
+                                    template.animationUri != null && CatalogMedia.animationUri(context, it) == template.animationUri
+                                } ?: template
+                            showEditDialog = true
+                        }
+                    )
                 }
             }
         }
     }
 
-    if (showResetDialog) AlertDialog(onDismissRequest = { showResetDialog = false }, title = { Text(stringResource(R.string.title_reset_exercises)) }, text = { Text(stringResource(R.string.msg_reset_exercises_warning)) }, confirmButton = { Button(onClick = { viewModel.reloadStandardExercises(context, currentLanguage); showResetDialog = false }) { Text(stringResource(R.string.btn_confirm)) } }, dismissButton = { TextButton(onClick = { showResetDialog = false }) { Text(stringResource(R.string.btn_cancel)) } })
-    if (showDetailDialog && viewingTemplate != null) ExerciseDetailDialog(template = viewingTemplate!!, onDismiss = { showDetailDialog = false }, onEdit = { editingTemplate = viewingTemplate; viewingTemplate = null; showDetailDialog = false; showEditDialog = true })
-    if (showEditDialog) ExerciseEditDialog(template = editingTemplate, onDismiss = { showEditDialog = false }, onSave = { viewModel.saveTemplate(it); showEditDialog = false })
+    if (showResetDialog) AlertDialog(
+        onDismissRequest = { showResetDialog = false },
+        title = { Text(stringResource(R.string.title_reset_exercises)) },
+        text = { Text(stringResource(R.string.msg_reset_exercises_warning)) },
+        confirmButton = {
+            Button(onClick = { viewModel.reloadStandardExercises(context, currentLanguage); showResetDialog = false }) {
+                Text(stringResource(R.string.btn_confirm))
+            }
+        },
+        dismissButton = { TextButton(onClick = { showResetDialog = false }) { Text(stringResource(R.string.btn_cancel)) } }
+    )
+    viewingTemplate?.let { template ->
+        ExerciseDetailDialog(template, onDismiss = { viewingTemplate = null }, onEdit = {
+            editingTemplate = template
+            viewingTemplate = null
+            showEditDialog = true
+        })
+    }
+    if (showEditDialog) ExerciseEditDialog(editingTemplate, { showEditDialog = false }, {
+        viewModel.saveTemplate(it)
+        showEditDialog = false
+    })
 }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun ExerciseEditDialog(template: ExerciseTemplate?, onDismiss: () -> Unit, onSave: (ExerciseTemplate) -> Unit) {
-    var name by remember { mutableStateOf(template?.name ?: "") }; var target by remember { mutableStateOf(template?.defaultTarget ?: "") }; var category by remember { mutableStateOf(template?.category ?: "STRENGTH") }; var bodyPart by remember { mutableStateOf(template?.bodyPart ?: "part_chest") }; var equipment by remember { mutableStateOf(template?.equipment ?: "equip_barbell") }; var isUnilateral by remember { mutableStateOf(template?.isUnilateral ?: false) }; var instruction by remember { mutableStateOf(template?.instruction ?: "") }; var logType by remember { mutableIntStateOf(template?.logType ?: LogType.WEIGHT_REPS.value) }; var imageUri by remember { mutableStateOf(template?.imageUri) }
     val context = LocalContext.current
+    var name by remember { mutableStateOf(template?.name.orEmpty()) }
+    var target by remember { mutableStateOf(template?.defaultTarget.orEmpty()) }
+    var category by remember { mutableStateOf(template?.category ?: "STRENGTH") }
+    var bodyPart by remember { mutableStateOf(template?.bodyPart ?: "part_chest") }
+    var equipment by remember { mutableStateOf(template?.equipment ?: "equip_barbell") }
+    var isUnilateral by remember { mutableStateOf(template?.isUnilateral ?: false) }
+    var instruction by remember { mutableStateOf(template?.instruction.orEmpty()) }
+    var logType by remember { mutableIntStateOf(template?.logType ?: LogType.WEIGHT_REPS.value) }
+    var imageUri by remember { mutableStateOf(template?.let { CatalogMedia.photoUri(it) }) }
+    var animationUri by remember { mutableStateOf(template?.let { CatalogMedia.animationUri(context, it) }) }
+    val photoActionColor = if (imageUri != null) Color.White else MaterialTheme.colorScheme.onSurface
+    var showAnimationPicker by remember { mutableStateOf(false) }
+    val editLanguage = context.resources.configuration.locales[0].language
     LaunchedEffect(category) { if (template == null) logType = when(category) { "CARDIO", "CORE" -> LogType.DURATION.value; else -> LogType.WEIGHT_REPS.value } }
 
     fun saveImage(uri: Uri): String? = try { val inputStream = context.contentResolver.openInputStream(uri); val file = File(context.filesDir, "img_${System.currentTimeMillis()}.jpg"); val outputStream = FileOutputStream(file); inputStream?.copyTo(outputStream); inputStream?.close(); outputStream.close(); file.absolutePath } catch(e: Exception) { e.printStackTrace(); null }
+    if (showAnimationPicker) ExerciseCatalogDialog(
+        language = editLanguage,
+        onDismiss = { showAnimationPicker = false },
+        onSelect = { selected ->
+            animationUri = selected.animationUri
+            showAnimationPicker = false
+        }
+    )
     val galleryLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { it?.let { uri -> saveImage(uri)?.let { imageUri = it } } }
     var tempCameraUri by remember { mutableStateOf<Uri?>(null) }
     val cameraLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { if(it && tempCameraUri != null) saveImage(tempCameraUri!!)?.let { imageUri = it } }
@@ -187,11 +266,30 @@ fun ExerciseEditDialog(template: ExerciseTemplate?, onDismiss: () -> Unit, onSav
                 Box(Modifier.fillMaxWidth().height(160.dp).clip(RoundedCornerShape(12.dp)).background(MaterialTheme.colorScheme.surfaceVariant.copy(0.5f)), Alignment.Center) {
                     if (imageUri != null) { AsyncImage(if (imageUri!!.startsWith("/")) File(imageUri!!) else imageUri, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop); Box(Modifier.fillMaxSize().background(Color.Black.copy(0.3f))) }
                     Row(horizontalArrangement = Arrangement.spacedBy(32.dp)) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.clickable { val p = Manifest.permission.CAMERA; if (ContextCompat.checkSelfPermission(context, p) == PackageManager.PERMISSION_GRANTED) { val uri = try { val f = File.createTempFile("cam_", ".jpg", context.cacheDir).apply { createNewFile(); deleteOnExit() }; FileProvider.getUriForFile(context, "${context.packageName}.provider", f) } catch(e: Exception) { null }; if(uri != null) { tempCameraUri = uri; cameraLauncher.launch(uri) } } else permissionLauncher.launch(p) }) { Icon(Icons.Default.PhotoCamera, null, tint = Color.White); Text(stringResource(R.string.source_camera), color = Color.White, fontSize = 11.sp) }
-                        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.clickable { galleryLauncher.launch("image/*") }) { Icon(Icons.Default.PhotoLibrary, null, tint = Color.White); Text(stringResource(R.string.source_gallery), color = Color.White, fontSize = 11.sp) }
+                        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.clickable { val p = Manifest.permission.CAMERA; if (ContextCompat.checkSelfPermission(context, p) == PackageManager.PERMISSION_GRANTED) { val uri = try { val f = File.createTempFile("cam_", ".jpg", context.cacheDir).apply { createNewFile(); deleteOnExit() }; FileProvider.getUriForFile(context, "${context.packageName}.provider", f) } catch(e: Exception) { null }; if(uri != null) { tempCameraUri = uri; cameraLauncher.launch(uri) } } else permissionLauncher.launch(p) }) { Icon(Icons.Default.PhotoCamera, null, tint = photoActionColor); Text(stringResource(R.string.source_camera), color = photoActionColor, fontSize = 11.sp) }
+                        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.clickable { galleryLauncher.launch("image/*") }) { Icon(Icons.Default.PhotoLibrary, null, tint = photoActionColor); Text(stringResource(R.string.source_gallery), color = photoActionColor, fontSize = 11.sp) }
                     }
                 }
                 Spacer(Modifier.height(16.dp))
+                if (imageUri != null) {
+                    GlassControlSurface(onClick = { imageUri = null }) {
+                        Icon(Icons.Default.DeleteOutline, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text(stringResource(R.string.remove_exercise_photo))
+                    }
+                    Spacer(Modifier.height(12.dp))
+                }
+                animationUri?.let { uri ->
+                    AsyncImage(
+                        model = uri,
+                        contentDescription = stringResource(R.string.catalog_choose_animation),
+                        modifier = Modifier.fillMaxWidth().height(160.dp),
+                        contentScale = ContentScale.Fit
+                    )
+                }
+                GlassControlSurface(onClick = { showAnimationPicker = true }) {
+                    Text(stringResource(R.string.catalog_choose_animation))
+                }
                 OutlinedTextField(name, { name = it }, Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.label_name)) }, shape = RoundedCornerShape(12.dp))
                 Spacer(Modifier.height(8.dp))
                 OutlinedTextField(target, { target = it }, Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.label_target)) }, shape = RoundedCornerShape(12.dp))
@@ -207,7 +305,7 @@ fun ExerciseEditDialog(template: ExerciseTemplate?, onDismiss: () -> Unit, onSav
                 }
                 Spacer(Modifier.height(16.dp)); OutlinedTextField(instruction, { instruction = it }, Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.label_instruction)) }, minLines = 3, shape = RoundedCornerShape(12.dp))
             }
-        }, confirmButton = { Button({ if (name.isNotBlank()) onSave(ExerciseTemplate(id = template?.id ?: 0, name = name, category = category, bodyPart = bodyPart, equipment = equipment, isUnilateral = isUnilateral, logType = logType, instruction = instruction, imageUri = imageUri, defaultTarget = target)) }) { Text(stringResource(R.string.btn_save)) } }, dismissButton = { TextButton(onDismiss) { Text(stringResource(R.string.btn_cancel)) } }
+        }, confirmButton = { Button({ if (name.isNotBlank()) onSave(ExerciseTemplate(id = template?.id ?: 0, name = name, category = category, bodyPart = bodyPart, equipment = equipment, isUnilateral = isUnilateral, logType = logType, instruction = instruction, imageUri = imageUri, animationUri = animationUri, defaultTarget = target)) }) { Text(stringResource(R.string.btn_save)) } }, dismissButton = { TextButton(onDismiss) { Text(stringResource(R.string.btn_cancel)) } }
     )
 }
 
@@ -221,9 +319,10 @@ fun ResourceDropdown(currentKey: String, options: List<String>, onSelect: (Strin
 
 @Composable
 fun ExerciseMinimalCard(template: ExerciseTemplate, onClick: () -> Unit, onDelete: () -> Unit) {
+    val mediaUri = CatalogMedia.photoUri(template) ?: CatalogMedia.animationUri(LocalContext.current, template)
     GlassCard(modifier = Modifier.fillMaxWidth().clickable { onClick() }, shape = RoundedCornerShape(16.dp)) {
         Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-            if (!template.imageUri.isNullOrBlank()) { AsyncImage(if (template.imageUri!!.startsWith("/")) File(template.imageUri!!) else template.imageUri, null, Modifier.size(52.dp).clip(RoundedCornerShape(10.dp)), contentScale = ContentScale.Crop); Spacer(Modifier.width(12.dp)) }
+            if (!mediaUri.isNullOrBlank()) { ExerciseThumbnail(if (mediaUri!!.startsWith("/")) File(mediaUri!!) else mediaUri, null, Modifier.size(52.dp).clip(RoundedCornerShape(10.dp)), contentScale = ContentScale.Crop); Spacer(Modifier.width(12.dp)) }
             Column(Modifier.weight(1f)) { Text(template.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold); Row { val p = getBodyPartResId(template.bodyPart); if (p != 0) Text(stringResource(p), style = MaterialTheme.typography.labelSmall, color = Color.Gray); Spacer(Modifier.width(8.dp)); val e = getEquipmentResId(template.equipment); if (e != 0) Text(stringResource(e), style = MaterialTheme.typography.labelSmall, color = Color.Gray) } }
             IconButton(onClick = onDelete) { Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error.copy(0.6f)) }
         }

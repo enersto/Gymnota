@@ -36,6 +36,12 @@ interface WorkoutDao {
     @Update
     suspend fun updateTemplate(template: ExerciseTemplate)
 
+    @Query("UPDATE workout_tasks SET imageUri = NULL WHERE templateId = :templateId AND imageUri = :photoUri")
+    suspend fun clearTaskPhoto(templateId: Long, photoUri: String)
+
+    @Query("UPDATE weekly_routine SET imageUri = NULL WHERE templateId = :templateId AND imageUri = :photoUri")
+    suspend fun clearRoutinePhoto(templateId: Long, photoUri: String)
+
     @Delete
     suspend fun deleteTemplate(template: ExerciseTemplate)
 

@@ -136,6 +136,17 @@ val MIGRATION_17_18 = object : Migration(17, 18) {
 }
 
 
+val MIGRATION_18_19 = object : Migration(18, 19) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE exercise_templates ADD COLUMN animationUri TEXT")
+        db.execSQL("""
+            UPDATE exercise_templates
+            SET animationUri = imageUri, imageUri = NULL
+            WHERE imageUri LIKE 'file:///android_asset/catalog/%'
+        """.trimIndent())
+    }
+}
+
 @Database(
     entities = [
         WorkoutTask::class,
@@ -148,7 +159,7 @@ val MIGRATION_17_18 = object : Migration(17, 18) {
         AiProviderConfig::class,
         AiMemory::class
     ],
-    version = 18, // 🔴 升级版本号
+    version = 19, // 🔴 升级版本号
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -163,7 +174,7 @@ abstract class AppDatabase : RoomDatabase() {
                 Room.databaseBuilder(context, AppDatabase::class.java, "myfit_v7.db")
                     .addMigrations(MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11,
                         MIGRATION_11_12, MIGRATION_12_13,MIGRATION_13_14, MIGRATION_14_15,
-                        MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18
+                        MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19
                         )
                     .addCallback(PrepopulateCallback(context.applicationContext))
                     .build().also { instance = it }

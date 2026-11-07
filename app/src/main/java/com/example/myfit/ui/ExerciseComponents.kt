@@ -34,25 +34,33 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import coil.compose.AsyncImage
+import com.example.myfit.ui.components.ExerciseThumbnail
+import com.example.myfit.ui.components.GlassControlSurface
+import com.example.myfit.ui.components.glassPanel
 import com.example.myfit.R
 import com.example.myfit.model.ExerciseTemplate
 import com.example.myfit.model.LogType
 import com.example.myfit.ui.components.GlassCard
 import java.io.File
+import androidx.compose.ui.platform.LocalContext
+import com.example.myfit.data.CatalogMedia
 
 @Composable
 fun ExerciseDetailDialog(
     template: ExerciseTemplate,
     onDismiss: () -> Unit,
-    onEdit: (() -> Unit)? = null
+    onEdit: (() -> Unit)? = null,
+    actionLabel: String? = null
 ) {
+    val catalogUri = CatalogMedia.animationUri(LocalContext.current, template)
+    val mediaUri = CatalogMedia.photoUri(template) ?: catalogUri
     var showFullImage by remember { mutableStateOf(false) }
 
-    if (showFullImage && !template.imageUri.isNullOrBlank()) {
+    if (showFullImage && !mediaUri.isNullOrBlank()) {
         Dialog(onDismissRequest = { showFullImage = false }) {
             Box(modifier = Modifier.fillMaxSize().clickable { showFullImage = false }) {
                 AsyncImage(
-                    model = if (template.imageUri!!.startsWith("/")) File(template.imageUri!!) else template.imageUri,
+                    model = if (mediaUri!!.startsWith("/")) File(mediaUri!!) else mediaUri,
                     contentDescription = null,
                     modifier = Modifier.fillMaxWidth().align(Alignment.Center),
                     contentScale = ContentScale.FillWidth
@@ -81,16 +89,23 @@ fun ExerciseDetailDialog(
             },
             text = {
                 Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                    if (!template.imageUri.isNullOrBlank()) {
+                    if (catalogUri != null && catalogUri != mediaUri) {
+                        AsyncImage(catalogUri, template.name,
+                            Modifier.fillMaxWidth().height(180.dp), contentScale = ContentScale.Fit)
+                    }
+                    if (catalogUri != null || mediaUri?.startsWith("file:///android_asset/catalog/") == true) {
+                        Text("© Gym visual — https://gymvisual.com/", style = MaterialTheme.typography.labelSmall)
+                    }
+                    if (!mediaUri.isNullOrBlank()) {
                         AsyncImage(
-                            model = if (template.imageUri!!.startsWith("/")) File(template.imageUri!!) else template.imageUri,
+                            model = if (mediaUri!!.startsWith("/")) File(mediaUri!!) else mediaUri,
                             contentDescription = null,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(180.dp)
                                 .clip(RoundedCornerShape(8.dp))
                                 .clickable { showFullImage = true },
-                            contentScale = ContentScale.Crop
+                            contentScale = ContentScale.Fit
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                     }
@@ -127,20 +142,20 @@ fun ExerciseDetailDialog(
             },
             confirmButton = {
                 if (onEdit != null) {
-                    Button(onClick = onEdit) {
-                        Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(16.dp))
+                    GlassControlSurface(onClick = onEdit) {
+                        Icon(if (actionLabel != null) Icons.Default.Add else Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text(stringResource(R.string.btn_edit))
+                        Text(actionLabel ?: stringResource(R.string.btn_edit))
                     }
                 } else {
-                    Button(onClick = onDismiss) {
+                    GlassControlSurface(onClick = onDismiss) {
                         Text(stringResource(R.string.btn_confirm))
                     }
                 }
             },
             dismissButton = {
                 if (onEdit != null) {
-                    TextButton(onClick = onDismiss) {
+                    GlassControlSurface(onClick = onDismiss) {
                         Text(stringResource(R.string.btn_cancel))
                     }
                 }
@@ -171,8 +186,8 @@ fun ExerciseSearchBar(
             modifier = Modifier
                 .weight(1f)
                 .height(48.dp)
-                .clip(RoundedCornerShape(24.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
+                .glassPanel(shape = RoundedCornerShape(24.dp), interactive = false)
+                .clip(RoundedCornerShape(24.dp)),
             contentAlignment = Alignment.CenterStart
         ) {
             if (query.isEmpty()) {
@@ -307,6 +322,7 @@ fun ExerciseMinimalCard(
     onClick: () -> Unit,
     onDelete: (() -> Unit)? = null
 ) {
+    val mediaUri = CatalogMedia.photoUri(template) ?: CatalogMedia.animationUri(LocalContext.current, template)
     Surface(
         modifier = Modifier.fillMaxWidth().clickable { onClick() },
         shape = RoundedCornerShape(12.dp),
@@ -316,9 +332,9 @@ fun ExerciseMinimalCard(
             modifier = Modifier.padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            if (!template.imageUri.isNullOrBlank()) {
-                AsyncImage(
-                    model = if (template.imageUri!!.startsWith("/")) File(template.imageUri!!) else template.imageUri,
+            if (!mediaUri.isNullOrBlank()) {
+                ExerciseThumbnail(
+                    model = if (mediaUri!!.startsWith("/")) File(mediaUri!!) else mediaUri,
                     contentDescription = null,
                     modifier = Modifier.size(44.dp).clip(RoundedCornerShape(8.dp)).background(Color.LightGray.copy(alpha = 0.2f)),
                     contentScale = ContentScale.Crop

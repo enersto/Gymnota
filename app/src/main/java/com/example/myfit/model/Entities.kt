@@ -57,7 +57,8 @@ data class ExerciseTemplate(
     val logType: Int = 0,
     // [新增] 2. 动作说明
     val instruction: String = "",
-    val imageUri: String? = null // [新增] 图片路径
+    val imageUri: String? = null, // User photo, independent of the exercise animation.
+    val animationUri: String? = null
 )
 
 @Entity(tableName = "schedule_config")

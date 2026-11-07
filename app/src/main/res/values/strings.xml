@@ -74,7 +74,7 @@
     <string name="confirm_delete">确认删除</string>
 
     <string name="about_version_format">健身记 %1$s</string>
-    <string name="about_credit">由enersto &amp; 哈吉米设计开发 </string>
+    <string name="about_credit">记录前进步伐 </string>
 
     <string name="category_core">核心</string>
 
@@ -401,4 +401,14 @@
     <string name="chart_title_skeletal_muscle">骨骼肌 (kg)</string>
     <string name="chart_title_body_water">身体水分 (%)</string>
     <string name="chart_title_whr">腰臀比 (WHR)</string>
+    <string name="catalog_title">内置动作库</string>
+    <string name="catalog_setup_hint">选择动作后，请确认记录方式、训练类别和目标，再保存到个人动作库。</string>
+    <string name="catalog_search">搜索名称或动作说明</string>
+    <string name="catalog_all_parts">全部部位</string>
+    <string name="catalog_load_failed">动作库加载失败，请关闭后重试。</string>
+    <string name="catalog_empty">没有匹配的动作</string>
+    <string name="catalog_choose_animation">选择动作示意动画</string>
+    <string name="remove_exercise_photo">移除图片</string>
+    <string name="catalog_personal_title">我的动作</string>
+    <string name="catalog_use_exercise">使用此动作</string>
 </resources>

@@ -58,7 +58,7 @@
     <string name="confirm_delete">Confirmar Eliminación</string>
 
     <string name="about_version_format">GymNota %1$s</string>
-    <string name="about_credit">Designed &amp; Built by enersto and Gemini</string>
+    <string name="about_credit">Documentar los pasos hacia adelante</string>
 
     <string name="category_core">Core/Núcleo</string>
 
@@ -392,4 +392,14 @@
     <string name="chart_title_whr">Relación Cintura-Cadera (RCA)</string>
 
 
+    <string name="catalog_title">Catálogo de ejercicios</string>
+    <string name="catalog_setup_hint">Elige un ejercicio y confirma el tipo de registro, la categoría y el objetivo antes de guardarlo.</string>
+    <string name="catalog_search">Buscar nombres o instrucciones</string>
+    <string name="catalog_all_parts">Todas las partes del cuerpo</string>
+    <string name="catalog_load_failed">No se pudo cargar el catálogo. Ciérralo e inténtalo de nuevo.</string>
+    <string name="catalog_empty">No hay ejercicios coincidentes</string>
+    <string name="catalog_choose_animation">Elegir animación del ejercicio</string>
+    <string name="remove_exercise_photo">Quitar foto</string>
+    <string name="catalog_personal_title">Mis ejercicios</string>
+    <string name="catalog_use_exercise">Usar ejercicio</string>
 </resources>

@@ -515,28 +515,18 @@ fun ManualRoutineDialog(viewModel: MainViewModel, onDismiss: () -> Unit) {
                     )
                     IconButton(onDismiss) { Icon(Icons.Default.Close, null) }
                 }
-                ScrollableTabRow(
-                    selectedTabIndex = pagerState.currentPage,
-                    edgePadding = 0.dp,
-                    containerColor = Color.Transparent,
-                    indicator = {
-                        if (pagerState.currentPage < it.size) TabRowDefaults.SecondaryIndicator(
-                            Modifier.tabIndicatorOffset(it[pagerState.currentPage])
+                Row(
+                    modifier = Modifier.horizontalScroll(rememberScrollState()).padding(vertical = 12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    val weekdays = listOf(R.string.week_1, R.string.week_2, R.string.week_3,
+                        R.string.week_4, R.string.week_5, R.string.week_6, R.string.week_7)
+                    weekdays.forEachIndexed { index, title ->
+                        GlassChoiceChip(
+                            text = stringResource(title),
+                            selected = pagerState.currentPage == index,
+                            onClick = { scope.launch { pagerState.animateScrollToPage(index) } }
                         )
-                    }) {
-                    (1..7).forEach { day ->
-                        Tab(
-                            pagerState.currentPage == day - 1,
-                            { scope.launch { pagerState.animateScrollToPage(day - 1) } },
-                            text = {
-                                Text(
-                                    stringResource(
-                                        when (day) {
-                                            1 -> R.string.week_1; 2 -> R.string.week_2; 3 -> R.string.week_3; 4 -> R.string.week_4; 5 -> R.string.week_5; 6 -> R.string.week_6; 7 -> R.string.week_7; else -> R.string.week_1
-                                        }
-                                    )
-                                )
-                            })
                     }
                 }
                 HorizontalPager(pagerState, Modifier.weight(1f)) {
@@ -620,79 +610,26 @@ fun ManualRoutineDialog(viewModel: MainViewModel, onDismiss: () -> Unit) {
 
 
 @Composable
-fun GlassLanguageChip(l: String, s: Boolean, onClick: () -> Unit) {
-    Surface(
-        onClick = onClick,
-        modifier = Modifier.height(44.dp),
-        shape = RoundedCornerShape(12.dp),
-        color = if (s) MaterialTheme.colorScheme.primary.copy(alpha = 0.85f) else MaterialTheme.colorScheme.surfaceVariant.copy(
-            0.35f
-        ),
-        border = if (s) null else BorderStroke(1.dp, Color.White.copy(alpha = 0.2f))
-    ) {
-        Box(Modifier.padding(horizontal = 20.dp), Alignment.Center) {
-            Text(
-                l,
-                style = MaterialTheme.typography.labelLarge,
-                color = if (s) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
-                fontWeight = if (s) FontWeight.Bold else FontWeight.Medium
-            )
-        }
+fun GlassLanguageChip(label: String, selected: Boolean, onClick: () -> Unit) {
+    GlassChoiceChip(text = label, selected = selected, onClick = onClick)
+}
+
+@Composable
+fun GlassActionButton(icon: ImageVector, label: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    GlassControlSurface(onClick = onClick, modifier = modifier.heightIn(min = 56.dp)) {
+        Icon(icon, contentDescription = null, modifier = Modifier.size(20.dp), tint = MaterialTheme.colorScheme.primary)
+        Spacer(Modifier.width(8.dp))
+        Text(label, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
     }
 }
 
 @Composable
-fun GlassActionButton(i: ImageVector, l: String, m: Modifier = Modifier, onClick: () -> Unit) {
-    GlassCard(m
-        .height(56.dp)
-        .clickable { onClick() }, RoundedCornerShape(14.dp)) {
-        Row(
-            Modifier
-                .fillMaxSize()
-                .padding(horizontal = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center
-        ) {
-            Icon(
-                i,
-                null,
-                Modifier.size(20.dp),
-                MaterialTheme.colorScheme.primary
-            ); Spacer(Modifier.width(8.dp)); Text(
-            l,
-            fontSize = 12.sp,
-            fontWeight = FontWeight.SemiBold
-        )
-        }
-    }
-}
-
-@Composable
-fun GlassNavBar(i: ImageVector, l: String, onClick: () -> Unit) {
-    GlassCard(
-        Modifier
-            .fillMaxWidth()
-            .height(64.dp)
-            .clickable { onClick() },
-        RoundedCornerShape(16.dp)
-    ) {
-        Row(Modifier
-            .fillMaxSize()
-            .padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Icon(
-                i,
-                null,
-                tint = MaterialTheme.colorScheme.primary
-            ); Spacer(Modifier.width(16.dp)); Text(
-            l,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold
-        ); Spacer(Modifier.weight(1f)); Icon(
-            Icons.Default.ChevronRight,
-            null,
-            tint = Color.Gray.copy(0.6f)
-        )
-        }
+fun GlassNavBar(icon: ImageVector, label: String, onClick: () -> Unit) {
+    GlassControlSurface(onClick = onClick, modifier = Modifier.fillMaxWidth().heightIn(min = 64.dp)) {
+        Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+        Spacer(Modifier.width(16.dp))
+        Text(label, modifier = Modifier.weight(1f), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        Icon(Icons.Default.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
@@ -885,7 +822,7 @@ fun AiConfigSection(viewModel: MainViewModel) {
                         Text(stringResource(R.string.label_ai_cache_title), fontWeight = FontWeight.Bold)
                         Text(stringResource(R.string.label_ai_cache_desc), style = MaterialTheme.typography.labelSmall, color = Color.Gray)
                     }
-                    Switch(settings.useLocalAiCache, { viewModel.toggleAiCache(it) })
+                    GlassSwitch(settings.useLocalAiCache, { viewModel.toggleAiCache(it) }, label = stringResource(R.string.label_ai_cache_title))
                 }
                 AnimatedVisibility(settings.useLocalAiCache) {
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 8.dp)) {
@@ -970,7 +907,7 @@ fun TimerSettingsSection(viewModel: MainViewModel) {
                     Arrangement.SpaceBetween,
                     Alignment.CenterVertically
                 ) {
-                    Column {
+                    Column(Modifier.weight(1f).padding(end = 12.dp)) {
                         Text(
                             stringResource(R.string.timer_sound_title),
                             fontWeight = FontWeight.Bold
@@ -979,9 +916,9 @@ fun TimerSettingsSection(viewModel: MainViewModel) {
                         style = MaterialTheme.typography.labelSmall,
                         color = Color.Gray
                     )
-                    }; Switch(
+                    }; GlassSwitch(
                     soundEnabled,
-                    { soundEnabled = it; viewModel.setTimerSoundEnabled(it) })
+                    { soundEnabled = it; viewModel.setTimerSoundEnabled(it) }, label = stringResource(R.string.timer_sound_title))
                 }
                 HorizontalDivider(
                     Modifier.padding(vertical = 12.dp),
@@ -992,7 +929,7 @@ fun TimerSettingsSection(viewModel: MainViewModel) {
                     Arrangement.SpaceBetween,
                     Alignment.CenterVertically
                 ) {
-                    Column {
+                    Column(Modifier.weight(1f).padding(end = 12.dp)) {
                         Text(
                             stringResource(R.string.timer_prep_title),
                             fontWeight = FontWeight.Bold
@@ -1001,7 +938,7 @@ fun TimerSettingsSection(viewModel: MainViewModel) {
                         style = MaterialTheme.typography.labelSmall,
                         color = Color.Gray
                     )
-                    }; Switch(prepEnabled, { prepEnabled = it; viewModel.setTimerPrepEnabled(it) })
+                    }; GlassSwitch(prepEnabled, { prepEnabled = it; viewModel.setTimerPrepEnabled(it) }, label = stringResource(R.string.timer_prep_title))
                 }
                 AnimatedVisibility(prepEnabled) {
                     Row(
@@ -1024,7 +961,7 @@ fun TimerSettingsSection(viewModel: MainViewModel) {
                     Arrangement.SpaceBetween,
                     Alignment.CenterVertically
                 ) {
-                    Column {
+                    Column(Modifier.weight(1f).padding(end = 12.dp)) {
                         Text(
                             stringResource(R.string.timer_final_title),
                             fontWeight = FontWeight.Bold
@@ -1033,9 +970,9 @@ fun TimerSettingsSection(viewModel: MainViewModel) {
                         style = MaterialTheme.typography.labelSmall,
                         color = Color.Gray
                     )
-                    }; Switch(
+                    }; GlassSwitch(
                     finalEnabled,
-                    { finalEnabled = it; viewModel.setTimerFinalEnabled(it) })
+                    { finalEnabled = it; viewModel.setTimerFinalEnabled(it) }, label = stringResource(R.string.timer_final_title))
                 }
                 AnimatedVisibility(finalEnabled) {
                     Row(
@@ -1204,7 +1141,7 @@ private fun AddRoutineItemSheet(
                                             .clickable { onSelect(t) }
                                             .padding(horizontal = 20.dp, vertical = 16.dp)
                                     ) {
-                                        Column {
+                                        Column(Modifier.weight(1f).padding(end = 12.dp)) {
                                             Text(t.name, style = MaterialTheme.typography.bodyLarge)
                                             if (t.bodyPart.isNotBlank()) {
                                                 Text(
@@ -1264,7 +1201,7 @@ private fun AddRoutineItemSheet(
                                     .clickable { onSelect(t) }
                                     .padding(horizontal = 20.dp, vertical = 16.dp)
                             ) {
-                                Column {
+                                Column(Modifier.weight(1f).padding(end = 12.dp)) {
                                     Text(t.name, style = MaterialTheme.typography.bodyLarge)
                                     if (t.bodyPart.isNotBlank()) {
                                         Text(
