@@ -28,6 +28,13 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Myfit" tools:targetApi="31">
 
+        <activity android:name=".flutter.FlutterLibraryActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Myfit"
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
+            android:hardwareAccelerated="true"
+            android:windowSoftInputMode="adjustResize" />
+
         <activity
             android:name=".MainActivity"
             android:exported="true"

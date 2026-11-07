@@ -14,3 +14,13 @@
 .cxx
 local.properties
 *.jks
+
+# Flutter add-to-app generated outputs
+/flutter_library/.android/
+/flutter_library/.ios/
+/flutter_library/.dart_tool/
+/flutter_library/build/
+
+# Rust build outputs
+/rust/history_core/target/
+/rust.local.properties

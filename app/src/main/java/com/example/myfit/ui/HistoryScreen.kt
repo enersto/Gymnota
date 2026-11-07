@@ -34,54 +34,15 @@ import com.kyant.shapes.Capsule
 
 @Composable
 fun HistoryScreen(viewModel: MainViewModel) {
-    var selectedTabIndex by remember { mutableIntStateOf(1) }
-    val tabTitles = listOf(
-        stringResource(R.string.tab_list),
-        stringResource(R.string.tab_chart)
-    )
-
-    val view = LocalView.current
-    val glassMode = LocalGlassMode.current
-    val useGlassTabs = glassMode && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
-
-    GlassScaffoldContent {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .statusBarsPadding()
-                .padding(top = 24.dp) // Added more top padding
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(
-                    text = stringResource(R.string.history_title),
-                    style = MaterialTheme.typography.headlineSmall,
-                    color = MaterialTheme.colorScheme.onBackground
-                )
-
-                GlassSegmentedControl(
-                    options = tabTitles,
-                    selectedIndex = selectedTabIndex,
-                    onSelected = { index ->
-                        view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
-                        selectedTabIndex = index
-                    }
-                )
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Box(modifier = Modifier.weight(1f)) {
-                when (selectedTabIndex) {
-                    0 -> HistoryList(viewModel)
-                    1 -> HistoryCharts(viewModel)
-                }
-            }
+    val language by viewModel.currentLanguage.collectAsState()
+    val host = com.example.myfit.flutter.rememberEmbeddedHistoryHost(language)
+    val useGlassTabs = LocalGlassMode.current && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+    Box(Modifier.fillMaxSize().statusBarsPadding().padding(bottom = if (useGlassTabs) 88.dp else 0.dp)) {
+        if (host != null) {
+            androidx.compose.ui.viewinterop.AndroidView(
+                factory = { host.container },
+                modifier = Modifier.fillMaxSize()
+            )
         }
     }
 }

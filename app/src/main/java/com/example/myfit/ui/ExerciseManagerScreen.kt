@@ -11,10 +11,6 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -24,13 +20,10 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
-import kotlinx.coroutines.launch
-import com.example.myfit.ui.components.GlassSegmentedControl
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -77,11 +70,7 @@ fun ExerciseManagerScreen(viewModel: MainViewModel, navController: NavController
     val templates by viewModel.allTemplates.collectAsState(initial = emptyList())
     val currentLanguage by viewModel.currentLanguage.collectAsState(initial = "zh")
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-    val libraries = rememberPagerState(pageCount = { 2 })
-    val categories = listOf("STRENGTH", "CARDIO", "CORE")
-    val categoriesPager = rememberPagerState(pageCount = { categories.size })
-    var selectedCategory by rememberSaveable { mutableIntStateOf(0) }
+    var personalSelected by rememberSaveable { mutableStateOf(true) }
     var showEditDialog by remember { mutableStateOf(false) }
     var editingTemplate by remember { mutableStateOf<ExerciseTemplate?>(null) }
     var viewingTemplate by remember { mutableStateOf<ExerciseTemplate?>(null) }
@@ -90,9 +79,45 @@ fun ExerciseManagerScreen(viewModel: MainViewModel, navController: NavController
     var searchQuery by rememberSaveable { mutableStateOf("") }
     val backdrop = LocalBackdrop.current
     val useGlassTabs = LocalGlassMode.current && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && backdrop != null
-    val floatingButtonBottomPadding = if (useGlassTabs) 76.dp else 0.dp
-    val libraryTitles = listOf(stringResource(R.string.catalog_personal_title), stringResource(R.string.catalog_title))
-    LaunchedEffect(selectedCategory) { categoriesPager.animateScrollToPage(selectedCategory) }
+    val personalRows = remember(templates, context, currentLanguage) {
+        templates.map { template ->
+            val part = getBodyPartResId(template.bodyPart)
+            val equipment = getEquipmentResId(template.equipment)
+            mapOf("id" to template.id, "name" to template.name, "category" to template.category,
+                "bodyLabel" to if (part != 0) context.getString(part) else "",
+                "equipment" to if (equipment != 0) context.getString(equipment) else "",
+                "hasMedia" to (CatalogMedia.photoUri(template) != null || CatalogMedia.animationUri(context, template) != null),
+                "mediaRevision" to listOf(template.name, template.imageUri, template.animationUri).hashCode())
+        }
+    }
+    val catalogHost = com.example.myfit.flutter.rememberEmbeddedCatalogHost(
+        currentLanguage, searchQuery,
+        onSelect = { selected ->
+            editingTemplate = templates.firstOrNull { selected.animationUri != null && CatalogMedia.animationUri(context, it) == selected.animationUri }
+                ?: templates.firstOrNull { it.name.equals(selected.name, true) } ?: selected
+            showEditDialog = true
+        },
+        personalRows = personalRows,
+        personalSelected = personalSelected,
+        onPersonalAction = { action, id ->
+            when (action) {
+                "showPersonal" -> personalSelected = true
+                "showCatalog" -> personalSelected = false
+                "add" -> { editingTemplate = null; showEditDialog = true }
+                "view" -> viewingTemplate = templates.firstOrNull { it.id == id }
+                "delete" -> templates.firstOrNull { it.id == id }?.let { viewModel.deleteTemplate(it.id) }
+            }
+        },
+        personalMedia = { id ->
+            templates.firstOrNull { it.id == id }?.let {
+                CatalogMedia.photoUri(it) ?: CatalogMedia.animationUri(context, it)
+            }
+        }
+    )
+    androidx.activity.compose.BackHandler(enabled = (!personalSelected || isSearching) && !showEditDialog && viewingTemplate == null && !showResetDialog) {
+        val leave = { if (isSearching) { isSearching = false; searchQuery = "" } else { navController.popBackStack(); Unit } }
+        if (personalSelected) leave() else catalogHost?.backOr(leave) ?: leave()
+    }
 
     GlassScaffoldContent {
         Scaffold(
@@ -103,102 +128,33 @@ fun ExerciseManagerScreen(viewModel: MainViewModel, navController: NavController
                         ExerciseSearchBar(searchQuery, { searchQuery = it },
                             onBack = { isSearching = false; searchQuery = "" }, onClear = { searchQuery = "" })
                     } else {
-                        CenterAlignedTopAppBar(
-                            title = { Text(stringResource(R.string.title_manage_exercises), style = MaterialTheme.typography.titleMedium) },
-                            navigationIcon = {
-                                IconButton(onClick = { navController.popBackStack() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, null) }
-                            },
-                            actions = {
-                                IconButton(onClick = { isSearching = true }) { Icon(Icons.Default.Search, null) }
-                                if (libraries.currentPage == 0) {
-                                    IconButton(onClick = { showResetDialog = true }) { Icon(Icons.Default.Refresh, null) }
-                                }
-                            },
-                            colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.Transparent)
-                        )
-                    }
-                    if (useGlassTabs) {
-                        LiquidBottomTabs(
-                            selectedTabIndex = { libraries.currentPage },
-                            onTabSelected = { scope.launch { libraries.animateScrollToPage(it) } },
-                            backdrop = backdrop, tabsCount = 2, refractContent = false,
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                        Row(
+                            Modifier.fillMaxWidth().heightIn(min = 48.dp).padding(horizontal = 16.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            libraryTitles.forEachIndexed { index, title ->
-                                Box(Modifier.weight(1f).fillMaxHeight(), contentAlignment = Alignment.Center) {
-                                    Text(title, style = MaterialTheme.typography.labelLarge,
-                                        fontWeight = if (libraries.currentPage == index) FontWeight.Bold else FontWeight.Normal)
+                            Text(
+                                stringResource(R.string.tab_exercises),
+                                style = MaterialTheme.typography.headlineSmall,
+                                color = MaterialTheme.colorScheme.onBackground,
+                                modifier = Modifier.weight(1f).padding(vertical = 8.dp),
+                            )
+                            IconButton(onClick = { isSearching = true }) {
+                                Icon(Icons.Default.Search, stringResource(R.string.catalog_search))
+                            }
+                            if (personalSelected) {
+                                IconButton(onClick = { showResetDialog = true }) {
+                                    Icon(Icons.Default.Refresh, null)
                                 }
                             }
                         }
-                    } else {
-                        GlassSegmentedControl(libraryTitles, libraries.currentPage,
-                            { scope.launch { libraries.animateScrollToPage(it) } }, Modifier.padding(16.dp))
                     }
-                    if (libraries.currentPage == 0) {
-                        if (useGlassTabs) {
-                            LiquidBottomTabs(
-                                selectedTabIndex = { selectedCategory }, onTabSelected = { selectedCategory = it },
-                                backdrop = backdrop, tabsCount = categories.size, refractContent = false,
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                            ) {
-                                categories.forEachIndexed { index, category ->
-                                    Box(Modifier.weight(1f).fillMaxHeight(), contentAlignment = Alignment.Center) {
-                                        Text(stringResource(getCategoryResId(category)), style = MaterialTheme.typography.labelMedium,
-                                            fontWeight = if (selectedCategory == index) FontWeight.Bold else FontWeight.Normal)
-                                    }
-                                }
-                            }
-                        } else {
-                            GlassSegmentedControl(categories.map { stringResource(getCategoryResId(it)) },
-                                selectedCategory, { selectedCategory = it }, Modifier.padding(horizontal = 16.dp))
-                        }
-                    }
-                }
-            },
-            floatingActionButton = {
-                if (libraries.currentPage == 0) {
-                    GlassControlSurface(
-                        onClick = { editingTemplate = null; showEditDialog = true },
-                        selected = true,
-                        modifier = Modifier.padding(bottom = floatingButtonBottomPadding).size(56.dp)
-                    ) { Icon(Icons.Default.Add, stringResource(R.string.btn_add)) }
                 }
             }
         ) { padding ->
-            HorizontalPager(libraries, Modifier.padding(padding)) { library ->
-                if (library == 0) {
-                    // Horizontal page gestures switch libraries; the category slider controls this inner pager.
-                    HorizontalPager(categoriesPager, userScrollEnabled = false) { page ->
-                        val filtered = templates.filter {
-                            it.category == categories[page] &&
-                                (searchQuery.isBlank() || it.name.contains(searchQuery, ignoreCase = true))
-                        }
-                        LazyColumn(
-                            Modifier.fillMaxSize().padding(horizontal = 16.dp),
-                            verticalArrangement = Arrangement.spacedBy(12.dp),
-                            contentPadding = PaddingValues(top = 8.dp, bottom = 120.dp)
-                        ) {
-                            items(filtered, key = { it.id }) { template ->
-                                ExerciseMinimalCard(template, { viewingTemplate = template }, { viewModel.deleteTemplate(template.id) })
-                            }
-                        }
-                    }
-                } else {
-                    ExerciseCatalogContent(
-                        language = currentLanguage,
-                        modifier = Modifier.padding(horizontal = 16.dp),
-                        searchQuery = searchQuery,
-                        onSelect = { template ->
-                            editingTemplate = templates.firstOrNull { it.name.equals(template.name, ignoreCase = true) }
-                                ?: templates.firstOrNull {
-                                    template.animationUri != null && CatalogMedia.animationUri(context, it) == template.animationUri
-                                } ?: template
-                            showEditDialog = true
-                        }
-                    )
-                }
-            }
+            com.example.myfit.flutter.EmbeddedCatalogView(
+                catalogHost,
+                Modifier.fillMaxSize().padding(padding).padding(bottom = if (useGlassTabs) 88.dp else 0.dp)
+            )
         }
     }
 

@@ -140,7 +140,7 @@ fun DailyPlanScreen(viewModel: MainViewModel, navController: NavController) {
                         navController.navigate("settings?scrollToType=true") {
                             popUpTo(navController.graph.findStartDestination().id) { saveState = true }
                             launchSingleTop = true
-                            restoreState = true
+                            restoreState = false
                         }
                     }
                 )

@@ -1,4 +1,5 @@
 <resources>
+    <string name="tab_exercises">Ejercicios</string>
     <string name="app_name">GymNota</string>
 
     <string name="tab_home">Inicio</string>

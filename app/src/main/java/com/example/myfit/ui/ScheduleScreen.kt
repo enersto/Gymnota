@@ -1,6 +1,5 @@
 package com.example.myfit.ui
 
-import android.app.Activity
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -20,6 +19,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
@@ -46,7 +46,6 @@ import com.example.myfit.model.*
 import com.example.myfit.ui.components.*
 import com.example.myfit.viewmodel.MainViewModel
 import com.kyant.shapes.Capsule
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 
@@ -62,7 +61,7 @@ import android.os.Build
 import androidx.compose.ui.graphics.graphicsLayer
 
 @Composable
-fun ScheduleScreen(navController: NavController, viewModel: MainViewModel) {
+fun ScheduleScreen(navController: NavController, viewModel: MainViewModel, oldVersion: Boolean = false) {
     val currentTheme by viewModel.currentTheme.collectAsState()
     val currentLanguage by viewModel.currentLanguage.collectAsState()
     val context = LocalContext.current
@@ -71,7 +70,6 @@ fun ScheduleScreen(navController: NavController, viewModel: MainViewModel) {
     var showManualRoutineDialog by remember { mutableStateOf(false) }
     var showHelpDialog by remember { mutableStateOf(false) }
     var showProfileDialog by remember { mutableStateOf(false) }
-    val scope = rememberCoroutineScope()
     val listState = rememberLazyListState()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
 
@@ -88,16 +86,10 @@ fun ScheduleScreen(navController: NavController, viewModel: MainViewModel) {
             uri?.let { viewModel.restoreDatabase(it, context) }
         }
 
-    LaunchedEffect(navBackStackEntry?.arguments?.getString("scrollToType")) {
-        val trigger = navBackStackEntry?.arguments?.getString("scrollToType")
-        if (trigger != null && trigger != "false") listState.animateScrollToItem(8)
-    }
-
-    LaunchedEffect(navBackStackEntry?.arguments?.getString("scrollToAi")) {
-        val trigger = navBackStackEntry?.arguments?.getString("scrollToAi")
-        if (trigger != null && trigger != "false") {
-            delay(100); listState.animateScrollToItem(5)
-        }
+    val requestedSection = when {
+        navBackStackEntry?.arguments?.getString("scrollToAi")?.let { it != "false" } == true -> "ai-model"
+        navBackStackEntry?.arguments?.getString("scrollToType")?.let { it != "false" } == true -> "schedule-type"
+        else -> null
     }
 
     GlassScaffoldContent {
@@ -105,19 +97,24 @@ fun ScheduleScreen(navController: NavController, viewModel: MainViewModel) {
             .fillMaxSize()
             .statusBarsPadding()
             .padding(top = 24.dp)) {
-            Text(
-                stringResource(R.string.settings_advanced),
-                style = MaterialTheme.typography.headlineSmall,
-                color = MaterialTheme.colorScheme.onBackground,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-            )
-            LazyColumn(
-                state = listState,
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(24.dp)
-            ) {
-                item {
+            Row(Modifier.padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+                if (oldVersion) {
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.btn_close))
+                    }
+                }
+                Text(
+                    stringResource(if (oldVersion) R.string.settings_old_title else R.string.settings_advanced),
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    modifier = Modifier.padding(vertical = 8.dp)
+                )
+            }
+            val sections = buildList<Pair<String, @Composable () -> Unit>> {
+                fun section(key: String, content: @Composable () -> Unit) {
+                    add(key to content)
+                }
+                section("language") {
                     Column {
                         Text(
                             stringResource(R.string.settings_language),
@@ -134,13 +131,13 @@ fun ScheduleScreen(navController: NavController, viewModel: MainViewModel) {
                                         "zh" -> "中文"; "en" -> "EN"; "es" -> "ES"; "ja" -> "JA"; else -> "DE"
                                     }, code == currentLanguage
                                 ) {
-                                    scope.launch { viewModel.switchLanguage(code); delay(500); (context as? Activity)?.recreate() }
+                                    viewModel.switchLanguage(code)
                                 }
                             }
                         }
                     }
                 }
-                item {
+                section("data") {
                     Column {
                         Text(
                             stringResource(R.string.settings_data_management),
@@ -187,21 +184,15 @@ fun ScheduleScreen(navController: NavController, viewModel: MainViewModel) {
                         }
                     }
                 }
-                item {
+                section("weekly-plan") {
                     GlassNavBar(
                         Icons.Default.EditCalendar,
                         stringResource(R.string.weekly_plan)
                     ) { showManualRoutineDialog = true }
                 }
-                item {
-                    GlassNavBar(
-                        Icons.AutoMirrored.Filled.List,
-                        stringResource(R.string.manage_lib)
-                    ) { navController.navigate("exercise_manager") }
-                }
-                item { AiConfigSection(viewModel) }
-                item { TimerSettingsSection(viewModel) }
-                item {
+                section("ai-model") { AiConfigSection(viewModel) }
+                section("timer") { TimerSettingsSection(viewModel) }
+                section("theme") {
                     Column {
                         Text(
                             stringResource(R.string.theme_style),
@@ -221,13 +212,25 @@ fun ScheduleScreen(navController: NavController, viewModel: MainViewModel) {
                         }
                     }
                 }
-                item {
+                section("schedule-type") {
                     Text(
                         stringResource(R.string.schedule_type_title),
                         style = MaterialTheme.typography.titleMedium,
                         modifier = Modifier.padding(top = 8.dp)
                     )
                 }
+            }
+            val targetIndex = sections.indexOfFirst { it.first == requestedSection }
+            LaunchedEffect(navBackStackEntry, targetIndex) {
+                if (targetIndex >= 0) listState.scrollToItem(targetIndex)
+            }
+            LazyColumn(
+                state = listState,
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(24.dp)
+            ) {
+                items(sections, key = { it.first }) { (_, content) -> content() }
                 items(scheduleList) { config ->
                     ScheduleItem(config) {
                         viewModel.updateScheduleConfig(
@@ -357,7 +360,7 @@ fun ProfileEditDialog(viewModel: MainViewModel, onDismiss: () -> Unit) {
 }
 
 @Composable
-private fun KeyReferenceDialog(onDismiss: () -> Unit) {
+internal fun KeyReferenceDialog(onDismiss: () -> Unit) {
     val context = LocalContext.current
     val selectedKeys = remember { mutableStateListOf<String>() }
     val bodyPartKeys = listOf(

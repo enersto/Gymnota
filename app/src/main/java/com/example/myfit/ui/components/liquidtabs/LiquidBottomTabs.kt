@@ -40,6 +40,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastCoerceIn
 import androidx.compose.ui.util.fastRoundToInt
@@ -72,11 +73,17 @@ fun LiquidBottomTabs(
     tabsCount: Int,
     modifier: Modifier = Modifier,
     refractContent: Boolean = true,
+    dragEnabled: Boolean = true,
+    trackHeight: Dp = 64.dp,
     content: @Composable RowScope.() -> Unit
 ) {
     val isLightTheme = MaterialTheme.colorScheme.background.luminance() >= 0.5f
     val accentColor = if (isLightTheme) Color(0xFF0088FF) else Color(0xFF0091FF)
-    val containerColor = if (isLightTheme) Color(0xFFFAFAFA).copy(0.16f) else Color(0xFF121212).copy(0.38f)
+    val containerColor = when {
+        !refractContent -> MaterialTheme.colorScheme.primary.copy(alpha = 0.06f)
+        isLightTheme -> Color(0xFFFAFAFA).copy(0.16f)
+        else -> Color(0xFF121212).copy(0.38f)
+    }
 
     val tabsBackdrop = rememberLayerBackdrop()
 
@@ -182,8 +189,13 @@ fun LiquidBottomTabs(
                     shape = { Capsule() },
                     effects = {
                         vibrancy()
-                        blur(4f.dp.toPx())
-                        lens(8f.dp.toPx(), 12f.dp.toPx())
+                        if (refractContent) {
+                            blur(4.dp.toPx())
+                            lens(8.dp.toPx(), 12.dp.toPx())
+                        } else {
+                            blur(2.5.dp.toPx())
+                            lens(6.dp.toPx(), 10.dp.toPx(), chromaticAberration = true)
+                        }
                     },
                     layerBlock = if (refractContent) ({
                         val progress = dampedDragAnimation.pressProgress
@@ -194,7 +206,7 @@ fun LiquidBottomTabs(
                     onDrawSurface = { drawRect(containerColor) }
                 )
                 .then(interactiveHighlight.modifier)
-                .height(64f.dp)
+                .height(trackHeight)
                 .fillMaxWidth()
                 .padding(4f.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -224,7 +236,7 @@ fun LiquidBottomTabs(
                             onDrawSurface = { drawRect(containerColor) }
                         )
                         .then(interactiveHighlight.modifier)
-                        .height(56f.dp)
+                        .height(trackHeight - 8.dp)
                         .fillMaxWidth()
                         .padding(horizontal = 4f.dp)
                         .graphicsLayer(colorFilter = ColorFilter.tint(accentColor)),
@@ -243,15 +255,22 @@ fun LiquidBottomTabs(
                         else (tabsCount - 1f - dampedDragAnimation.value) * tabWidth + panelOffset
                 }
                 .then(interactiveHighlight.gestureModifier)
-                .then(dampedDragAnimation.modifier)
+                .then(if (dragEnabled) dampedDragAnimation.modifier else Modifier)
                 .drawBackdrop(
                     backdrop = if (refractContent) rememberCombinedBackdrop(backdrop, tabsBackdrop) else backdrop,
                     shape = { Capsule() },
                     effects = {
                         val progress = if (refractContent) dampedDragAnimation.pressProgress else 0f
-                        lens(10f.dp.toPx() * progress, 14f.dp.toPx() * progress, chromaticAberration = true)
+                        if (refractContent) {
+                            lens(10f.dp.toPx() * progress, 14f.dp.toPx() * progress, chromaticAberration = true)
+                        } else {
+                            lens(3f.dp.toPx(), 5f.dp.toPx())
+                        }
                     },
-                    highlight = { Highlight.Default.copy(alpha = if (refractContent) dampedDragAnimation.pressProgress else 0f) },
+                    highlight = {
+                        if (refractContent) Highlight.Default.copy(alpha = dampedDragAnimation.pressProgress)
+                        else Highlight.Ambient.copy(alpha = 0.25f)
+                    },
                     shadow = { Shadow(alpha = if (refractContent) dampedDragAnimation.pressProgress else 0f) },
                     innerShadow = {
                         val progress = if (refractContent) dampedDragAnimation.pressProgress else 0f
@@ -271,15 +290,15 @@ fun LiquidBottomTabs(
                         drawRect(Color.Black.copy(alpha = 0.03f * progress))
                     }
                 )
-                .height(56f.dp)
+                .height(trackHeight - 8.dp)
                 .fillMaxWidth(1f / tabsCount)
         )
 
         if (!refractContent) {
-            // Same 64 dp bounds and 4 dp insets as the track; labels are drawn once, above the lens.
+            // Same bounds and 4 dp insets as the track; labels are drawn once, above the lens.
             Row(
                 Modifier.align(Alignment.CenterStart)
-                    .height(64.dp)
+                    .height(trackHeight)
                     .fillMaxWidth()
                     .padding(4.dp),
                 verticalAlignment = Alignment.CenterVertically,

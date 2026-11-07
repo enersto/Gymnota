@@ -45,6 +45,10 @@ import java.util.*
 fun AICoachScreen(viewModel: MainViewModel, navController: NavController) {
     val aiResponse by viewModel.aiResponse.collectAsState()
     val isLoading by viewModel.aiIsLoading.collectAsState()
+    val streamState by viewModel.aiStreamState.collectAsState()
+    val streamingEnabled by viewModel.aiStreamingEnabled.collectAsState()
+    val canImport by viewModel.aiCanImport.collectAsState()
+    val isGeneratingCsv by viewModel.isGeneratingCsv.collectAsState()
     val settings by viewModel.userProfile.collectAsState()
     val context = LocalContext.current
     val scrollState = rememberScrollState()
@@ -65,6 +69,18 @@ fun AICoachScreen(viewModel: MainViewModel, navController: NavController) {
             chatImageUri = uri
             isFreeChatMode = true
         }
+    }
+
+    fun openAiSettings() {
+        navController.navigate("settings?scrollToAi=${System.currentTimeMillis()}") {
+            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+            launchSingleTop = true
+            restoreState = false
+        }
+    }
+
+    val flutterCoachLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.data?.getBooleanExtra("openAiSettings", false) == true) openAiSettings()
     }
 
     fun createTempPictureUri(): Uri? {
@@ -134,6 +150,16 @@ fun AICoachScreen(viewModel: MainViewModel, navController: NavController) {
 
             Spacer(modifier = Modifier.height(16.dp))
 
+            if (com.example.myfit.BuildConfig.DEBUG) {
+                TextButton(
+                    onClick = {
+                        flutterCoachLauncher.launch(android.content.Intent(context, com.example.myfit.flutter.FlutterLibraryActivity::class.java)
+                            .putExtra("page", "/coach-preview"))
+                    },
+                    modifier = Modifier.padding(horizontal = 16.dp)
+                ) { Text("Flutter UI preview") }
+            }
+
             // Scrollable Content
             Column(
                 modifier = Modifier
@@ -148,16 +174,7 @@ fun AICoachScreen(viewModel: MainViewModel, navController: NavController) {
                 ) {
                     Row(
                         modifier = Modifier
-                            .clickable {
-                                val timestamp = System.currentTimeMillis()
-                                navController.navigate("settings?scrollToAi=$timestamp") {
-                                    popUpTo(navController.graph.findStartDestination().id) {
-                                        saveState = true
-                                    }
-                                    launchSingleTop = true
-                                    restoreState = true
-                                }
-                            }
+                            .clickable { openAiSettings() }
                             .padding(horizontal = 12.dp, vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -304,10 +321,18 @@ fun AICoachScreen(viewModel: MainViewModel, navController: NavController) {
 
                 Spacer(modifier = Modifier.height(16.dp))
 
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Text(stringResource(R.string.coach_stream_enabled), Modifier.weight(1f))
+                    GlassSwitch(checked = streamingEnabled, onCheckedChange = viewModel::setAiStreamingEnabled,
+                        enabled = !isLoading && !isGeneratingCsv, label = stringResource(R.string.coach_stream_enabled))
+                }
+                Text(stringResource(R.string.coach_stream_compat_hint), style = MaterialTheme.typography.bodySmall)
+                Spacer(Modifier.height(12.dp))
+
                 GlassButton(
                     text = if (isFreeChatMode) stringResource(R.string.btn_send_message) else stringResource(R.string.btn_get_advice),
                     modifier = Modifier.fillMaxWidth(),
-                    enabled = !isLoading,
+                    enabled = !isLoading && !isGeneratingCsv,
                     onClick = {
                         if (isFreeChatMode) {
                             if (viewModel.currentTrainingGoal.isNotBlank() || chatImageUri != null) {
@@ -321,6 +346,29 @@ fun AICoachScreen(viewModel: MainViewModel, navController: NavController) {
                         }
                     }
                 )
+
+                if (isLoading) {
+                    Spacer(Modifier.height(12.dp))
+                    LinearProgressIndicator(Modifier.fillMaxWidth())
+                    Text(stringResource(if (streamState.status == "connecting") R.string.coach_stream_connecting
+                        else if (streamState.status == "reasoning") R.string.coach_stream_thinking else R.string.coach_stream_answering))
+                    GlassButton(text = stringResource(R.string.coach_stream_stop), onClick = viewModel::cancelAiGeneration,
+                        modifier = Modifier.fillMaxWidth())
+                } else if (streamState.status in setOf("cancelled", "incomplete", "failed")) {
+                    Spacer(Modifier.height(12.dp))
+                    Text(stringResource(when (streamState.status) {
+                        "cancelled" -> R.string.coach_stream_stopped
+                        "incomplete" -> R.string.coach_stream_incomplete
+                        else -> if (streamState.errorCode == "stream_unsupported") R.string.coach_stream_unsupported else R.string.coach_stream_failed
+                    }), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                if (streamState.reasoningSummary.isNotBlank() || streamState.providerReasoning.isNotBlank()) {
+                    var expanded by remember(streamState.requestId) { mutableStateOf(false) }
+                    TextButton(onClick = { expanded = !expanded }) {
+                        Text(stringResource(if (streamState.reasoningSummary.isNotBlank()) R.string.coach_stream_reasoning_summary else R.string.coach_stream_provider_reasoning))
+                    }
+                    if (expanded) Text(streamState.reasoningSummary.ifBlank { streamState.providerReasoning })
+                }
 
                 Spacer(modifier = Modifier.height(24.dp))
 
@@ -337,12 +385,14 @@ fun AICoachScreen(viewModel: MainViewModel, navController: NavController) {
                                 fontWeight = FontWeight.Bold
                             )
                             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-                            MarkdownText(markdown = aiResponse!!)
+                            // Avoid reparsing the whole Markdown document for every network fragment.
+                            if (isLoading) Text(aiResponse!!) else MarkdownText(markdown = aiResponse!!)
                             
                             if (!isFreeChatMode) {
                                 Spacer(modifier = Modifier.height(16.dp))
                                 FilledTonalButton(
                                     onClick = { showRefineDialog = true },
+                                    enabled = canImport && !isLoading && !isGeneratingCsv,
                                     modifier = Modifier.fillMaxWidth(),
                                     shape = RoundedCornerShape(12.dp)
                                 ) {

@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SmartToy
 import androidx.compose.material3.*
@@ -33,6 +34,8 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavType
@@ -53,14 +56,18 @@ import com.kyant.shapes.Capsule
 sealed class Screen(val route: String, val titleResId: Int, val icon: ImageVector) {
     object DailyPlan : Screen("daily_plan", R.string.tab_home, Icons.Default.CalendarToday)
     object History : Screen("history", R.string.tab_history, Icons.Default.History)
+    object Exercises : Screen("exercise_manager", R.string.tab_exercises, Icons.Default.FitnessCenter)
     object AICoach : Screen("ai_coach", R.string.tab_ai_coach, Icons.Default.SmartToy)
     object Settings : Screen("settings", R.string.tab_settings, Icons.Default.Settings)
 }
 
+// Keep the original Compose coach available for rollback.
+private const val useFlutterCoach = true
+
 @Composable
 fun MainScreen(viewModel: MainViewModel) {
     val navController = rememberNavController()
-    val screens = listOf(Screen.DailyPlan, Screen.History, Screen.AICoach, Screen.Settings)
+    val screens = listOf(Screen.DailyPlan, Screen.History, Screen.Exercises, Screen.AICoach, Screen.Settings)
     val view = LocalView.current
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
@@ -81,7 +88,9 @@ fun MainScreen(viewModel: MainViewModel) {
                     screens.forEach { screen ->
                         NavigationBarItem(
                             icon = { Icon(screen.icon, contentDescription = null) },
-                            label = { Text(stringResource(screen.titleResId)) },
+                            label = {
+                                Text(stringResource(screen.titleResId), fontSize = 11.sp, maxLines = 2, textAlign = TextAlign.Center)
+                            },
                             selected = currentDestination?.hierarchy?.any {
                                 it.route?.startsWith(screen.route) == true
                             } == true,
@@ -113,22 +122,61 @@ fun MainScreen(viewModel: MainViewModel) {
                     composable(Screen.DailyPlan.route) {
                         DailyPlanScreen(navController = navController, viewModel = viewModel)
                     }
-                    composable(Screen.History.route) {
+                    composable(Screen.History.route,
+                        enterTransition = { androidx.compose.animation.EnterTransition.None },
+                        exitTransition = { androidx.compose.animation.ExitTransition.None },
+                        popEnterTransition = { androidx.compose.animation.EnterTransition.None },
+                        popExitTransition = { androidx.compose.animation.ExitTransition.None }) {
                         HistoryScreen(viewModel)
                     }
-                    composable(Screen.AICoach.route) {
-                        AICoachScreen(viewModel = viewModel, navController = navController)
+                    composable(Screen.AICoach.route,
+                        enterTransition = { androidx.compose.animation.EnterTransition.None },
+                        exitTransition = { androidx.compose.animation.ExitTransition.None }) {
+                        if (useFlutterCoach) {
+                            com.example.myfit.flutter.EmbeddedCoachPage(
+                                viewModel = viewModel,
+                                openSettings = {
+                                    navController.navigate("settings?scrollToAi=${System.currentTimeMillis()}") {
+                                        popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                                        launchSingleTop = true
+                                        restoreState = false
+                                    }
+                                },
+                                modifier = Modifier.fillMaxSize().statusBarsPadding()
+                                    .padding(bottom = if (useGlassTabs) 88.dp else 0.dp),
+                            )
+                        } else {
+                            AICoachScreen(viewModel = viewModel, navController = navController)
+                        }
                     }
                     composable(
                         route = Screen.Settings.route + "?scrollToType={scrollToType}&scrollToAi={scrollToAi}",
                         arguments = listOf(
                             navArgument("scrollToType") { defaultValue = "false"; type = NavType.StringType },
                             navArgument("scrollToAi") { defaultValue = "false"; type = NavType.StringType }
+                        ),
+                        enterTransition = { androidx.compose.animation.EnterTransition.None },
+                        exitTransition = { androidx.compose.animation.ExitTransition.None },
+                        popEnterTransition = { androidx.compose.animation.EnterTransition.None },
+                        popExitTransition = { androidx.compose.animation.ExitTransition.None }
+                    ) { entry ->
+                        val aiRequest = entry.arguments?.getString("scrollToAi")?.takeUnless { it == "false" }
+                        val scheduleRequest = entry.arguments?.getString("scrollToType") == "true"
+                        com.example.myfit.flutter.EmbeddedSettingsPage(
+                            viewModel = viewModel,
+                            aiRequest = aiRequest,
+                            scheduleRequest = scheduleRequest,
+                            modifier = Modifier.fillMaxSize().statusBarsPadding()
+                                .padding(bottom = if (useGlassTabs) 88.dp else 0.dp),
+                            onOpenOld = { navController.navigate("settings_old") { launchSingleTop = true } },
+                            onBack = { navController.popBackStack() },
+                            fallback = { ScheduleScreen(navController, viewModel) }
                         )
-                    ) {
-                        ScheduleScreen(navController, viewModel)
                     }
-                    composable("exercise_manager") {
+                    composable("settings_old") {
+                        ScheduleScreen(navController, viewModel, oldVersion = true)
+                    }
+                    composable(Screen.Exercises.route) {
                         ExerciseManagerScreen(navController = navController, viewModel = viewModel)
                     }
                     composable("exercise_selector") {
@@ -183,7 +231,9 @@ fun MainScreen(viewModel: MainViewModel) {
                                     Text(
                                         stringResource(screen.titleResId),
                                         style = MaterialTheme.typography.labelSmall,
-                                        fontSize = 10.sp
+                                        fontSize = 10.sp,
+                                        maxLines = 2,
+                                        textAlign = TextAlign.Center
                                     )
                                 }
                             }

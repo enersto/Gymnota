@@ -19,3 +19,10 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+# Rust JNI uses a stable class and native method name.
+-keep class com.example.myfit.flutter.RustHistoryCore { native <methods>; }
+
+-keep class com.example.myfit.data.ai.RustAiStream { native <methods>; }
+-keep class com.example.myfit.data.ai.RustAiStream$Companion { native <methods>; }
+
+-keep class com.example.myfit.data.RustSettingsCsv { native <methods>; }

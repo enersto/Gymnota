@@ -1,4 +1,5 @@
 <resources>
+    <string name="tab_exercises">动作</string>
     <string name="app_name">健身记</string>
 
     <string name="tab_home">打卡</string>

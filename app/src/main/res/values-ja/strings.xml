@@ -1,4 +1,5 @@
 <resources>
+    <string name="tab_exercises">種目</string>
     <string name="app_name">トレノート</string>
 
     <string name="tab_home">記録</string>

@@ -18,6 +18,7 @@ import com.example.myfit.ui.ChartGranularity
 import com.example.myfit.util.NotificationHelper
 import com.example.myfit.util.TimerService
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -51,6 +52,11 @@ import java.io.ByteArrayOutputStream
 import com.example.myfit.data.ai.PromptManager
 import com.example.myfit.data.api.AiService
 import com.example.myfit.data.api.ChatMessage
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.currentCoroutineContext
+import com.example.myfit.data.ai.*
+import com.example.myfit.data.api.StreamingChatRequest
 import com.example.myfit.data.api.ChatRequest
 
 enum class TimerPhase {
@@ -134,9 +140,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _selectedDate = MutableStateFlow(LocalDate.now())
     val selectedDate: StateFlow<LocalDate> = _selectedDate.asStateFlow()
 
+    private val initialLanguage = com.example.myfit.util.LocaleHelper.cachedLanguage(application)
     val userProfile = dao.getAppSettings()
         .map { it ?: AppSetting(themeId = 1) }
-        .stateIn(viewModelScope, SharingStarted.Lazily, AppSetting(themeId = 1))
+        .stateIn(viewModelScope, SharingStarted.Lazily, AppSetting(themeId = 1, languageCode = initialLanguage))
 
     val currentTheme = userProfile
         .map { AppTheme.fromId(it.themeId) }
@@ -144,7 +151,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     val currentLanguage = userProfile
         .map { it.languageCode }
-        .stateIn(viewModelScope, SharingStarted.Lazily, "zh")
+        .stateIn(viewModelScope, SharingStarted.Lazily, initialLanguage)
 
     val allSchedules: Flow<List<ScheduleConfig>> = dao.getAllSchedules()
 
@@ -624,21 +631,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun exportHistoryToCsv(uri: Uri, context: Context) = viewModelScope.launch(Dispatchers.IO) {
         try {
-            val sb = StringBuilder("Date,Name,Category,Target,IsUnilateral,LogType,Sets_Detail\n")
-            dao.getHistoryRecordsSync().forEach { t ->
-                val setsStr =
-                    t.sets.joinToString(" | ") { if (t.isUnilateral) "L: ${it.weightOrDuration}x${it.reps} / R: ${it.rightWeight ?: ""}x${it.rightReps ?: ""}" else "${it.weightOrDuration}x${it.reps}" }
-                sb.append(
-                    "${t.date},${
-                        t.name.replace(
-                            ",",
-                            " "
-                        )
-                    },${t.category},${t.target},${t.isUnilateral},${t.logType},$setsStr\n"
-                )
+            val records = dao.getHistoryRecordsSync()
+            val csv = com.example.myfit.data.RustSettingsCsv.encode(records) ?: buildString {
+                append("Date,Name,Category,Target,IsUnilateral,LogType,Sets_Detail\n")
+                records.forEach { task ->
+                    val sets = task.sets.joinToString(" | ") {
+                        if (task.isUnilateral) "L: ${it.weightOrDuration}x${it.reps} / R: ${it.rightWeight ?: ""}x${it.rightReps ?: ""}"
+                        else "${it.weightOrDuration}x${it.reps}"
+                    }
+                    append("${task.date},${task.name.replace(',', ' ')},${task.category},${task.target},${task.isUnilateral},${task.logType},$sets\n")
+                }
             }
-            context.contentResolver.openOutputStream(uri)
-                ?.use { it.write(sb.toString().toByteArray()) }
+            context.contentResolver.openOutputStream(uri)?.use { it.write(csv.toByteArray()) }
             withContext(Dispatchers.Main) {
                 Toast.makeText(
                     context,
@@ -949,6 +953,78 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _aiIsLoading = MutableStateFlow(false)
     val aiIsLoading = _aiIsLoading.asStateFlow()
 
+    private val _aiStreamingEnabled = MutableStateFlow(true)
+    val aiStreamingEnabled = _aiStreamingEnabled.asStateFlow()
+    private val _aiStreamState = MutableStateFlow(AiStreamSnapshot())
+    val aiStreamState = _aiStreamState.asStateFlow()
+    private val _aiCanImport = MutableStateFlow(false)
+    val aiCanImport = _aiCanImport.asStateFlow()
+    private var aiRequestJob: Job? = null
+    private val aiRequestGeneration = java.util.concurrent.atomic.AtomicLong()
+
+    @Synchronized fun setAiStreamingEnabled(enabled: Boolean) { if (!_aiIsLoading.value) _aiStreamingEnabled.value = enabled }
+    @Synchronized fun cancelAiGeneration() {
+        if (!_aiIsLoading.value) return
+        aiRequestGeneration.incrementAndGet()
+        aiRequestJob?.cancel(); aiRequestJob = null
+        _aiIsLoading.value = false; _aiCanImport.value = false
+        _aiStreamState.value = _aiStreamState.value.copy(status = "cancelled")
+    }
+
+    private suspend fun runAiCompletion(settings: AppSetting, messages: List<ChatMessage>,
+        requestId: String = java.util.UUID.randomUUID().toString(), onUpdate: (AiStreamSnapshot) -> Unit = {}): String {
+        val api = getAiApi(settings)
+        if (!_aiStreamingEnabled.value) {
+            val response = api.generateChatCompletion("Bearer ${settings.aiApiKey}", ChatRequest(settings.aiModel, messages))
+            val choice = response.choices.firstOrNull() ?: throw AiStreamFailure("empty_response")
+            if (choice.finishReason != null && choice.finishReason != "stop") throw AiStreamFailure("incomplete")
+            return choice.message.content?.toString()?.takeIf { it.isNotBlank() }
+                ?: throw AiStreamFailure("empty_response")
+        }
+        return AiStreamRunner.run(api.streamChatCompletion("Bearer ${settings.aiApiKey}",
+            StreamingChatRequest(settings.aiModel, messages)),
+            AiStreamCapabilities(AiStreamProtocol.CHAT_COMPLETIONS, streaming = true), requestId = requestId, onUpdate = onUpdate)
+    }
+
+    /** Existing prompts and final Room writes stay here; Rust sees response bytes only. */
+    @Synchronized private fun launchCoachRequest(settings: AppSetting, goal: String, buildMessages: suspend () -> List<ChatMessage>) {
+        if (_aiIsLoading.value) return
+        val generation = aiRequestGeneration.incrementAndGet()
+        val id = java.util.UUID.randomUUID().toString()
+        _aiIsLoading.value = true; _aiCanImport.value = false; _aiResponse.value = null
+        _aiStreamState.value = AiStreamSnapshot(requestId = id, status = if (_aiStreamingEnabled.value) "connecting" else "answering")
+        aiRequestJob = viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val content = runAiCompletion(settings, buildMessages(), id) { snapshot ->
+                    synchronized(this@MainViewModel) {
+                        if (aiRequestGeneration.get() == generation) {
+                            _aiStreamState.value = snapshot
+                            _aiResponse.value = snapshot.answer.takeIf { it.isNotEmpty() }
+                        }
+                    }
+                }
+                currentCoroutineContext().ensureActive()
+                synchronized(this@MainViewModel) {
+                    if (aiRequestGeneration.get() != generation) return@launch
+                    _aiResponse.value = content
+                    _aiStreamState.value = _aiStreamState.value.copy(status = "completed", answer = content)
+                    _aiCanImport.value = true
+                }
+                dao.insertAiChatRecord(AiChatRecord(timestamp = System.currentTimeMillis(), role = "assistant",
+                    content = content, userGoal = goal, modelUsed = settings.aiModel))
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                synchronized(this@MainViewModel) { if (aiRequestGeneration.get() == generation) {
+                    val code = (e as? AiStreamFailure)?.code ?: "request_failed"
+                    val incomplete = code in setOf("incomplete", "truncated_sse_event", "stream_ended_without_terminal_event")
+                    _aiCanImport.value = false
+                    _aiStreamState.value = _aiStreamState.value.copy(status = if (incomplete) "incomplete" else "failed", errorCode = code)
+                } }
+            } finally { synchronized(this@MainViewModel) { if (aiRequestGeneration.get() == generation) _aiIsLoading.value = false } }
+        }
+    }
+
     var currentTrainingGoal by mutableStateOf("")
     var historyWeeks by mutableIntStateOf(3)
     var selectedFocus by mutableStateOf(setOf("COMPREHENSIVE"))
@@ -967,7 +1043,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val aiChatHistory: Flow<List<AiChatRecord>> = dao.getAllAiChatRecords()
 
     private fun getAiApi(settings: AppSetting): AiService {
-        val client = OkHttpClient.Builder().connectTimeout(30, TimeUnit.SECONDS)
+        val client = OkHttpClient.Builder().retryOnConnectionFailure(false).connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(120, TimeUnit.SECONDS).build()
         val rawUrl = settings.aiBaseUrl.ifBlank {
             availableProviders.find { it.name == settings.aiProvider }?.defaultBaseUrl
@@ -1020,17 +1096,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun saveAiConfig(provider: String, apiKey: String, model: String, baseUrl: String) {
+        viewModelScope.launch(Dispatchers.IO) { persistAiConfig(provider, apiKey, model, baseUrl) }
+    }
+
+    internal suspend fun persistAiConfig(provider: String, apiKey: String, model: String, baseUrl: String) {
         val clean = baseUrl.trim().replace(Regex("v1/?$", RegexOption.IGNORE_CASE), "").trimEnd('/')
-        viewModelScope.launch(Dispatchers.IO) {
+        database.withTransaction {
             val settings = dao.getAppSettings().first() ?: AppSetting()
-            dao.saveAppSettings(
-                settings.copy(
-                    aiProvider = provider,
-                    aiApiKey = apiKey,
-                    aiModel = model,
-                    aiBaseUrl = clean
-                )
-            )
+            dao.saveAppSettings(settings.copy(aiProvider = provider, aiApiKey = apiKey, aiModel = model, aiBaseUrl = clean))
             dao.saveAiProviderConfig(AiProviderConfig(provider, apiKey, model, clean))
         }
     }
@@ -1048,48 +1121,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun generateWeeklyPlan(context: Context) {
         val settings = userProfile.value
         if (settings.aiApiKey.isBlank()) {
-            Toast.makeText(
-                context,
-                context.getString(R.string.msg_config_missing),
-                Toast.LENGTH_SHORT
-            ).show(); return
+            Toast.makeText(context, context.getString(R.string.msg_config_missing), Toast.LENGTH_SHORT).show(); return
         }
-        _aiIsLoading.value = true; _aiResponse.value = null
-
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                val cutoff = LocalDate.now().minusWeeks(historyWeeks.toLong()).toString()
-                val history = dao.getHistoryRecordsSync().filter { it.date >= cutoff }
-                val schedules = dao.getAllSchedulesSync()
-                val latestWeight = dao.getLatestWeightSync()
-                val memory = dao.getAiMemorySync()?.longTermContext
-
-                val messages = PromptManager.buildWeeklyPlanPrompt(
-                    context,
-                    settings,
-                    latestWeight,
-                    memory,
-                    schedules,
-                    history,
-                    currentTrainingGoal,
-                    historyWeeks,
-                    selectedFocus,
-                    selectedScene,
-                    selectedInjuries
-                )
-                val response = getAiApi(settings).generateChatCompletion(
-                    "Bearer ${settings.aiApiKey}",
-                    ChatRequest(model = settings.aiModel, messages = messages)
-                )
-                val content =
-                    response.choices.firstOrNull()?.message?.content?.toString() ?: "No content"
-                _aiResponse.value = content
-                saveAiChatRecord(content, "assistant", currentTrainingGoal, settings.aiModel)
-            } catch (e: Exception) {
-                _aiResponse.value = "Error: ${e.message}"
-            } finally {
-                _aiIsLoading.value = false
-            }
+        // Snapshot mutable form values before the request leaves the UI thread.
+        val goal = currentTrainingGoal; val weeks = historyWeeks
+        val focus = selectedFocus; val scene = selectedScene; val injuries = selectedInjuries
+        launchCoachRequest(settings, goal) {
+            val cutoff = LocalDate.now().minusWeeks(weeks.toLong()).toString()
+            PromptManager.buildWeeklyPlanPrompt(context, settings, dao.getLatestWeightSync(),
+                dao.getAiMemorySync()?.longTermContext, dao.getAllSchedulesSync(),
+                dao.getHistoryRecordsSync().filter { it.date >= cutoff }, goal, weeks, focus, scene, injuries)
         }
     }
 
@@ -1115,81 +1156,38 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun deleteAiChatRecord(id: Long) =
         viewModelScope.launch(Dispatchers.IO) { dao.deleteAiChatRecord(id) }
 
-    fun loadAiResponseFromHistory(content: String) {
-        _aiResponse.value = content
+    internal fun requestAiHistoryDeletion(id: Long) =
+        viewModelScope.async(Dispatchers.IO) { dao.deleteAiChatRecord(id) }
+
+    @Synchronized fun loadAiResponseFromHistory(content: String) {
+        cancelAiGeneration()
+        _aiResponse.value = content; _aiCanImport.value = content.isNotBlank()
+        _aiStreamState.value = AiStreamSnapshot(status = "completed", answer = content)
     }
 
     fun analyzeImage(context: Context, uri: Uri) {
         val settings = userProfile.value
         if (settings.aiApiKey.isBlank()) {
-            Toast.makeText(context, "Config required", Toast.LENGTH_SHORT).show(); return
+            Toast.makeText(context, context.getString(R.string.msg_config_missing), Toast.LENGTH_SHORT).show(); return
         }
-        _aiIsLoading.value = true; _aiResponse.value = context.getString(R.string.msg_processing)
-
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                val b64 = compressImageToBase64(context, uri) ?: throw Exception("Image error")
-                val messages = PromptManager.buildImageAnalysisPrompt(context, b64)
-                val res = getAiApi(settings).generateChatCompletion(
-                    "Bearer ${settings.aiApiKey}",
-                    ChatRequest(model = settings.aiModel, messages = messages)
-                )
-                val content = res.choices.firstOrNull()?.message?.content?.toString() ?: "No result"
-                _aiResponse.value = content
-                saveAiChatRecord(content, "assistant", "[Vision] Analysis", settings.aiModel)
-            } catch (e: Exception) {
-                _aiResponse.value = "Error: ${e.message}"
-            } finally {
-                _aiIsLoading.value = false
-            }
+        launchCoachRequest(settings, "[Vision] Analysis") {
+            val b64 = compressImageToBase64(context, uri) ?: throw AiStreamFailure("image_error")
+            PromptManager.buildImageAnalysisPrompt(context, b64)
         }
     }
 
     fun sendFreeChat(context: Context, query: String, imageUri: Uri? = null) {
         val settings = userProfile.value
         if (settings.aiApiKey.isBlank()) {
-            Toast.makeText(
-                context,
-                context.getString(R.string.msg_config_missing),
-                Toast.LENGTH_SHORT
-            ).show(); return
+            Toast.makeText(context, context.getString(R.string.msg_config_missing), Toast.LENGTH_SHORT).show(); return
         }
-        _aiIsLoading.value = true; _aiResponse.value = null
-
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                val chatHistory =
-                    if (settings.useLocalAiCache) dao.getRecentAiChatRecords(settings.maxHistoryLimit) else emptyList()
-                val memory =
-                    if (settings.useLocalAiCache) dao.getAiMemorySync()?.longTermContext else null
-
-                val messages = if (imageUri != null) {
-                    val b64 = compressImageToBase64(context, imageUri)
-                    if (b64 != null) PromptManager.buildMultimodalChatPrompt(context, query, b64)
-                    else {
-                        withContext(Dispatchers.Main) {
-                            Toast.makeText(
-                                context,
-                                "Image fail, fallback",
-                                Toast.LENGTH_SHORT
-                            ).show()
-                        }; PromptManager.buildFreeChatPrompt(context, query, chatHistory, memory)
-                    }
-                } else PromptManager.buildFreeChatPrompt(context, query, chatHistory, memory)
-
-                val res = getAiApi(settings).generateChatCompletion(
-                    "Bearer ${settings.aiApiKey}",
-                    ChatRequest(model = settings.aiModel, messages = messages)
-                )
-                val content =
-                    res.choices.firstOrNull()?.message?.content?.toString() ?: "AI No response"
-                _aiResponse.value = content
-                saveAiChatRecord(content, "assistant", "Free Chat: $query", settings.aiModel)
-            } catch (e: Exception) {
-                _aiResponse.value = "Error: ${e.message}"
-            } finally {
-                _aiIsLoading.value = false
-            }
+        launchCoachRequest(settings, "Free Chat: $query") {
+            val history = if (settings.useLocalAiCache) dao.getRecentAiChatRecords(settings.maxHistoryLimit) else emptyList()
+            val memory = if (settings.useLocalAiCache) dao.getAiMemorySync()?.longTermContext else null
+            if (imageUri != null) {
+                val b64 = compressImageToBase64(context, imageUri) ?: throw AiStreamFailure("image_error")
+                PromptManager.buildMultimodalChatPrompt(context, query, b64)
+            } else PromptManager.buildFreeChatPrompt(context, query, history, memory)
         }
     }
 
@@ -1201,11 +1199,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 val history = dao.getRecentAiChatRecords(20)
                 if (history.isEmpty()) return@launch
                 val messages = PromptManager.buildMemorySummaryPrompt(context, history)
-                val res = getAiApi(settings).generateChatCompletion(
-                    "Bearer ${settings.aiApiKey}",
-                    ChatRequest(model = settings.aiModel, messages = messages)
-                )
-                val summary = res.choices.firstOrNull()?.message?.content?.toString()
+                val summary = runAiCompletion(settings, messages)
                 if (!summary.isNullOrBlank()) dao.saveAiMemory(
                     AiMemory(
                         0,
@@ -1213,9 +1207,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         System.currentTimeMillis()
                     )
                 )
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
+            } catch (e: CancellationException) { throw e
+            } catch (_: Exception) { /* Never persist partial memory. */ }
         }
     }
 
@@ -1229,25 +1222,23 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         onResult: (String) -> Unit
     ) {
         val settings = userProfile.value
-        if (settings.aiApiKey.isBlank()) return
+        if (settings.aiApiKey.isBlank() || _aiIsLoading.value || !_aiCanImport.value || _isGeneratingCsv.value) return
         _isGeneratingCsv.value = true
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val messages = PromptManager.buildCsvPlanPrompt(context, advice, userFeedback)
-                val res = getAiApi(settings).generateChatCompletion(
-                    "Bearer ${settings.aiApiKey}",
-                    ChatRequest(model = settings.aiModel, messages = messages)
-                )
-                val clean = (res.choices.firstOrNull()?.message?.content?.toString() ?: "").replace(
+                val content = runAiCompletion(settings, messages)
+                val clean = content.replace(
                     "```csv",
                     ""
                 ).replace("```", "").trim()
                 withContext(Dispatchers.Main) { onResult(clean) }
-            } catch (e: Exception) {
+            } catch (e: CancellationException) { throw e
+            } catch (_: Exception) {
                 withContext(Dispatchers.Main) {
                     Toast.makeText(
                         context,
-                        "CSV Gen Error: ${e.message}",
+                        context.getString(R.string.coach_stream_failed),
                         Toast.LENGTH_SHORT
                     ).show()
                 }

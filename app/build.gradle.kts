@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -6,21 +8,35 @@ plugins {
 //    id("kotlin-kapt")
 }
 
+val rustHistoryEnabled = providers.gradleProperty("rustHistory").orElse("true").get().toBooleanStrict()
+
 android {
     namespace = "com.example.myfit"
     compileSdk = 36
+    ndkVersion = "28.2.13676358"
 
     defaultConfig {
+        buildConfigField("boolean", "RUST_HISTORY_ENABLED", rustHistoryEnabled.toString())
         applicationId = "com.example.myfit"
-        minSdk = 26
+        ndk {
+            val previewAbi = providers.gradleProperty("previewAbi").orNull
+            require(previewAbi == null || previewAbi in listOf("armeabi-v7a", "arm64-v8a", "x86_64"))
+            abiFilters += previewAbi?.let { listOf(it) } ?: listOf("armeabi-v7a", "arm64-v8a", "x86_64")
+        }
+        minSdk = 28
         targetSdk = 35
-        versionCode = 6200
-        versionName = "6.2.0"
+        versionCode = 6300
+        versionName = "6.3.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildTypes {
+        create("preview") {
+            initWith(getByName("release"))
+            signingConfig = signingConfigs.getByName("debug")
+            matchingFallbacks += listOf("release")
+        }
         release {
             isMinifyEnabled = false
             proguardFiles(
@@ -29,12 +45,17 @@ android {
             )
         }
     }
+    if (rustHistoryEnabled) sourceSets.getByName("main").jniLibs.srcDir(layout.buildDirectory.dir("generated/rustJniLibs"))
+    sourceSets.getByName("androidTest").assets.srcDir(layout.buildDirectory.dir("generated/mediaBenchAssets"))
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
+    // Preserve the pre-API-28 APK compression policy after raising minSdk.
+    packaging { dex { useLegacyPackaging = true } }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
@@ -45,6 +66,7 @@ kotlin {
 }
 
 dependencies {
+    implementation(project(":flutter"))
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
@@ -92,3 +114,33 @@ dependencies {
 
 
 }
+// No checked-in native binaries. -PrustHistory=false builds the existing Kotlin fallback.
+val rustAbis = providers.gradleProperty("previewAbi").orElse("armeabi-v7a,arm64-v8a,x86_64")
+val rustNdk = providers.environmentVariable("ANDROID_NDK_HOME").orElse(providers.provider {
+    val local = Properties()
+    rootProject.file("local.properties").takeIf { it.exists() }?.inputStream()?.use { local.load(it) }
+    val sdk = local.getProperty("sdk.dir") ?: System.getenv("ANDROID_HOME") ?: "${System.getenv("LOCALAPPDATA")}/Android/Sdk"
+    File(sdk, "ndk/28.2.13676358").path
+})
+val rustLocalProperties = Properties().apply {
+    rootProject.file("rust.local.properties").takeIf { it.exists() }?.inputStream()?.use { load(it) }
+}
+val buildRustHistory by tasks.registering(Exec::class) {
+    for ((key, envName) in mapOf("cargo.path" to "GYMNOTA_CARGO", "cargo.home" to "CARGO_HOME", "rustup.home" to "RUSTUP_HOME")) {
+        rustLocalProperties.getProperty(key)?.let { environment(envName, it) }
+    }
+    rustLocalProperties.getProperty("cargo.path")?.let {
+        environment("Path", File(it).parent + File.pathSeparator + System.getenv("Path"))
+    }
+    inputs.property("localRustConfig", rustLocalProperties.toString())
+    onlyIf { rustHistoryEnabled }
+    inputs.dir(rootProject.file("rust/history_core/src"))
+    inputs.files(rootProject.file("rust/history_core/Cargo.toml"), rootProject.file("rust/history_core/Cargo.lock"), rootProject.file("tools/build_rust.ps1"))
+    inputs.property("abis", rustAbis)
+    inputs.property("ndk", rustNdk)
+    outputs.dir(layout.buildDirectory.dir("generated/rustJniLibs"))
+    commandLine("powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", rootProject.file("tools/build_rust.ps1"),
+        "-Abis", rustAbis.get(), "-OutputDir", layout.buildDirectory.dir("generated/rustJniLibs").get().asFile,
+        "-Ndk", rustNdk.get())
+}
+tasks.named("preBuild").configure { dependsOn(buildRustHistory) }
