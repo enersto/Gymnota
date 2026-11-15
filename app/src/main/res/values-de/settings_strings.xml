@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_old_title">Alte Einstellungen</string>
+    <string name="settings_ai_saved">Konfiguration gespeichert</string>
+    <string name="settings_ai_connection_error">Verbindung fehlgeschlagen</string>
+</resources>

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="coach_stream_connecting">接続中…</string>
+    <string name="coach_stream_thinking">推論を生成中…</string>
+    <string name="coach_stream_answering">回答を生成中…</string>
+    <string name="coach_stream_stop">生成を停止</string>
+    <string name="coach_stream_stopped">停止しました</string>
+    <string name="coach_stream_retry">再試行</string>
+    <string name="coach_stream_incomplete">回答が完了していません</string>
+    <string name="coach_stream_reasoning_summary">推論の要約</string>
+    <string name="coach_stream_provider_reasoning">サービスが返した推論</string>
+    <string name="coach_stream_reasoning_unavailable">このサービスまたはモデルは表示可能な推論を返していません。</string>
+    <string name="coach_stream_enabled">回答を逐次表示</string>
+    <string name="coach_stream_compat_hint">未対応の場合はオフにして、もう一度送信してください。</string>
+    <string name="coach_stream_failed">生成に失敗しました。ネットワークとモデル設定を確認してください。</string>
+    <string name="coach_stream_unsupported">サービスから逐次データが返されませんでした。オフにして再送信してください。</string>
+</resources>

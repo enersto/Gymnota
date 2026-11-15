@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_old_title">旧バージョンの設定</string>
+    <string name="settings_ai_saved">設定を保存しました</string>
+    <string name="settings_ai_connection_error">接続に失敗しました</string>
+</resources>

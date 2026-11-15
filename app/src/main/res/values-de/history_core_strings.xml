@@ -1,0 +1,11 @@
+<resources>
+    <string name="history_stats">Trainingsübersicht</string>
+    <string name="history_stats_days">Trainingstage</string>
+    <string name="history_stats_tasks">Abgeschlossene Übungen</string>
+    <string name="history_stats_sets">Sätze</string>
+    <string name="history_stats_volume">Volumen (kg·Wdh.)</string>
+    <string name="history_stats_duration">Dauer (Min.)</string>
+    <string name="history_stats_max_weight">Max. protokolliertes Gewicht (kg)</string>
+    <string name="history_stats_fallback">Statistik nicht verfügbar; Einträge bleiben zugänglich</string>
+    <string name="history_stats_partial">Einige Werte sind nicht eindeutig. Die Statistik berücksichtigt nur auswertbare Werte.</string>
+</resources>

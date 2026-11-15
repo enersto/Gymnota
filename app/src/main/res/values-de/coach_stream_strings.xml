@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="coach_stream_connecting">Verbindung wird hergestellt…</string>
+    <string name="coach_stream_thinking">Überlegungen werden erstellt…</string>
+    <string name="coach_stream_answering">Antwort wird erstellt…</string>
+    <string name="coach_stream_stop">Generierung stoppen</string>
+    <string name="coach_stream_stopped">Gestoppt</string>
+    <string name="coach_stream_retry">Erneut versuchen</string>
+    <string name="coach_stream_incomplete">Unvollständige Antwort</string>
+    <string name="coach_stream_reasoning_summary">Zusammenfassung der Überlegungen</string>
+    <string name="coach_stream_provider_reasoning">Vom Dienst bereitgestellte Überlegungen</string>
+    <string name="coach_stream_reasoning_unavailable">Dieser Dienst oder dieses Modell hat keine darstellbaren Überlegungen bereitgestellt.</string>
+    <string name="coach_stream_enabled">Antworten schrittweise anzeigen</string>
+    <string name="coach_stream_compat_hint">Falls nicht unterstützt, ausschalten und erneut senden.</string>
+    <string name="coach_stream_failed">Antwort fehlgeschlagen. Netzwerk und Modelleinstellungen prüfen und erneut versuchen.</string>
+    <string name="coach_stream_unsupported">Der Dienst hat keinen Datenstrom geliefert. Ausschalten und erneut senden.</string>
+</resources>

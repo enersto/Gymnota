@@ -1,0 +1,6 @@
+<resources>
+    <string name="charts_unavailable">Charts are unavailable. Records remain accessible; return to the original page for charts of current records.</string>
+    <string name="charts_data">View data points</string>
+    <string name="charts_low">Low</string>
+    <string name="charts_high">High</string>
+</resources>

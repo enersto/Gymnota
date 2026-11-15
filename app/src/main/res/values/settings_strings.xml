@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_old_title">旧版设置</string>
+    <string name="settings_ai_saved">配置已保存</string>
+    <string name="settings_ai_connection_error">连接失败</string>
+</resources>

@@ -1,0 +1,12 @@
+<resources>
+    <string name="flutter_history">Flutter-Verlauf</string>
+    <string name="flutter_backup">Sicherung ansehen</string>
+    <string name="flutter_current">Aktuelle Einträge</string>
+    <string name="flutter_refresh">Aktualisieren</string>
+    <string name="flutter_readonly">Schreibgeschützte Ansicht. Eine ausgewählte Sicherung ersetzt keine persönlichen Daten.</string>
+    <string name="flutter_error">Laden fehlgeschlagen. Erneut versuchen oder gültige Sicherung wählen.</string>
+    <string name="flutter_retry">Erneut versuchen</string>
+    <string name="flutter_native">Zur ursprünglichen Seite</string>
+    <string name="flutter_minutes">Min.</string>
+    <string name="flutter_history_search">Datum oder Übungsname suchen</string>
+</resources>

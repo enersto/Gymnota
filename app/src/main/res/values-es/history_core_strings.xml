@@ -1,0 +1,11 @@
+<resources>
+    <string name="history_stats">Resumen de entrenamiento</string>
+    <string name="history_stats_days">Días de entrenamiento</string>
+    <string name="history_stats_tasks">Ejercicios completados</string>
+    <string name="history_stats_sets">Series</string>
+    <string name="history_stats_volume">Volumen (kg·rep.)</string>
+    <string name="history_stats_duration">Duración (min)</string>
+    <string name="history_stats_max_weight">Peso máximo registrado (kg)</string>
+    <string name="history_stats_fallback">Estadísticas no disponibles; los registros siguen accesibles</string>
+    <string name="history_stats_partial">Algunos valores son ambiguos. Las estadísticas solo incluyen valores interpretables.</string>
+</resources>

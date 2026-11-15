@@ -1,0 +1,12 @@
+<resources>
+    <string name="flutter_history">Flutter 历史</string>
+    <string name="flutter_backup">查看备份副本</string>
+    <string name="flutter_current">当前记录</string>
+    <string name="flutter_refresh">刷新</string>
+    <string name="flutter_readonly">只读展示；选择备份不会恢复或覆盖个人数据。</string>
+    <string name="flutter_error">加载失败，请重试或选择有效的备份。</string>
+    <string name="flutter_retry">重试</string>
+    <string name="flutter_native">返回原有页面</string>
+    <string name="flutter_minutes">分钟</string>
+    <string name="flutter_history_search">搜索日期或动作名称</string>
+</resources>

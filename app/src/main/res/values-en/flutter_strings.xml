@@ -1,0 +1,12 @@
+<resources>
+    <string name="flutter_history">Flutter history</string>
+    <string name="flutter_backup">View backup copy</string>
+    <string name="flutter_current">Current records</string>
+    <string name="flutter_refresh">Refresh</string>
+    <string name="flutter_readonly">Read-only view. Selecting a backup does not restore or replace personal data.</string>
+    <string name="flutter_error">Unable to load. Retry or select a valid backup.</string>
+    <string name="flutter_retry">Retry</string>
+    <string name="flutter_native">Return to original page</string>
+    <string name="flutter_minutes">min</string>
+    <string name="flutter_history_search">Search dates or exercise names</string>
+</resources>

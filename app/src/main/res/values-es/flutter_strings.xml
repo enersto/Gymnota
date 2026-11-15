@@ -1,0 +1,12 @@
+<resources>
+    <string name="flutter_history">Historial Flutter</string>
+    <string name="flutter_backup">Ver copia de seguridad</string>
+    <string name="flutter_current">Registros actuales</string>
+    <string name="flutter_refresh">Actualizar</string>
+    <string name="flutter_readonly">Vista de solo lectura. La copia seleccionada no sustituye los datos personales.</string>
+    <string name="flutter_error">No se pudo cargar. Reintenta o selecciona una copia válida.</string>
+    <string name="flutter_retry">Reintentar</string>
+    <string name="flutter_native">Volver a la página original</string>
+    <string name="flutter_minutes">min</string>
+    <string name="flutter_history_search">Buscar fechas o nombres de ejercicios</string>
+</resources>

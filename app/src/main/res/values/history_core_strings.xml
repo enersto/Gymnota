@@ -1,0 +1,11 @@
+<resources>
+    <string name="history_stats">训练统计</string>
+    <string name="history_stats_days">训练天数</string>
+    <string name="history_stats_tasks">已完成动作</string>
+    <string name="history_stats_sets">组数</string>
+    <string name="history_stats_volume">训练量（kg·次）</string>
+    <string name="history_stats_duration">时长（分钟）</string>
+    <string name="history_stats_max_weight">最大记录重量（kg）</string>
+    <string name="history_stats_fallback">统计暂不可用，记录仍可查看</string>
+    <string name="history_stats_partial">部分记录的数值格式不明确，统计仅包含可解析的数值。</string>
+</resources>

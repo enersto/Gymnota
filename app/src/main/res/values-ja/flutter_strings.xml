@@ -1,0 +1,12 @@
+<resources>
+    <string name="flutter_history">Flutter 履歴</string>
+    <string name="flutter_backup">バックアップを表示</string>
+    <string name="flutter_current">現在の記録</string>
+    <string name="flutter_refresh">更新</string>
+    <string name="flutter_readonly">読み取り専用です。バックアップを選んでも個人データは復元・上書きされません。</string>
+    <string name="flutter_error">読み込めませんでした。再試行するか有効なバックアップを選んでください。</string>
+    <string name="flutter_retry">再試行</string>
+    <string name="flutter_native">元の画面へ戻る</string>
+    <string name="flutter_minutes">分</string>
+    <string name="flutter_history_search">日付または動作名で検索</string>
+</resources>

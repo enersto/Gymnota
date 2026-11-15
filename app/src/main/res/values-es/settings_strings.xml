@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_old_title">Ajustes anteriores</string>
+    <string name="settings_ai_saved">Configuración guardada</string>
+    <string name="settings_ai_connection_error">Error de conexión</string>
+</resources>

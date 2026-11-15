@@ -1,0 +1,11 @@
+<resources>
+    <string name="history_stats">トレーニング集計</string>
+    <string name="history_stats_days">トレーニング日数</string>
+    <string name="history_stats_tasks">完了した動作</string>
+    <string name="history_stats_sets">セット数</string>
+    <string name="history_stats_volume">総負荷量（kg・回）</string>
+    <string name="history_stats_duration">時間（分）</string>
+    <string name="history_stats_max_weight">最大記録重量（kg）</string>
+    <string name="history_stats_fallback">集計を利用できませんが、記録は表示できます</string>
+    <string name="history_stats_partial">形式が不明確な値があります。集計には解析可能な値のみを含みます。</string>
+</resources>

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="coach_stream_connecting">Conectando…</string>
+    <string name="coach_stream_thinking">Generando razonamiento…</string>
+    <string name="coach_stream_answering">Respondiendo…</string>
+    <string name="coach_stream_stop">Detener generación</string>
+    <string name="coach_stream_stopped">Detenido</string>
+    <string name="coach_stream_retry">Reintentar</string>
+    <string name="coach_stream_incomplete">Respuesta incompleta</string>
+    <string name="coach_stream_reasoning_summary">Resumen del razonamiento</string>
+    <string name="coach_stream_provider_reasoning">Razonamiento proporcionado por el servicio</string>
+    <string name="coach_stream_reasoning_unavailable">Este servicio o modelo no proporcionó razonamiento para mostrar.</string>
+    <string name="coach_stream_enabled">Respuestas en tiempo real</string>
+    <string name="coach_stream_compat_hint">Si el servicio no lo admite, desactiva esta opción y vuelve a enviar.</string>
+    <string name="coach_stream_failed">No se pudo generar la respuesta. Revisa la red y la configuración del modelo.</string>
+    <string name="coach_stream_unsupported">El servicio no devolvió datos en tiempo real. Desactiva esta opción y vuelve a enviar.</string>
+</resources>

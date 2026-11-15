@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="coach_stream_connecting">Connecting…</string>
+    <string name="coach_stream_thinking">Generating reasoning…</string>
+    <string name="coach_stream_answering">Answering…</string>
+    <string name="coach_stream_stop">Stop generating</string>
+    <string name="coach_stream_stopped">Stopped</string>
+    <string name="coach_stream_retry">Retry</string>
+    <string name="coach_stream_incomplete">Incomplete answer</string>
+    <string name="coach_stream_reasoning_summary">Reasoning summary</string>
+    <string name="coach_stream_provider_reasoning">Provider reasoning content</string>
+    <string name="coach_stream_reasoning_unavailable">This service or model did not provide reasoning to display.</string>
+    <string name="coach_stream_enabled">Stream answers</string>
+    <string name="coach_stream_compat_hint">If unsupported, turn streaming off and send again manually.</string>
+    <string name="coach_stream_failed">Generation failed. Check your network and model settings before retrying.</string>
+    <string name="coach_stream_unsupported">The service did not return a stream. Turn streaming off and send again.</string>
+</resources>
