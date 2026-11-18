@@ -3,6 +3,30 @@ pub mod ai_sessions;
 pub mod ai_stream;
 #[cfg(feature = "catalog-sqlite")]
 pub mod catalog;
+#[cfg(feature = "catalog-sqlite")]
+pub mod routine;
+pub mod workout;
+pub mod timer;
+#[cfg(feature = "catalog-sqlite")]
+pub mod workout_store;
+#[cfg(feature = "catalog-sqlite")]
+pub mod history_store;
+#[cfg(feature = "catalog-sqlite")]
+pub mod live_store;
+#[cfg(feature = "catalog-sqlite")]
+mod template_store;
+#[cfg(feature = "catalog-sqlite")]
+mod routine_import;
+#[cfg(feature = "catalog-sqlite")]
+mod settings_store;
+#[cfg(feature = "catalog-sqlite")]
+mod ai_store;
+#[cfg(feature = "catalog-sqlite")]
+pub mod backup;
+#[cfg(feature = "catalog-sqlite")]
+pub mod migrations;
+#[cfg(feature = "catalog-sqlite")]
+pub mod bootstrap;
 mod charts;
 use serde_json::{json, Value};
 use std::collections::{BTreeMap, BTreeSet};
@@ -405,6 +429,114 @@ mod android {
         sys::jstring,
         JNIEnv,
     };
+    #[no_mangle]
+    pub extern "system" fn Java_com_example_myfit_data_RustTimer_transitionNative(
+        mut env: JNIEnv, _class: JClass, input: JString,
+    ) -> jstring {
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            let request: String = env.get_string(&input).map_err(|_| "invalid_jni_string")?.into();
+            super::timer::execute(&request)
+        }));
+        match result {
+            Ok(Ok(value)) => env.new_string(value).map(|s| s.into_raw()).unwrap_or(std::ptr::null_mut()),
+            _ => std::ptr::null_mut(),
+        }
+    }
+
+    #[no_mangle]
+    pub extern "system" fn Java_com_example_myfit_data_RustWorkout_initializeNative(
+        mut env: JNIEnv, _class: JClass, input: JString,
+    ) -> jstring {
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            let request: String = env.get_string(&input).map_err(|_| "invalid_jni_string")?.into();
+            super::bootstrap::execute(&request)
+        }));
+        let output = match result {
+            Ok(Ok(value)) => value,
+            Ok(Err(error)) => serde_json::json!({"error": error}).to_string(),
+            Err(_) => "{\"error\":\"bootstrap_panic\"}".into(),
+        };
+        env.new_string(output).map(|s| s.into_raw()).unwrap_or(std::ptr::null_mut())
+    }
+
+    #[no_mangle]
+    pub extern "system" fn Java_com_example_myfit_data_RustWorkout_backupNative(
+        mut env: JNIEnv, _class: JClass, input: JString,
+    ) -> jstring {
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            let request: String = env.get_string(&input).map_err(|_| "invalid_jni_string")?.into();
+            super::backup::execute(&request)
+        }));
+        let output = match result {
+            Ok(Ok(value)) => value,
+            Ok(Err(error)) => serde_json::json!({"error": error}).to_string(),
+            Err(_) => "{\"error\":\"backup_panic\"}".into(),
+        };
+        env.new_string(output).map(|s| s.into_raw()).unwrap_or(std::ptr::null_mut())
+    }
+
+    #[no_mangle]
+    pub extern "system" fn Java_com_example_myfit_data_RustWorkout_queryNative(
+        mut env: JNIEnv, _class: JClass, input: JString,
+    ) -> jstring {
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            let request: String = env.get_string(&input).map_err(|_| "invalid_jni_string")?.into();
+            super::live_store::execute(&request)
+        }));
+        let output = match result {
+            Ok(Ok(value)) => value,
+            Ok(Err(error)) => serde_json::json!({"error": error}).to_string(),
+            Err(_) => "{\"error\":\"query_panic\"}".into(),
+        };
+        env.new_string(output).map(|s| s.into_raw()).unwrap_or(std::ptr::null_mut())
+    }
+
+    #[no_mangle]
+    pub extern "system" fn Java_com_example_myfit_data_RustWorkout_historyNative(
+        mut env: JNIEnv, _class: JClass, input: JString,
+    ) -> jstring {
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            let path: String = env.get_string(&input).map_err(|_| "invalid_jni_string")?.into();
+            super::history_store::process(&path)
+        }));
+        let output = match result {
+            Ok(Ok(value)) => value,
+            Ok(Err(error)) => serde_json::json!({"error": error}).to_string(),
+            Err(_) => "{\"error\":\"history_store_panic\"}".to_string(),
+        };
+        env.new_string(output).map(|s| s.into_raw()).unwrap_or(std::ptr::null_mut())
+    }
+
+    #[no_mangle]
+    pub extern "system" fn Java_com_example_myfit_data_RustWorkout_storeNative(
+        mut env: JNIEnv, _class: JClass, input: JString,
+    ) -> jstring {
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            let text: String = env.get_string(&input).map_err(|_| "invalid_jni_string")?.into();
+            super::workout_store::execute(&text)
+        }));
+        let output = match result {
+            Ok(Ok(value)) => value,
+            Ok(Err(error)) => serde_json::json!({"error": error}).to_string(),
+            Err(_) => "{\"error\":\"workout_store_panic\"}".to_string(),
+        };
+        env.new_string(output).map(|s| s.into_raw()).unwrap_or(std::ptr::null_mut())
+    }
+
+    #[no_mangle]
+    pub extern "system" fn Java_com_example_myfit_data_RustWeeklyRoutine_executeNative(
+        mut env: JNIEnv, _class: JClass, input: JString,
+    ) -> jstring {
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            let text: String = env.get_string(&input).map_err(|_| "invalid_jni_string")?.into();
+            super::routine::execute(&text)
+        }));
+        match result {
+            Ok(Ok(text)) => env.new_string(text).map(|s| s.into_raw()).unwrap_or(std::ptr::null_mut()),
+            _ => std::ptr::null_mut(),
+        }
+    }
+
     #[no_mangle]
     pub extern "system" fn Java_com_example_myfit_data_ai_RustAiStream_createNative(
         mut env: JNIEnv,

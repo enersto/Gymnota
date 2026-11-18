@@ -34,7 +34,7 @@ object NotificationHelper {
     }
 
     fun buildNotification(context: Context, taskName: String?, endTimeMillis: Long?): Notification {
-        val intent = Intent(context, MainActivity::class.java).apply {
+        val intent = Intent(context, com.example.myfit.flutter.FlutterLibraryActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_BROUGHT_TO_FRONT or Intent.FLAG_ACTIVITY_SINGLE_TOP
         }
         val pendingIntent = PendingIntent.getActivity(

@@ -402,4 +402,5 @@
     <string name="remove_exercise_photo">写真を削除</string>
     <string name="catalog_personal_title">マイ種目</string>
     <string name="catalog_use_exercise">この種目を使用</string>
+    <string name="msg_save_failed">動作を保存できませんでした。もう一度お試しください。</string>
 </resources>

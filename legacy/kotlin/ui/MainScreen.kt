@@ -168,13 +168,9 @@ fun MainScreen(viewModel: MainViewModel) {
                             scheduleRequest = scheduleRequest,
                             modifier = Modifier.fillMaxSize().statusBarsPadding()
                                 .padding(bottom = if (useGlassTabs) 88.dp else 0.dp),
-                            onOpenOld = { navController.navigate("settings_old") { launchSingleTop = true } },
                             onBack = { navController.popBackStack() },
                             fallback = { ScheduleScreen(navController, viewModel) }
                         )
-                    }
-                    composable("settings_old") {
-                        ScheduleScreen(navController, viewModel, oldVersion = true)
                     }
                     composable(Screen.Exercises.route) {
                         ExerciseManagerScreen(navController = navController, viewModel = viewModel)

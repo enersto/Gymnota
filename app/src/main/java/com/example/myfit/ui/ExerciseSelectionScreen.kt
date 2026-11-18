@@ -35,7 +35,10 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ExerciseSelectionScreen(viewModel: MainViewModel, navController: NavController) {
+fun ExerciseSelectionScreen(
+    viewModel: MainViewModel, navController: NavController,
+    onClose: () -> Unit = { navController.popBackStack() }
+) {
     val templates by viewModel.allTemplates.collectAsState(initial = emptyList())
     val context = LocalContext.current
 
@@ -80,7 +83,7 @@ fun ExerciseSelectionScreen(viewModel: MainViewModel, navController: NavControll
                         CenterAlignedTopAppBar(
                             title = { Text(stringResource(R.string.title_select_exercise), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold) },
                             navigationIcon = {
-                                IconButton(onClick = { navController.popBackStack() }) {
+                                IconButton(onClick = { onClose() }) {
                                     Icon(
                                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                                         contentDescription = "Back"
@@ -150,7 +153,7 @@ fun ExerciseSelectionScreen(viewModel: MainViewModel, navController: NavControll
                         context.getString(R.string.msg_added_to_plan, template.name),
                         Toast.LENGTH_SHORT
                     ).show()
-                    navController.popBackStack()
+                    onClose()
                 },
                 onDelete = null
             )

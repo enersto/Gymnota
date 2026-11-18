@@ -106,8 +106,7 @@ void main() {
       expect(restore.height, closeTo(backup.height, 1));
       expect(restore.height, greaterThanOrEqualTo(60));
       expect(tester.takeException(), isNull);
-      await tester.tap(find.text('Old settings').hitTestable());
-      expect(actions.last, {'action': 'old', 'value': null});
+      expect(find.text('Old settings'), findsNothing);
 
       await tester.tap(find.text('Datenbank wiederherstellen').hitTestable());
       expect(actions.last, {'action': 'restore', 'value': null});

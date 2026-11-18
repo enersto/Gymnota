@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="root_preview_title">Flutter 预览</string>
+    <string name="preview_daily_read_only">打卡预览为只读</string>
+    <string name="preview_daily_empty">今天还没有训练动作</string>
+    <string name="preview_open_settings">打开正式版设置</string>
+    <string name="preview_workout_title">打卡预览</string>
+</resources>

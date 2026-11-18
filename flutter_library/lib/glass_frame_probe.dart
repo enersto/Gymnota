@@ -47,7 +47,9 @@ class GlassFrameProbe {
 class GlassPopupProbe {
   static bool active = false;
   static double? firstPaintMs, fullyVisibleMs;
-  static Map<String,Object> get values => {'popupActive':active,
-    if(firstPaintMs!=null)'popupFirstPaintMs':firstPaintMs!,
-    if(fullyVisibleMs!=null)'popupFullyVisibleMs':fullyVisibleMs!};
+  static Map<String, Object> get values => {
+    'popupActive': active,
+    if (firstPaintMs != null) 'popupFirstPaintMs': firstPaintMs!,
+    if (fullyVisibleMs != null) 'popupFullyVisibleMs': fullyVisibleMs!,
+  };
 }

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="root_preview_title">Flutter preview</string>
+    <string name="preview_daily_read_only">Read-only workout preview</string>
+    <string name="preview_daily_empty">No exercises planned for today</string>
+    <string name="preview_open_settings">Open regular settings</string>
+    <string name="preview_workout_title">Workout preview</string>
+</resources>

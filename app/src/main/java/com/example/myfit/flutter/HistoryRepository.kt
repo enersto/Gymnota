@@ -1,10 +1,11 @@
 package com.example.myfit.flutter
 
 import android.content.Context
-import android.os.Trace
 import androidx.room.InvalidationTracker
 import androidx.room.withTransaction
+import com.example.myfit.BuildConfig
 import com.example.myfit.data.AppDatabase
+import com.example.myfit.data.RustWorkoutStorage
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import java.util.concurrent.atomic.AtomicLong
@@ -22,11 +23,27 @@ internal object HistoryRepository {
         val app = context.applicationContext
         scope.launch {
           try {
+            if (BuildConfig.RUST_HISTORY_ENABLED) {
+                launch {
+                    RustWorkoutStorage.historyRevision.collect { nativeRevision ->
+                        refresh(app, immediate = nativeRevision == 0L)
+                    }
+                }
+                com.example.myfit.data.RustLiveQueries.observe<com.example.myfit.model.AppSetting>(app,
+                    "app_settings", RustWorkoutStorage.profileRevision, "profile")
+                    .map { rows -> rows.firstOrNull()?.let { Triple(it.age, it.height, it.gender) } }
+                    .distinctUntilChanged().drop(1).collect { refresh(app) }
+                return@launch
+            }
             val db = AppDatabase.getDatabase(app)
             db.invalidationTracker.addObserver(object : InvalidationTracker.Observer("workout_tasks", "weight_records") {
                 override fun onInvalidated(tables: Set<String>) { refresh(app) }
             })
-            refresh(app, immediate = true)
+            launch {
+                RustWorkoutStorage.historyRevision.collect { revision ->
+                    refresh(app, immediate = revision == 0L)
+                }
+            }
             db.workoutDao().getAppSettings()
                 .map { setting -> setting?.let { Triple(it.age, it.height, it.gender) } }
                 .distinctUntilChanged()
@@ -41,18 +58,17 @@ internal object HistoryRepository {
         refreshJob = scope.launch {
             if (!immediate) delay(80)
             try {
-                val db = AppDatabase.getDatabase(context)
-                val raw = db.withTransaction {
-                    Trace.beginSection("Gymnota: read history from Room")
-                    try { HistorySnapshot.read(encodedSets = true, chartFields = true) { sql -> db.openHelper.writableDatabase.query(sql) } }
-                    finally { Trace.endSection() }
-                }
-                val snapshot = withContext(Dispatchers.Default) {
-                    Trace.beginSection("Gymnota: build history snapshot")
-                    try { RustHistoryCore.process(raw) }
-                    finally { Trace.endSection() }
-                } +
-                    mapOf("revision" to revision.incrementAndGet())
+                val snapshot = if (BuildConfig.RUST_HISTORY_ENABLED) {
+                    RustHistoryCore.decodeOutput(RustWorkoutStorage.history(context))
+                } else {
+                    val db = AppDatabase.getDatabase(context)
+                    val raw = db.withTransaction {
+                        HistorySnapshot.read(encodedSets = true, chartFields = true) { sql ->
+                            db.openHelper.writableDatabase.query(sql)
+                        }
+                    }
+                    withContext(Dispatchers.Default) { RustHistoryCore.process(raw) }
+                } + mapOf("revision" to revision.incrementAndGet())
                 ensureActive()
                 state.value = Result.success(snapshot)
             } catch (e: CancellationException) { throw e }

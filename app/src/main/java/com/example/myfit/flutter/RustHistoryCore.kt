@@ -4,7 +4,7 @@ import com.example.myfit.BuildConfig
 import org.json.JSONArray
 import org.json.JSONObject
 
-/** JNI stays at the existing Android bridge. Rust owns no database handles or Android objects. */
+/** Decodes the Rust history result for Flutter and legacy callers. */
 internal object RustHistoryCore {
     private val loaded by lazy {
         if (!BuildConfig.RUST_HISTORY_ENABLED) false
@@ -16,17 +16,22 @@ internal object RustHistoryCore {
     fun process(raw: Map<String, Any>, enableRust: Boolean = true): Map<String, Any?> {
         if (enableRust && loaded) {
             try {
-                val output = JSONObject(processNative(JSONObject(raw).toString()))
-                check(output.optInt("schemaVersion") == 1 && !output.has("error"))
-                val result = value(output.getJSONObject("snapshot")) as Map<String, Any?>
-                return result + mapOf("charts" to value(output.getJSONObject("charts")), "engine" to "rust", "summary" to value(output.getJSONObject("summary")),
-                    "byDay" to value(output.getJSONArray("byDay")), "byMonth" to value(output.getJSONArray("byMonth")),
-                    "byExercise" to value(output.getJSONArray("byExercise")), "warnings" to value(output.getJSONArray("warnings")),
-                    "legacyCharts" to value(output.getJSONArray("legacyCharts")))
+                return decodeOutput(processNative(JSONObject(raw).toString()))
             } catch (_: Exception) { /* Existing snapshot decoding remains the availability fallback. */ }
             catch (_: LinkageError) { }
         }
         return decodeLegacy(raw) + mapOf("engine" to "kotlin-fallback")
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    fun decodeOutput(text: String): Map<String, Any?> {
+        val output = JSONObject(text)
+        check(output.optInt("schemaVersion") == 1 && !output.has("error"))
+        val result = value(output.getJSONObject("snapshot")) as Map<String, Any?>
+        return result + mapOf("charts" to value(output.getJSONObject("charts")), "engine" to "rust", "summary" to value(output.getJSONObject("summary")),
+            "byDay" to value(output.getJSONArray("byDay")), "byMonth" to value(output.getJSONArray("byMonth")),
+            "byExercise" to value(output.getJSONArray("byExercise")), "warnings" to value(output.getJSONArray("warnings")),
+            "legacyCharts" to value(output.getJSONArray("legacyCharts")))
     }
 
     @Suppress("UNCHECKED_CAST")

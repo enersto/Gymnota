@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="exercise_name_required">请输入动作名称</string>
+    <string name="exercise_media_separate">自定义图片与示意动画分开保存，移除其中一个不会删除另一个。</string>
+    <string name="exercise_remove_animation">移除示意动画</string>
+    <string name="exercise_photo_title">自定义图片</string>
+</resources>

@@ -167,17 +167,29 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun workoutDao(): WorkoutDao
 
     companion object {
+        const val FILE_NAME = "myfit_v7.db"
+
         @Volatile private var instance: AppDatabase? = null
 
-        fun getDatabase(context: Context): AppDatabase {
-            return instance ?: synchronized(this) {
-                Room.databaseBuilder(context, AppDatabase::class.java, "myfit_v7.db")
+        private fun builder(context: Context, name: String): RoomDatabase.Builder<AppDatabase> =
+            Room.databaseBuilder(context, AppDatabase::class.java, name)
                     .addMigrations(MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11,
                         MIGRATION_11_12, MIGRATION_12_13,MIGRATION_13_14, MIGRATION_14_15,
                         MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19
                         )
-                    .addCallback(PrepopulateCallback(context.applicationContext))
-                    .build().also { instance = it }
+
+        internal fun openForRestore(context: Context, name: String): AppDatabase = builder(context, name).build()
+
+        fun getDatabase(context: Context): AppDatabase {
+            check(!com.example.myfit.BuildConfig.RUST_HISTORY_ENABLED) {
+                "Room live database is disabled; use RustWorkoutStorage"
+            }
+            return instance ?: synchronized(this) {
+                instance ?: run {
+                    val builder = builder(context, FILE_NAME)
+                    builder.addCallback(PrepopulateCallback(context.applicationContext))
+                    builder.build().also { instance = it }
+                }
             }
         }
     }

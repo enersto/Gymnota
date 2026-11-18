@@ -2,6 +2,7 @@ package com.example.myfit.data
 
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
+import android.database.sqlite.SQLiteDatabaseCorruptException
 import com.example.myfit.model.ExerciseTemplate
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -41,7 +42,7 @@ class ExerciseCatalog(context: Context) {
     private val context = context.applicationContext
 
     companion object {
-        private const val FILE_NAME = "gymnota-catalog-v4.sqlite"
+        private const val FILE_NAME = "gymnota-catalog-v5.sqlite"
         private val installLock = Any()
         private data class QueryKey(val language: String, val query: String, val part: String?)
         private val queryLock = Mutex()
@@ -57,11 +58,11 @@ class ExerciseCatalog(context: Context) {
 
     }
 
-    private fun databaseFile(): File = synchronized(installLock) {
+    private fun databaseFile(reinstall: Boolean = false): File = synchronized(installLock) {
         val directory = File(context.noBackupFilesDir, "exercise_catalog")
         check(directory.isDirectory || directory.mkdirs()) { "Cannot create catalogue directory" }
         val target = File(directory, FILE_NAME)
-        if (!target.exists()) {
+        if (reinstall || !target.exists()) {
             val temporary = File(directory, "$FILE_NAME.tmp")
             try {
                 context.assets.open("catalog/$FILE_NAME.bin").use { asset ->
@@ -82,6 +83,11 @@ class ExerciseCatalog(context: Context) {
                 temporary.delete()
             }
         }
+        // Old installed catalogues are disposable; personal records live elsewhere.
+        directory.listFiles().orEmpty().filter { old ->
+            old.isFile && old.name != FILE_NAME && !old.name.startsWith("$FILE_NAME-") &&
+                Regex("gymnota-catalog-v\\d+\\.sqlite(?:-(?:wal|shm)|\\.tmp)?").matches(old.name)
+        }.forEach { it.delete() }
         target
     }
 
@@ -92,11 +98,19 @@ class ExerciseCatalog(context: Context) {
         return withContext(Dispatchers.IO) {
             queryLock.withLock {
                 cached(language, query, part)?.let { return@withLock it }
-                val rows = RustCatalog.query(databaseFile().path, language, query, part)
-                    ?: loadLegacy(language).filter { e ->
-                        (part == null || e.bodyPart == part) && listOf(e.name, e.canonicalName, e.sourceId, e.instruction)
-                            .any { it.lowercase(java.util.Locale.ROOT).contains(query.trim().lowercase(java.util.Locale.ROOT)) }
-                    }
+                suspend fun read(): List<CatalogExercise> =
+                    RustCatalog.query(databaseFile().path, language, query, part)
+                        ?: loadLegacy(language).filter { e ->
+                            (part == null || e.bodyPart == part) && listOf(e.name, e.canonicalName, e.sourceId, e.instruction)
+                                .any { it.lowercase(java.util.Locale.ROOT).contains(query.trim().lowercase(java.util.Locale.ROOT)) }
+                        }
+                val rows = try {
+                    read()
+                } catch (_: SQLiteDatabaseCorruptException) {
+                    // Reinstall the disposable catalogue only. Validation runs before replacing the cached copy.
+                    databaseFile(reinstall = true)
+                    read()
+                }
                 synchronized(results) { results[key(language, query, part)] = rows }
                 rows
             }

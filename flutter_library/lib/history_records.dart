@@ -28,7 +28,7 @@ String formatWeight(num value) =>
 typedef HistoryRecord = Map<String, dynamic>;
 
 /// Flat, lazy date/card rows: no per-row blur or nested scrollables.
-class HistoryRecordsView extends StatelessWidget {
+class HistoryRecordsView extends StatefulWidget {
   final List<HistoryRecord> tasks, weights;
   final Map<String, String> labels;
   final String query;
@@ -40,25 +40,57 @@ class HistoryRecordsView extends StatelessWidget {
     this.query = '',
   });
   @override
-  Widget build(BuildContext context) {
-    final grouped = <String, List<HistoryRecord>>{};
-    final dailyWeights = <String, HistoryRecord>{};
-    for (final task in tasks) {
-      grouped.putIfAbsent('${task['date']}', () => []).add(task);
+  State<HistoryRecordsView> createState() => _HistoryRecordsViewState();
+}
+
+class _HistoryRecordsViewState extends State<HistoryRecordsView> {
+  final grouped = <String, List<HistoryRecord>>{};
+  final dailyWeights = <String, HistoryRecord>{};
+  final names = <String, List<String>>{};
+  List<String> dates = [];
+
+  @override
+  void initState() {
+    super.initState();
+    indexRecords();
+  }
+
+  @override
+  void didUpdateWidget(HistoryRecordsView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.tasks != widget.tasks ||
+        oldWidget.weights != widget.weights) {
+      indexRecords();
     }
-    for (final weight in weights) {
+  }
+
+  void indexRecords() {
+    grouped.clear();
+    dailyWeights.clear();
+    names.clear();
+    for (final task in widget.tasks) {
+      final date = '${task['date']}';
+      grouped.putIfAbsent(date, () => []).add(task);
+      names.putIfAbsent(date, () => []).add('${task['name']}'.toLowerCase());
+    }
+    for (final weight in widget.weights) {
       dailyWeights.putIfAbsent('${weight['date']}', () => weight);
     }
-    final dates = {...grouped.keys, ...dailyWeights.keys}.toList()
+    dates = {...grouped.keys, ...dailyWeights.keys}.toList()
       ..sort((a, b) => b.compareTo(a));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final labels = widget.labels;
     final rows =
         <({String date, HistoryRecord? task, bool header, bool empty})>[];
-    final needle = query.trim().toLowerCase();
+    final needle = widget.query.trim().toLowerCase();
     for (final date in dates) {
       final day = grouped[date] ?? [];
       if (needle.isNotEmpty &&
           !date.contains(needle) &&
-          !day.any((t) => '${t['name']}'.toLowerCase().contains(needle)))
+          !(names[date]?.any((name) => name.contains(needle)) ?? false))
         continue;
       rows.add((date: date, task: null, header: true, empty: false));
       if (day.isEmpty)
@@ -175,170 +207,175 @@ class HistoryRecordCard extends StatelessWidget {
     final valueStyle = theme.textTheme.bodyMedium?.copyWith(
       color: theme.colorScheme.onSurface,
     );
-    return Glass(
-      radius: 16,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            LayoutBuilder(
-              builder: (_, constraints) {
-                final name = Text(
-                  '${task['name'] ?? ''}',
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                );
-                final tag = Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 4,
-                    vertical: 2,
-                  ),
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.tertiaryContainer.withValues(
-                      alpha: .7,
+    return SelectionArea(
+      child: Glass(
+        radius: 16,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              LayoutBuilder(
+                builder: (_, constraints) {
+                  final name = Text(
+                    '${task['name'] ?? ''}',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
                     ),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Text(
-                    l['tag_uni'] ?? '',
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      fontSize: 10,
-                      color: theme.colorScheme.onSurface,
+                  );
+                  final tag = Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 4,
+                      vertical: 2,
                     ),
-                  ),
-                );
-                final done = ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 110),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.check_circle_outline,
-                        size: 14,
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.tertiaryContainer.withValues(
+                        alpha: .7,
+                      ),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      l['tag_uni'] ?? '',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        fontSize: 10,
                         color: theme.colorScheme.onSurface,
                       ),
-                      const SizedBox(width: 4),
-                      Flexible(
-                        child: Text(
-                          l['btn_done'] ?? '',
-                          style: theme.textTheme.labelSmall?.copyWith(
-                            color: theme.colorScheme.onSurface,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-                if (constraints.maxWidth < 300 &&
-                    MediaQuery.textScalerOf(context).scale(1) > 1.3) {
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      name,
-                      const SizedBox(height: 8),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 4,
-                        crossAxisAlignment: WrapCrossAlignment.center,
-                        children: [if (unilateral) tag, done],
-                      ),
-                    ],
+                    ),
                   );
-                }
-                return Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (unilateral)
-                      Padding(
-                        padding: const EdgeInsets.only(right: 8, top: 3),
-                        child: tag,
-                      ),
-                    Expanded(child: name),
-                    const SizedBox(width: 8),
-                    done,
-                  ],
-                );
-              },
-            ),
-            Divider(
-              height: 24,
-              color: theme.colorScheme.outlineVariant.withValues(alpha: .3),
-            ),
-            if (sets.isEmpty)
-              Text(
-                '${task['target'] ?? ''}${'${task['actualWeight'] ?? ''}'.isEmpty ? '' : ' @ ${task['actualWeight']}'}',
-                style: valueStyle,
-              )
-            else if (unilateral)
-              Table(
-                columnWidths: const {
-                  0: FixedColumnWidth(32),
-                  1: FlexColumnWidth(),
-                  2: FlexColumnWidth(),
-                },
-                defaultVerticalAlignment: TableCellVerticalAlignment.middle,
-                children: [
-                  for (final (index, set) in sets.indexed)
-                    TableRow(
+                  final done = ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 110),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 6),
+                        Icon(
+                          Icons.check_circle_outline,
+                          size: 14,
+                          color: theme.colorScheme.onSurface,
+                        ),
+                        const SizedBox(width: 4),
+                        Flexible(
                           child: Text(
-                            '#${set['setNumber'] ?? index + 1}',
+                            l['btn_done'] ?? '',
                             style: theme.textTheme.labelSmall?.copyWith(
-                              color: theme.colorScheme.onSurface.withValues(
-                                alpha: .6,
-                              ),
+                              color: theme.colorScheme.onSurface,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
                         ),
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(0, 6, 8, 6),
-                          child: Text(
-                            '${l['label_side_left'] ?? ''}: ${setValue(task, set, l)}',
-                            style: valueStyle,
-                          ),
+                      ],
+                    ),
+                  );
+                  if (constraints.maxWidth < 300 &&
+                      MediaQuery.textScalerOf(context).scale(1) > 1.3) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        name,
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 4,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [if (unilateral) tag, done],
                         ),
+                      ],
+                    );
+                  }
+                  return Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (unilateral)
                         Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 6),
+                          padding: const EdgeInsets.only(right: 8, top: 3),
+                          child: tag,
+                        ),
+                      Expanded(child: name),
+                      const SizedBox(width: 8),
+                      done,
+                    ],
+                  );
+                },
+              ),
+              Divider(
+                height: 24,
+                color: theme.colorScheme.outlineVariant.withValues(alpha: .3),
+              ),
+              if (sets.isEmpty)
+                Text(
+                  '${task['target'] ?? ''}${'${task['actualWeight'] ?? ''}'.isEmpty ? '' : ' @ ${task['actualWeight']}'}',
+                  style: valueStyle,
+                )
+              else if (unilateral)
+                Table(
+                  columnWidths: const {
+                    0: FixedColumnWidth(32),
+                    1: FlexColumnWidth(),
+                    2: FlexColumnWidth(),
+                  },
+                  defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+                  children: [
+                    for (final (index, set) in sets.indexed)
+                      TableRow(
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 6),
+                            child: Text(
+                              '#${set['setNumber'] ?? index + 1}',
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                color: theme.colorScheme.onSurface.withValues(
+                                  alpha: .6,
+                                ),
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(0, 6, 8, 6),
+                            child: Text(
+                              '${l['label_side_left'] ?? ''}: ${setValue(task, set, l)}',
+                              style: valueStyle,
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 6),
+                            child: Text(
+                              '${l['label_side_right'] ?? ''}: ${setValue(task, set, l, right: true)}',
+                              style: valueStyle,
+                            ),
+                          ),
+                        ],
+                      ),
+                  ],
+                )
+              else if (task['category'] == 'STRENGTH' && task['logType'] == 0)
+                Text(
+                  sets.map((s) => setValue(task, s, l)).join('  |  '),
+                  style: valueStyle,
+                )
+              else
+                for (final set in sets)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(
+                          Icons.check,
+                          size: 16,
+                          color: theme.colorScheme.onSurface,
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
                           child: Text(
-                            '${l['label_side_right'] ?? ''}: ${setValue(task, set, l, right: true)}',
+                            setValue(task, set, l),
                             style: valueStyle,
                           ),
                         ),
                       ],
                     ),
-                ],
-              )
-            else if (task['category'] == 'STRENGTH' && task['logType'] == 0)
-              Text(
-                sets.map((s) => setValue(task, s, l)).join('  |  '),
-                style: valueStyle,
-              )
-            else
-              for (final set in sets)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 4),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Icon(
-                        Icons.check,
-                        size: 16,
-                        color: theme.colorScheme.onSurface,
-                      ),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: Text(setValue(task, set, l), style: valueStyle),
-                      ),
-                    ],
                   ),
-                ),
-          ],
+            ],
+          ),
         ),
       ),
     );

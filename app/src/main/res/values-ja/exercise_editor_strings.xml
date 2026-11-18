@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="exercise_name_required">種目名を入力してください</string>
+    <string name="exercise_media_separate">写真と動作アニメーションは別々に保存されます。一方を削除しても、もう一方は保持されます。</string>
+    <string name="exercise_remove_animation">アニメーションを削除</string>
+    <string name="exercise_photo_title">カスタム写真</string>
+</resources>

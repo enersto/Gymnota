@@ -7,6 +7,7 @@ import 'glass_frame_probe.dart';
 import 'embedded_catalog.dart';
 import 'exercise_libraries.dart';
 import 'settings_page.dart';
+import 'root_navigation_preview.dart';
 import 'history_charts.dart';
 import 'history_records.dart';
 export 'history_records.dart' show setValue, formatWeight;
@@ -134,6 +135,14 @@ class _LibraryAppState extends State<LibraryApp> {
     super.initState();
     glassProbe.start();
     bridge.setMethodCallHandler((call) async {
+      if (const {
+        'rootModelSettings',
+        'rootScheduleSettings',
+      }.contains(call.method)) {
+        rootNavigationEvents.value = null;
+        rootNavigationEvents.value = call.method;
+        return true;
+      }
       if (call.method == 'historySnapshot') {
         historySnapshotFailed.value = false;
         historySnapshots.value = object(call.arguments);
@@ -408,6 +417,9 @@ class _LibraryAppState extends State<LibraryApp> {
                         ),
                 ),
               );
+            }
+            if (config!['page'] == '/root-preview') {
+              return RootNavigationPreview(config: config!, labels: labels);
             }
             if (config!['embedded'] == true) {
               return Scaffold(
@@ -706,8 +718,21 @@ class _HistoryPageState extends State<HistoryPage> with WidgetsBindingObserver {
   Json? charts;
   bool showCharts = true, listVisited = false;
   bool loading = true, failed = false, busy = false;
-  String query = '';
+  final query = ValueNotifier('');
   final search = TextEditingController();
+  Timer? searchDebounce;
+
+  void filterRecords(String text) {
+    searchDebounce?.cancel();
+    if (text.isEmpty) {
+      query.value = '';
+    } else {
+      searchDebounce = Timer(const Duration(milliseconds: 150), () {
+        query.value = text;
+      });
+    }
+  }
+
   int revision = -1;
   int? recordsRevision;
   bool recordsLoading = false, recordsFailed = false;
@@ -804,6 +829,8 @@ class _HistoryPageState extends State<HistoryPage> with WidgetsBindingObserver {
     WidgetsBinding.instance.removeObserver(this);
     historySnapshots.removeListener(onSnapshot);
     historySnapshotFailed.removeListener(onSnapshotError);
+    searchDebounce?.cancel();
+    query.dispose();
     search.dispose();
     super.dispose();
   }
@@ -875,6 +902,7 @@ class _HistoryPageState extends State<HistoryPage> with WidgetsBindingObserver {
     measure.dispose();
     return Scaffold(
       backgroundColor: Colors.transparent,
+      resizeToAvoidBottomInset: !widget.embedded,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         surfaceTintColor: Colors.transparent,
@@ -940,24 +968,27 @@ class _HistoryPageState extends State<HistoryPage> with WidgetsBindingObserver {
                 child: TextField(
                   key: const ValueKey('history-search'),
                   controller: search,
-                  onChanged: (value) => setState(() => query = value),
+                  onChanged: filterRecords,
                   decoration: InputDecoration(
                     prefixIcon: const Icon(Icons.search),
                     hintText: l['flutter_history_search'],
                     border: InputBorder.none,
                     enabledBorder: InputBorder.none,
                     focusedBorder: InputBorder.none,
-                    suffixIcon: query.isEmpty
-                        ? null
-                        : IconButton(
-                            tooltip: MaterialLocalizations.of(context)
-                                .deleteButtonTooltip,
-                            icon: const Icon(Icons.close),
-                            onPressed: () {
-                              search.clear();
-                              setState(() => query = '');
-                            },
-                          ),
+                    suffixIcon: ValueListenableBuilder<TextEditingValue>(
+                      valueListenable: search,
+                      builder: (context, value, _) => value.text.isEmpty
+                          ? const SizedBox.shrink()
+                          : IconButton(
+                              tooltip: MaterialLocalizations.of(context)
+                                  .deleteButtonTooltip,
+                              icon: const Icon(Icons.close),
+                              onPressed: () {
+                                search.clear();
+                                filterRecords('');
+                              },
+                            ),
+                    ),
                   ),
                 ),
               ),
@@ -999,11 +1030,15 @@ class _HistoryPageState extends State<HistoryPage> with WidgetsBindingObserver {
                                   ? const Center(
                                       child: CircularProgressIndicator(),
                                     )
-                                  : HistoryRecordsView(
-                                      tasks: tasks,
-                                      weights: weights,
-                                      labels: l,
-                                      query: query,
+                                  : ValueListenableBuilder<String>(
+                                      valueListenable: query,
+                                      builder: (_, searchText, _) =>
+                                          HistoryRecordsView(
+                                            tasks: tasks,
+                                            weights: weights,
+                                            labels: l,
+                                            query: searchText,
+                                          ),
                                     ),
                             ),
                           ),
@@ -1023,18 +1058,20 @@ class Failure extends StatelessWidget {
   const Failure({super.key, required this.labels, required this.retry});
   @override
   Widget build(BuildContext context) => Center(
-    child: Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Padding(
-          padding: const EdgeInsets.all(20),
-          child: Text(labels['flutter_error'] ?? ''),
-        ),
-        TextButton(
-          onPressed: retry,
-          child: Text(labels['flutter_retry'] ?? ''),
-        ),
-      ],
+    child: SingleChildScrollView(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Text(labels['flutter_error'] ?? ''),
+          ),
+          TextButton(
+            onPressed: retry,
+            child: Text(labels['flutter_retry'] ?? ''),
+          ),
+        ],
+      ),
     ),
   );
 }

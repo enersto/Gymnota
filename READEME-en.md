@@ -1,132 +1,138 @@
-# Gymnota 6.2
+# Gymnota 6.4
 
-Gymnota is an Android workout tracker built with Kotlin and Jetpack Compose. It supports weekly routines, daily workout logs, body measurements, history charts and an AI coach.
+An Android workout journal for weekly routines, daily training, body measurements and progress charts, with an optional AI coach connected to your own model provider.
 
-[简体中文](README.md) · [6.2 release notes, Chinese](RELEASE_NOTES_6.2.md)
+The default interface uses **Flutter**. **Rust** owns the main database queries, transactions, migrations, history calculations and timer transitions. Android adapters retain notifications, camera/gallery access, document selection and network transport.
+
+[简体中文](README.md) · [6.4 changes](RELEASE_NOTES_6.4.md) · [6.2 history](RELEASE_NOTES_6.2.md)
+
+> Screenshots show the current app in Chinese with demonstration data, not personal backups or API credentials.
+
+## Daily workouts
+
+- Configure training, active recovery, light activity and rest days; apply the day's weekly routine.
+- Add exercises and sets, logging weight × reps, reps only or duration. Track left and right sides separately.
+- Use preparation, pause/resume, final countdown, sounds and background timer notifications. Finished sets update history.
+- Swipe to reveal Delete, then continue swiping or tap the trash button to confirm.
+- Record weight and optional body measurements during the workout flow.
+
+<p align="center"><img src="docs/images/6.4/workout.png" width="300" alt="6.4 workouts: training day, exercise cards and set inputs"></p>
+
+## History and charts
+
+History opens on charts by default, with a searchable records list and selectable text available alongside it.
+
+- Training heatmap, strength/core exercise trends, cardio duration, weight and body measurements.
+- Exercise selection, left/right views for unilateral records, and daily/monthly views.
+- BMI, BMR and waist-to-hip ratio calculated using the profile and recorded measurements, preserving the existing chart semantics.
+- Already-open pages refresh after workout, measurement and settings changes.
 
 <p align="center">
-  <img src="docs/images/gymnota-6.2-workout.jpg" width="360" alt="Gymnota 6.2 workout screen with exercise previews and Liquid Glass controls">
+  <img src="docs/images/6.4/history-heatmap.png" width="280" alt="6.4 muscle training heatmap">
+  <img src="docs/images/6.4/history-chart.png" width="300" alt="6.4 history charts and exercise selection">
+  <img src="docs/images/6.4/history-list.png" width="300" alt="6.4 history list with sets and weights">
 </p>
 
-## 6.3 development preview
+## Exercises and offline animations
 
-Flutter catalogue and history/charts are embedded in the existing app. Rust now owns read-only catalogue SQLite queries, locale fallback, body filters and text search, with a Kotlin availability fallback. The 1,324 animations use lossless animated WebP (180×180), reducing raw media bytes by 20.7%. Legacy GIF URIs resolve without rewriting personal records. Minimum Android version is now Android 9 / API 28. Personal Room data, editing, services, photos and backup restoration retain their native implementations.
+Exercises has its own bottom tab, with My exercises and the bundled catalogue.
 
-## New in 6.2
+- **1,324 exercises and lossless animated WebP assets**, bundled offline at **180×180**.
+- Filter by body part; search translated/original names, IDs and instructions.
+- Preview animations and instructions, then open the editor. Existing matched personal exercises retain their own names and targets.
+- Chinese, English, Spanish, German and Japanese interfaces. The catalogue retains 12 upstream language resources, with English fallback for unavailable instructions.
 
-### Offline exercise catalogue and animations
+<p align="center">
+  <img src="docs/images/6.4/catalog.png" width="300" alt="6.4 catalogue body filters and exercises">
+  <img src="docs/images/6.4/exercise-detail.png" width="300" alt="6.4 exercise detail and demonstration animation">
+</p>
 
-- Bundle 1,324 exercises and their 180×180 GIF animations for offline browsing.
-- Switch between My exercises and Exercise catalogue within the management page using the glass tab slider. The personal library retains Strength, Cardio and Core categories.
-- Filter by body part and search translated names, original English names, exercise IDs or instructions.
-- Preview an exercise, then confirm its training category, logging type, unilateral setting and target before adding it to the personal library.
-- Associate supported existing exercise names with animations while preserving personal names. Animations can also be selected manually in the editor.
-- Store custom photo and animation references separately. Remove a custom photo while retaining the associated animation.
+Animation attribution: **© Gym visual — https://gymvisual.com/**. The screenshot captures one animation frame.
 
-### Names and interface in five languages
+### Flutter exercise editor
 
-The interface supports Simplified Chinese, English, Spanish, German and Japanese. The catalogue includes Chinese, Spanish, German and Japanese exercise names alongside the original English names.
+Creating, editing and importing catalogue exercises use the same Flutter glass form, saved through Rust template transactions.
 
-These names use the translation draft reviewed during this update. Uncommon terms and variants remain open to correction. Instructions use available translations for the selected language, with English fallback for German and Japanese.
+- Name, target, category, body part, equipment, logging type, unilateral setting and instructions.
+- Pick a gallery photo or take one with the camera. Photos and demonstration animations have separate references and removal controls.
+- Changing the animation preserves the other fields. Cancelling leaves the saved exercise unchanged.
+- Saving refreshes the personal library and linked workout display.
 
-### Liquid Glass interface
+<p align="center"><img src="docs/images/6.4/exercise-editor.png" width="300" alt="6.4 Flutter exercise editor with shared glass controls">
+  <img src="docs/images/6.4/exercise-editor-media.png" width="300" alt="6.4 editor: separate photo and animation controls"></p>
 
-- Apply shared glass controls to workout completion, Add set and Add exercise.
-- Unify the history exercise selector, list/chart tabs, left/right selection and daily/monthly chart controls.
-- Unify weekly routine and exercise-library entries, language selection and settings switches.
-- Reduce white overlays and adapt materials to the selected light or dark theme. The bottom navigation samples page content, while list cards use lighter effects.
-- Show static first frames in list thumbnails and keep GIF playback in detail views.
-- Adjust duplicated tab-label rendering, gesture-cancellation cleanup and indicator positioning to address overlapping text and lingering deformation.
-- Fix the management Add button overlapping the root navigation and remove the old outline from the focused history selector.
+## AI coach
 
-## Features
+- Request weekly advice using goals, history range, training focus, equipment and injury-avoidance selections.
+- Free chat supports text and images where supported by the configured model.
+- Compatible providers can stream answers and separately expose their public reasoning/summary fields.
+- Markdown headings, lists, quotations and code blocks, with text selection and copying.
+- View/delete saved advice and turn recommendations into a CSV routine for import.
+- The model status strip shows configuration/connection status and links to model settings.
 
-- **Workout logging**. Weekly routines, templates, daily tasks, sets and completion tracking. Supports weight × reps, duration, reps-only and unilateral records.
-- **Exercise management**. Personal exercises, a bundled catalogue, instructions, custom photos and demonstration animations.
-- **History and charts**. Training heatmaps, body measurements, cardio duration, maximum recorded exercise weight and separate left/right charts for unilateral exercises.
-- **Body measurements**. Weight, fat mass, skeletal muscle mass, body water, waist and hip measurements, plus profile-based BMI and BMR.
-- **Timer**. Preparation time, final countdown, sound effects and notification countdown.
-- **AI coach**. Weekly plan suggestions, chat, image analysis, chat history and long-term memory summaries. Convert advice into a weekly-plan CSV for import.
-- **Data management**. Export training history as CSV, import weekly routines and back up or restore the personal database.
+<p align="center"><img src="docs/images/6.4/coach.png" width="300" alt="6.4 AI coach model status, goal and weekly preferences"></p>
 
-## Getting started
+Configure your provider, API key, model and Base URL before use. Records are stored locally; AI requests send the relevant context and selected images to the provider you configure.
 
-### Add an exercise from the catalogue
+## Settings, routines and data
 
-1. Open exercise management from Settings.
-2. Switch to Exercise catalogue and search or filter by body part.
-3. Open the exercise details and choose Use exercise.
-4. Confirm its name, category, logging type, unilateral setting and target, then save.
+- Five interface languages, themes, day types and detailed weekly routines.
+- Profile, timer preparation/countdown/audio, model and AI history-context settings.
+- Weekly CSV import, training-history CSV export, field help and key references.
+- Personal SQLite backup and restore. Restore migrates and validates a staged copy before replacement and restart.
 
-Personal exercise names are retained. Automatic animation lookup applies to supported name mappings. Other exercises can be assigned an animation manually.
+<p align="center"><img src="docs/images/6.4/settings.png" width="300" alt="6.4 language, data management and weekly settings"></p>
 
-### Photos and animations
+Personal data keeps the **v19** schema, with migrations covering v7–v19. The catalogue and animations are supplied by the APK and excluded from personal backups. Original custom-photo files are not transferred across devices by a SQLite-only backup. Backups can contain AI configuration and should be handled as personal data.
 
-Open an exercise for editing to take a photo, select a gallery image or choose a bundled animation. Remove photo appears when a custom photo is attached. The change takes effect after saving. Photo and animation references are stored independently.
+## Changes since 6.2
 
-### Workouts and history
-
-Add exercises to the daily plan, enter set data and mark tasks complete. In History, switch between list and charts, choose an exercise and adjust side or daily/monthly granularity where applicable.
-
-### AI coach
-
-Configure the provider, API key, model and base URL in Settings or the AI page. Generate weekly-plan advice, chat or analyze an image, then convert a plan into CSV for import.
-
-API configuration and training records are stored in the local database. AI features send the relevant context and submitted images to the configured model service.
-
-## Backups and upgrades
-
-Personal data uses Room schema **v19**, with an existing migration chain for older versions. Version 19 adds a separate animation reference and migrates bundled-animation references previously stored in the photo field.
-
-The bundled catalogue is a separate SQLite database, extracted to the app's no-backup directory on first use. The catalogue and packaged media are excluded from personal database backups and supplied by the APK after restoration.
-
-## Weekly routine CSV
-
-~~~csv
-Day,Name,Category,Target,BodyPart,Equipment,IsUnilateral,LogType
-1,Seated Chest Press,STRENGTH,3x12,part_chest,equip_machine,false,0
-1,Plank,CORE,3x60s,part_abs,equip_bodyweight,false,1
-2,Barbell Squat,STRENGTH,4x10,part_thighs,equip_barbell,false,0
-3,Running,CARDIO,30min,part_cardio,equip_cardio_machine,false,1
-4,Crunches,CORE,4x20,part_abs,equip_bodyweight,false,2
-~~~
-
-- Day is 1–7, Monday to Sunday.
-- Category is STRENGTH, CARDIO or CORE.
-- Target is the default workout prescription, such as 3x12, 30min or 3x60s.
-- IsUnilateral is true or false.
-- LogType is 0 for weight × reps, 1 for duration or 2 for reps-only.
-- Body-part keys include part_chest, part_back, part_shoulders, part_arms, part_abs, part_hips, part_thighs, part_calves, part_cardio and part_other.
-- Common equipment keys include equip_barbell, equip_dumbbell, equip_machine, equip_cable, equip_smith_machine, equip_bodyweight, equip_cardio_machine and equip_other.
-
-Import replaces routine entries for the weekdays included in the CSV. Review the days and exercise contents before importing.
-
-## Technology
-
-| Area | Implementation |
+| 6.2 | 6.4 |
 |---|---|
-| Language and UI | Kotlin, Jetpack Compose, Material 3 |
-| State and concurrency | ViewModel, Coroutines, Flow |
-| Personal data | Room 2.8.4, schema v19 |
-| Bundled catalogue | Separate SQLite, compressed assets, no-backup directory |
-| Images and animations | Coil / ImageDecoder with animated WebP |
-| Network | Retrofit, OkHttp |
-| Charts | Compose Canvas |
-| Glass effects | Kyant0 Backdrop |
-| Android | Minimum API 28 (Android 9), target API 35, compile API 36 |
+| Kotlin/Compose root and main screens | Flutter root and five main pages with shared Liquid Glass styling |
+| Exercise management under Settings | Dedicated Exercises tab with swipe/tap navigation |
+| Native exercise-editing dialog | Full Flutter editor, Rust persistence and Android camera/gallery adapters |
+| Bundled GIF animations | Lossless WebP; archived GIFs excluded from release assets; legacy URIs still resolve |
+| Room owns main personal-data access | Rust initialization, migrations, queries, transactions and commit-driven refresh |
+| Native timer/history calculations | Rust timer transitions and history calculations; Android clock/audio/notifications |
+| Native AI page | Flutter coach, saved advice, Markdown and streaming display |
+| Old screens reachable in the app | Old workout/editor source archived outside compilation and APK packaging |
 
-## Resources and credits
+Also includes shared title emphasis and theme colors, primary/secondary glass navigation, selection feedback, haptics and long-label layouts. Fixes cover keyboard overflow, an obscured exercise Add button, and stale lists after deleting saved advice.
 
-The catalogue is adapted from [hasaneyldrm/exercises-dataset](https://github.com/hasaneyldrm/exercises-dataset), with source attribution retained.
+Media/database deduplication and R8/resource shrinking bring an optimized ARM64 build to roughly **124 MiB**. Debug builds include development runtimes, and universal packages can contain multiple CPU architectures; their sizes are not directly comparable. See [size measurements](docs/apk-size-trimming.md).
 
-**© Gym visual — [gymvisual.com](https://gymvisual.com/)**
+**Room remains temporarily** for staged restore validation and compatibility code; it has not been completely removed from build dependencies. [Runtime boundaries](docs/rust-runtime.md) · [Archived sources](legacy/README.md)
 
-The upstream MIT license covers code, data structure and instruction text. Exercise media has separate terms. The packaged [LICENSE](app/src/main/assets/catalog/LICENSE.txt) and [NOTICE](app/src/main/assets/catalog/NOTICE.md) retain the relevant distinctions and attribution.
+## Weekly CSV
 
-Glass effects use [Kyant0/AndroidLiquidGlass](https://github.com/Kyant0/AndroidLiquidGlass). Design and implementation comparisons also referenced [QWEA0/Liquid-Glass-Android](https://github.com/QWEA0/Liquid-Glass-Android).
+```csv
+Day,Name,Category,Target,BodyPart,Equipment,IsUnilateral,LogType
+1,Barbell bench press,STRENGTH,4x8,part_chest,equip_barbell,false,0
+1,Plank,CORE,3x60s,part_abs,equip_bodyweight,false,1
+2,Lat pulldown,STRENGTH,3x12,part_back,equip_cable,false,0
+3,Elliptical,CARDIO,25min,part_cardio,equip_cardio_machine,false,1
+```
 
-## Version
+Day is 1–7 (Monday–Sunday); Category is STRENGTH/CARDIO/CORE; LogType is 0 (weight × reps), 1 (duration) or 2 (reps only). Import replaces routine entries for the weekdays included in the CSV. Full keys are available in the in-app reference.
 
-- Release series **6.2**, application version **6.2.0**.
-- Version code **6200**.
-- Designed & Built by enersto & Hajimi.
+## Build and installation
+
+Minimum Android **9 / API 28**. App version **6.4.0**, Version Code **6400**. Use a Flutter/Dart SDK matching `flutter_library/pubspec.yaml`, the Rust Android target and Android SDK/NDK. The local validated environment uses JDK 21 and NDK 28.2.13676358.
+
+```powershell
+cd flutter_library
+flutter pub get
+cd ..
+.\gradlew.bat :app:assemblePreview -PpreviewAbi=arm64-v8a -Ptarget-platform=android-arm64
+```
+
+Output: `app/build/outputs/apk/preview/app-preview.apk`. Select the app's **preview** variant in Android Studio for the optimized test build, signed with the debug key. A production release needs your own release signing configuration. Choose the corresponding ABI for non-ARM64 devices. Debug is for development, not release-size measurement.
+
+## Credits
+
+- Dataset: [hasaneyldrm/exercises-dataset](https://github.com/hasaneyldrm/exercises-dataset).
+- Exercise media: **© Gym visual — https://gymvisual.com/**. See the bundled [LICENSE](app/src/main/assets/catalog/LICENSE.txt), [NOTICE](app/src/main/assets/catalog/NOTICE.md) and the rights holder's terms.
+- Flutter glass: [sdegenaar/liquid_glass_widgets](https://github.com/sdegenaar/liquid_glass_widgets). Native/design references: [Kyant0/AndroidLiquidGlass](https://github.com/Kyant0/AndroidLiquidGlass) and [QWEA0/Liquid-Glass-Android](https://github.com/QWEA0/Liquid-Glass-Android).
+
+Designed & Built by enersto & Hajimi.

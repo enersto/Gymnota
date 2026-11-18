@@ -6,6 +6,7 @@ import android.content.res.Configuration
 import android.database.sqlite.SQLiteDatabase
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.net.Uri
 import androidx.room.withTransaction
 import com.example.myfit.R
 import com.example.myfit.data.AppDatabase
@@ -39,13 +40,17 @@ internal class LibraryBridge(
     private val onOverlayBackdrop: (suspend () -> ByteArray?)? = null,
     private val onOverlayReady: (() -> Unit)? = null,
     private val onInlineReady: (() -> Unit)? = null,
-    private val onPersonalAction: ((String, Long?) -> Unit)? = null,
+    private val onPersonalAction: (suspend (String, Long?) -> Unit)? = null,
     private val personalMedia: ((Long) -> String?)? = null,
-    private val onSettingsAction: ((String, Any?) -> Unit)? = null,
+    private val personalDetailMedia: ((Long, Boolean) -> String?)? = null,
+    private val onExerciseEditor: (suspend (String, Map<*, *>) -> Any?)? = null,
+    private val onRoutine: (suspend (String, Int, Long?) -> List<Map<String, Any?>>)? = null,
+    private val onSettingsAction: (suspend (String, Any?) -> Unit)? = null,
     private val onSettingsModel: (suspend (String, Map<String, String>) -> Map<String, Any?>)? = null
 ) {
     private var channel: MethodChannel? = null
     private var state: Map<String, Any?> = initialState
+    private val rootPreview = initialState["page"] == RootPreviewHost.PAGE
     private val applicationContext get() = activity.applicationContext
     private val resources get() = activity.resources
     private val packageName get() = activity.packageName
@@ -61,6 +66,10 @@ internal class LibraryBridge(
         state = next
         val language = next["language"] as? String ?: "zh"
         channel?.invokeMethod("embeddedState", next + mapOf("labels" to labels(language)))
+    }
+
+    fun rootEvent(method: String, argument: Any? = null) {
+        channel?.invokeMethod(method, argument)
     }
 
     fun park() {
@@ -106,7 +115,7 @@ internal class LibraryBridge(
 
     fun configure(flutterEngine: FlutterEngine) {
         channel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "gymnota/library")
-        if (state["page"] == "/embedded-history" || (!embedded && intent.getStringExtra("page") == "/history")) {
+        if (rootPreview || state["page"] == "/embedded-history" || (!embedded && intent.getStringExtra("page") == "/history")) {
             scope.launch { HistoryRepository.observe(applicationContext).collect { snapshot ->
                 snapshot.onSuccess { channel?.invokeMethod("historySnapshot", if (embedded) chartSnapshot(it) else it) }
                     .onFailure { channel?.invokeMethod("historySnapshotError", null) }
@@ -152,29 +161,43 @@ internal class LibraryBridge(
                 try {
                     val language = call.argument<String>("language") ?: state["language"] as? String ?: intent.getStringExtra("language") ?: "zh"
                     val value: Any? = when (call.method) {
-                        "bootstrap" -> if (embedded && state["page"] == "/embedded-history") {
+                        "bootstrap" -> if (rootPreview || (embedded && state["page"] == "/embedded-history")) {
                             state + mapOf("labels" to labels(language), "initialHistory" to HistoryRepository.currentOrNull()?.let(::chartSnapshot))
                         } else if (embedded && (state["page"] == "/embedded-idle" || state["page"] == "/embedded-coach" || state["page"] == "/embedded-settings" || state["exerciseManager"] == true)) {
                             state + mapOf("labels" to labels(language))
                         } else if (embedded) {
                             state + mapOf("labels" to labels(language), "catalogLanguage" to language, "initialCatalog" to catalog(language, "", null))
                         } else withContext(Dispatchers.IO) {
-                            val settings = AppDatabase.getDatabase(applicationContext).workoutDao().getAppSettings().first()
+                            val settings = if (com.example.myfit.BuildConfig.RUST_HISTORY_ENABLED)
+                                com.example.myfit.data.RustLiveQueries.read<com.example.myfit.model.AppSetting>(applicationContext, "profile").firstOrNull()
+                            else AppDatabase.getDatabase(applicationContext).workoutDao().getAppSettings().first()
                             val theme = AppTheme.fromId(settings?.themeId ?: 1)
                             mapOf("page" to (intent.getStringExtra("page") ?: "/catalog"), "language" to (settings?.languageCode ?: language), "dark" to (theme == AppTheme.DARK),
                                 "primary" to (if (theme == AppTheme.DARK) 0xFF90CAF9L else theme.primary), "background" to theme.background, "onBackground" to theme.onBackground, "secondary" to (if (theme == AppTheme.DARK) 0xFF4F378BL else 0xFFEADDFFL))
                         }
                         "settingsModel" -> {
-                            check(state["page"] == "/embedded-settings")
+                            check(rootPreview || state["page"] == "/embedded-settings")
                             val fields = listOf("provider", "model", "apiKey", "baseUrl").associateWith {
                                 call.argument<String>(it).orEmpty()
                             }
                             checkNotNull(onSettingsModel).invoke(call.argument<String>("operation").orEmpty(), fields)
                         }
+                        "weeklyRoutine" -> {
+                            check(rootPreview && state["primaryHost"] == true)
+                            val day = call.argument<Int>("day") ?: error("Missing day")
+                            require(day in 1..7)
+                            onRoutine?.invoke(call.argument<String>("action") ?: "list", day,
+                                call.argument<Number>("id")?.toLong()) ?: error("Routine unavailable")
+                        }
                         "settingsAction" -> {
-                            check(state["page"] == "/embedded-settings")
+                            check(rootPreview || state["page"] == "/embedded-settings")
                             checkNotNull(onSettingsAction).invoke(call.argument<String>("action").orEmpty(), call.argument<Any>("value"))
                             true
+                        }
+                        "exerciseEditor" -> {
+                            check(rootPreview && state["primaryHost"] == true)
+                            checkNotNull(onExerciseEditor).invoke(call.argument<String>("operation").orEmpty(),
+                                call.arguments as? Map<*, *> ?: emptyMap<String, Any?>())
                         }
                         "exerciseManagerAction" -> {
                             check(state["exerciseManager"] == true)
@@ -192,6 +215,33 @@ internal class LibraryBridge(
                             withContext(Dispatchers.Default) {
                                 RustCatalog.searchPersonal(names, query)
                                     ?: names.filter { (_, name) -> name.contains(query, ignoreCase = true) }.map { it.first }
+                            }
+                        }
+                        "personalDetailMedia" -> {
+                            check(rootPreview && state["primaryHost"] == true)
+                            val id = call.argument<Number>("id")?.toLong() ?: error("Missing ID")
+                            val animation = call.argument<Boolean>("animation") == true
+                            val uri = personalDetailMedia?.invoke(id, animation)
+                            if (uri == null) null else withContext(Dispatchers.IO) {
+                                if (animation) {
+                                    val assetPrefix = "file:///android_asset/"
+                                    when {
+                                        uri.startsWith(assetPrefix) -> assets.open(uri.removePrefix(assetPrefix)).use { it.readBytes() }
+                                        uri.startsWith("/") -> File(uri).readBytes()
+                                        else -> contentResolver.openInputStream(Uri.parse(uri))?.use { it.readBytes() }
+                                    }
+                                } else {
+                                    val model: Any = if (uri.startsWith("/")) File(uri) else uri
+                                    val request = ImageRequest.Builder(applicationContext)
+                                        .data(model).size(1080).allowHardware(false).build()
+                                    val image = applicationContext.imageLoader.execute(request) as? SuccessResult
+                                    image?.drawable?.toBitmap()?.let { bitmap ->
+                                        ByteArrayOutputStream().use { stream ->
+                                            bitmap.compress(Bitmap.CompressFormat.JPEG, 94, stream)
+                                            stream.toByteArray()
+                                        }
+                                    }
+                                }
                             }
                         }
                         "personalThumbnail" -> {
@@ -250,6 +300,7 @@ internal class LibraryBridge(
                             RustHistoryCore.process(rawSnapshot)
                         }
                         "useExercise" -> {
+                            check(!rootPreview || state["primaryHost"] == true)
                             val id = call.argument<String>("id") ?: error("Missing ID")
                             check(ExerciseCatalog(applicationContext).load(language).any { it.sourceId == id })
                             if (embedded) onSelect?.invoke(id, language)
@@ -257,7 +308,7 @@ internal class LibraryBridge(
                             true
                         }
                         "showPersonal" -> { onPersonal?.invoke(); true }
-                        "close" -> { if (!embedded) activity.finish(); true }
+                        "close" -> { if (!embedded || rootPreview) activity.finish(); true }
                         else -> { result.notImplemented(); return@launch }
                     }
                     result.success(value)
@@ -275,11 +326,11 @@ internal class LibraryBridge(
         val c = createConfigurationContext(Configuration(resources.configuration).apply { setLocale(Locale.forLanguageTag(language)) })
         val names = listOf("catalog_personal_title", "btn_add", "btn_delete", "btn_test_connection", "msg_connection_success", "source_gallery", "action_delete_photo", "btn_snap_photo", "label_injuries", "injury_knee", "injury_lower_back", "injury_shoulder", "injury_wrist", "injury_neck", "title_ai_history", "msg_no_history", "ai_status_unconfigured", "coach_stream_stop", "coach_stream_failed", "coach_stream_stopped", "coach_stream_incomplete", "coach_stream_connecting", "coach_stream_reasoning_summary", "ai_response_title", "btn_generate_and_import", "msg_refine_dialog_hint", "btn_cancel", "btn_confirm", "label_focus", "label_scene", "focus_comprehensive", "category_strength", "category_cardio", "category_core", "scene_gym", "scene_home_equip", "scene_home_none", "scene_outdoor", "scene_pool", "scene_yoga", "scene_limited_gym", "scene_crossfit", "option_1_week", "option_2_weeks", "option_3_weeks", "option_4_weeks", "tab_ai_coach", "btn_close", "weekly_plan", "btn_free_chat", "label_context_length", "label_current_goal", "hint_input_chat", "hint_input_goal", "coach_stream_enabled", "btn_send_message", "btn_get_advice", "tag_uni", "label_log_type", "tab_list","tab_chart","chart_granularity_day","chart_granularity_month","header_strength_train","header_core_train","header_cardio_train","chart_title_strength_single","chart_title_core_single","chart_title_cardio_single","chart_title_cardio_total","chart_title_body_status","chart_title_weight","chart_title_bmi","chart_title_bmr","chart_title_body_fat","chart_title_skeletal_muscle","chart_title_body_water","chart_title_whr","chart_title_heatmap","hint_heatmap_volume","chart_no_data","title_select_exercise","charts_unavailable","charts_data","charts_low","charts_high","part_chest","part_back","part_shoulders","part_arms","part_abs","part_hips","part_thighs","part_calves","part_cardio","part_other","settings_language", "catalog_title", "catalog_setup_hint", "catalog_search", "catalog_all_parts", "catalog_empty", "catalog_use_exercise",
             "history_title", "no_history", "history_no_train", "header_set_no", "label_weight", "label_reps", "label_duration_sec", "label_side_left", "label_side_right",
-            "label_instruction", "label_instruction_empty", "label_target", "btn_cancel", "btn_confirm", "btn_done",
+            "label_instruction", "label_instruction_empty", "label_target", "btn_edit", "btn_cancel", "btn_confirm", "btn_done",
             "history_stats_partial", "history_stats", "history_stats_days", "history_stats_tasks", "history_stats_sets", "history_stats_volume", "history_stats_duration", "history_stats_max_weight", "history_stats_fallback", "flutter_history_search", "flutter_history", "flutter_backup", "flutter_current", "flutter_refresh", "flutter_readonly", "flutter_error", "flutter_retry", "flutter_native", "flutter_minutes")
-        val settingsNames = if (state["page"] == "/embedded-settings") listOf(
+        val settingsNames = if (rootPreview || state["page"] == "/embedded-settings") listOf(
             "settings_advanced", "settings_data_management", "export_csv_btn", "import_csv_btn",
-            "settings_help_reference", "settings_profile", "btn_backup_db", "btn_restore_db",
+            "label_weight_kg", "label_body_fat_kg", "label_skeletal_muscle_kg", "label_body_water", "label_waist_circumference", "label_hip_circumference", "weekly_metrics_subtitle", "dialog_weight_title", "dialog_profile_title", "label_age", "label_height", "label_gender", "gender_male", "gender_female", "btn_save", "import_csv_template", "import_dialog_title", "import_btn", "help_dialog_title", "btn_select_all", "btn_clear", "section_body_part", "section_equipment", "equip_barbell", "equip_dumbbell", "equip_machine", "equip_cable", "equip_bodyweight", "equip_cardio_machine", "equip_kettlebell", "equip_smith_machine", "equip_resistance_band", "equip_medicine_ball", "equip_trx", "equip_bench", "equip_other", "settings_help_reference", "settings_profile", "btn_backup_db", "btn_restore_db",
             "ai_config_title", "settings_timer_title", "timer_sound_title", "timer_sound_desc",
             "timer_prep_title", "timer_prep_desc", "timer_final_title", "timer_final_desc", "theme_style",
             "schedule_type_title", "type_core", "type_active", "type_light", "type_rest",
@@ -289,7 +340,19 @@ internal class LibraryBridge(
             "label_ai_cache_title", "label_ai_cache_desc", "label_max_history",
             "settings_ai_saved", "settings_ai_connection_error" 
         ) else emptyList()
-        return (names + settingsNames).associateWith { name -> c.getString(resources.getIdentifier(name, "string", packageName)) }
+        val previewNames = if (rootPreview) listOf(
+            "root_preview_title", "preview_daily_read_only", "preview_daily_empty", "preview_open_settings",
+             "tab_home", "tab_history", "tab_exercises", "tab_settings", "timer_pause",
+            "label_unilateral_mode", "btn_check", "btn_add_set", "apply_routine",
+            "header_weight_time", "timer_resume", "timer_stop", "timer_start", "preview_workout_title",
+            "log_weight", "no_plan", "new_manage_lib", "dialog_lock_screen_title",
+            "dialog_lock_screen_content", "btn_go_to_settings", "btn_later", "timer_overlay_prep", "timer_overlay_finish"
+        ) else emptyList()
+        val editorNames = listOf("title_new_exercise", "title_edit_exercise", "label_name", "label_category",
+            "label_body_part", "label_equipment", "label_log_type", "label_is_unilateral", "source_gallery",
+            "source_camera", "remove_exercise_photo", "catalog_choose_animation", "log_type_weight_reps",
+            "log_type_reps_only", "log_type_duration", "exercise_name_required", "exercise_media_separate", "exercise_remove_animation", "exercise_photo_title")
+        return (names + settingsNames + previewNames + editorNames).associateWith { name -> c.getString(resources.getIdentifier(name, "string", packageName)) }
     }
 
     @Deprecated("Legacy activity result used by FlutterActivity")

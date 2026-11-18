@@ -30,7 +30,7 @@ class RustCatalogTest {
         val catalog = ExerciseCatalog(context)
         // Installs the immutable catalogue; bypass the fallback below so JNI failures fail the test.
         catalog.load("en")
-        val path = File(context.noBackupFilesDir, "exercise_catalog/gymnota-catalog-v4.sqlite").path
+        val path = File(context.noBackupFilesDir, "exercise_catalog/gymnota-catalog-v5.sqlite").path
         for (language in listOf("zh", "en", "es", "de", "ja", "zh-CN", "xx")) {
             val expected = catalog.loadLegacy(language)
             val actual = RustCatalog.query(path, language, "", null)

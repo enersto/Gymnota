@@ -10,6 +10,25 @@ plugins {
 
 val rustHistoryEnabled = providers.gradleProperty("rustHistory").orElse("true").get().toBooleanStrict()
 
+// Keep migration archives in source control, but package only the WebP runtime assets.
+val packagedAssets = layout.buildDirectory.dir("generated/packagedAssets")
+val preparePackagedAssets by tasks.registering(Sync::class) {
+    from("src/main/assets") {
+        exclude("catalog/videos/*.gif", "catalog/gymnota-catalog-v4.sqlite.bin")
+    }
+    into(packagedAssets)
+    includeEmptyDirs = false
+    doFirst {
+        val videos = file("src/main/assets/catalog/videos")
+        val originals = videos.listFiles().orEmpty().filter { it.extension == "gif" }
+        check(originals.all { file("${videos.path}/${it.nameWithoutExtension}.webp").isFile }) {
+            "Archived GIF has no WebP replacement"
+        }
+        check(file("src/main/assets/catalog/gymnota-catalog-v5.sqlite.bin").isFile)
+    }
+}
+
+
 android {
     namespace = "com.example.myfit"
     compileSdk = 36
@@ -25,26 +44,31 @@ android {
         }
         minSdk = 28
         targetSdk = 35
-        versionCode = 6300
-        versionName = "6.3.0"
+        versionCode = 6400
+        versionName = "6.4.0"
 
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        testInstrumentationRunner = if (providers.gradleProperty("documentationFixture").orNull == "true")
+            "com.example.myfit.flutter.DocumentationFixtureInstrumentation"
+        else if (providers.gradleProperty("packagingInspector").orNull == "true")
+            "com.example.myfit.flutter.PackagingInstrumentation" else "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildTypes {
-        create("preview") {
-            initWith(getByName("release"))
-            signingConfig = signingConfigs.getByName("debug")
-            matchingFallbacks += listOf("release")
-        }
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
         }
+        create("preview") {
+            initWith(getByName("release"))
+            signingConfig = signingConfigs.getByName("debug")
+            matchingFallbacks += listOf("release")
+        }
     }
+    sourceSets.getByName("main").assets.setSrcDirs(listOf(packagedAssets))
     if (rustHistoryEnabled) sourceSets.getByName("main").jniLibs.srcDir(layout.buildDirectory.dir("generated/rustJniLibs"))
     sourceSets.getByName("androidTest").assets.srcDir(layout.buildDirectory.dir("generated/mediaBenchAssets"))
     compileOptions {
@@ -143,4 +167,4 @@ val buildRustHistory by tasks.registering(Exec::class) {
         "-Abis", rustAbis.get(), "-OutputDir", layout.buildDirectory.dir("generated/rustJniLibs").get().asFile,
         "-Ndk", rustNdk.get())
 }
-tasks.named("preBuild").configure { dependsOn(buildRustHistory) }
+tasks.named("preBuild").configure { dependsOn(buildRustHistory, preparePackagedAssets) }

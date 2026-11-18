@@ -39,9 +39,9 @@ class EmbeddedCatalogHost internal constructor(
     onPersonal: () -> Unit,
     preparedEngine: FlutterEngine? = null,
     private val coachBridge: CoachBridge? = null,
-    personalAction: ((String, Long?) -> Unit)? = null,
+    personalAction: (suspend (String, Long?) -> Unit)? = null,
     personalMedia: ((Long) -> String?)? = null,
-    onSettingsAction: ((String, Any?) -> Unit)? = null,
+    onSettingsAction: (suspend (String, Any?) -> Unit)? = null,
     onSettingsModel: (suspend (String, Map<String, String>) -> Map<String, Any?>)? = null
 ) {
     private var disposed = false
@@ -146,7 +146,7 @@ fun rememberEmbeddedCatalogHost(
     activate: Boolean = true,
     personalRows: List<Map<String, Any?>>? = null,
     personalSelected: Boolean = true,
-    onPersonalAction: ((String, Long?) -> Unit)? = null,
+    onPersonalAction: (suspend (String, Long?) -> Unit)? = null,
     personalMedia: ((Long) -> String?)? = null
 ): EmbeddedCatalogHost? {
     val context = LocalContext.current

@@ -147,7 +147,16 @@ internal class CoachBridge(
                     "refine" -> vm.generateCsvFromAdvice(promptContext(), vm.aiResponse.value.orEmpty(), call.arguments as String) {
                         sink?.success(mapOf("csv" to it))
                     }
-                    "import" -> vm.importWeeklyRoutine(activity, call.arguments as String)
+                    "import" -> {
+                        scope.launch {
+                            try {
+                                vm.importWeeklyRoutineNow(activity, call.arguments as String)
+                                result.success(true)
+                            } catch (e: CancellationException) { throw e }
+                            catch (_: Exception) { result.error("import", null, null) }
+                        }
+                        return@setMethodCallHandler
+                    }
                     "clearImage" -> { image = null }
                     "image" -> {
                         if (picker != null) { result.error("busy", null, null); return@setMethodCallHandler }

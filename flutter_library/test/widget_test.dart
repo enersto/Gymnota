@@ -175,6 +175,7 @@ void main() {
         find.byKey(const ValueKey('history-search')),
         'missing',
       );
+      await tester.pump(const Duration(milliseconds: 150));
       await tester.pumpAndSettle();
       expect(find.text('No records'), findsOneWidget);
       await tester.tap(find.text('Charts'));
@@ -188,6 +189,7 @@ void main() {
       );
       expect(find.text('No records'), findsOneWidget);
       await tester.enterText(find.byType(TextField), 'My row');
+      await tester.pump(const Duration(milliseconds: 150));
       await tester.pumpAndSettle();
       expect(find.text('My row', findRichText: false), findsNWidgets(2));
       expect(reads, 1);

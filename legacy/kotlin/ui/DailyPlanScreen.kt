@@ -76,7 +76,14 @@ import kotlin.random.Random
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DailyPlanScreen(viewModel: MainViewModel, navController: NavController) {
+fun DailyPlanScreen(
+    viewModel: MainViewModel,
+    navController: NavController,
+    onFlutterPreview: (() -> Unit)? = null,
+    onCloseLegacy: (() -> Unit)? = null,
+    onSelectExercise: (() -> Unit)? = null,
+    onSelectSchedule: (() -> Unit)? = null
+) {
     val date by viewModel.selectedDate.collectAsState()
     val dayType by viewModel.todayScheduleType.collectAsState()
     val tasks by viewModel.todayTasks.collectAsState(initial = emptyList<WorkoutTask>())
@@ -93,9 +100,21 @@ fun DailyPlanScreen(viewModel: MainViewModel, navController: NavController) {
     var showLockScreenSetupDialog by remember { mutableStateOf(false) }
 
     val glassMode = LocalGlassMode.current
-    val useGlassTabs = glassMode && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+    val useGlassTabs = onCloseLegacy == null && onFlutterPreview == null && glassMode && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
 
     val context = LocalContext.current
+    val rootPreview = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        val route = when (result.data?.getStringExtra(com.example.myfit.flutter.RootPreviewHost.RETURN_ROUTE)) {
+            "settings" -> "settings"
+            "ai-model" -> "settings?scrollToAi=${System.currentTimeMillis()}"
+            else -> null
+        }
+        if (route != null) navController.navigate(route) {
+            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+            launchSingleTop = true
+            restoreState = false
+        }
+    }
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission(),
         onResult = { isGranted ->
@@ -112,7 +131,7 @@ fun DailyPlanScreen(viewModel: MainViewModel, navController: NavController) {
                 if (dayType != DayType.REST) {
                     CompositionLocalProvider(LocalBackdrop provides workoutBackdrop) {
                         GlassControlSurface(
-                            onClick = { navController.navigate("exercise_selector") },
+                            onClick = onSelectExercise ?: { navController.navigate("exercise_selector") },
                             selected = true,
                             tint = themeColor,
                             modifier = Modifier.padding(bottom = if (useGlassTabs) 100.dp else 0.dp).size(56.dp)
@@ -127,8 +146,18 @@ fun DailyPlanScreen(viewModel: MainViewModel, navController: NavController) {
                 .layerBackdrop(workoutBackdrop)
                 .padding(padding)
                 .padding(16.dp)
-                .statusBarsPadding()) {
+                .then(if (onFlutterPreview == null) Modifier.statusBarsPadding() else Modifier)) {
 
+                TextButton(
+                    onClick = onCloseLegacy ?: onFlutterPreview ?: { rootPreview.launch(com.example.myfit.flutter.RootPreviewHost.intent(context, viewModel)) },
+                    modifier = Modifier.align(Alignment.End)
+                ) {
+                    Text(stringResource(when {
+                        onCloseLegacy != null -> R.string.btn_close
+                        onFlutterPreview != null -> R.string.preview_workout_title
+                        else -> R.string.root_preview_title
+                    }))
+                }
                 HeaderSection(
                     date = date,
                     dayType = dayType,
@@ -136,7 +165,7 @@ fun DailyPlanScreen(viewModel: MainViewModel, navController: NavController) {
                     color = themeColor,
                     showWeightAlert = showWeightAlert,
                     onWeightClick = { showWeightDialog = true },
-                    onTypeClick = {
+                    onTypeClick = onSelectSchedule ?: {
                         navController.navigate("settings?scrollToType=true") {
                             popUpTo(navController.graph.findStartDestination().id) { saveState = true }
                             launchSingleTop = true
@@ -287,31 +316,7 @@ fun AdvancedTaskItem(
                 
                 PillCheckButton(isCompleted = isCompleted, color = themeColor, onClick = {
                     val newState = !task.isCompleted
-                    var updatedTask = task.copy(isCompleted = newState)
-                    
-                    val isAutoFill = task.logType == LogType.DURATION.value || 
-                                   task.logType == LogType.REPS_ONLY.value || 
-                                   task.category.contains("有氧") || 
-                                   task.category.contains("核心")
-                    
-                    if (newState && isAutoFill) {
-                        val targetValue = task.target.replace(" ", "")
-                        val filledSets = task.sets.map { set ->
-                            // 核心修复：仅当用户未填写次数/时间时才尝试填充默认值
-                            val hasInput = set.weightOrDuration.isNotBlank() || set.reps.isNotBlank()
-                            
-                            if (!hasInput) {
-                                set.copy(
-                                    weightOrDuration = targetValue,
-                                    reps = if (task.logType == LogType.DURATION.value) "Done" else targetValue
-                                )
-                            } else {
-                                set // 保留用户输入
-                            }
-                        }
-                        updatedTask = updatedTask.copy(sets = filledSets)
-                    }
-                    viewModel.updateTask(updatedTask)
+                    viewModel.editWorkout(task, "check")
                     if (newState) onComplete()
                 })
             }
@@ -332,7 +337,7 @@ fun AdvancedTaskItem(
                         Spacer(modifier = Modifier.height(8.dp))
                         task.sets.forEachIndexed { index, set ->
                             SetRow(index = index, set = set, color = themeColor, isUnilateral = task.isUnilateral, isRepsOnly = isRepsOnly) { updatedSet ->
-                                viewModel.updateTask(task.copy(sets = task.sets.toMutableList().apply { set(index, updatedSet) }))
+                                viewModel.editWorkout(task, "setFields", index, updatedSet)
                             }
                             Spacer(modifier = Modifier.height(8.dp))
                         }
@@ -340,16 +345,14 @@ fun AdvancedTaskItem(
                         val showSeconds = task.category.equals("CORE", ignoreCase = true) || task.target.contains("s", ignoreCase = true) || task.target.contains("秒")
                         task.sets.forEachIndexed { index, set ->
                             TimerSetRow(index = index, set = set, defaultDuration = parseDefaultDuration(task.target), taskId = task.id, timerState = timerState, themeColor = themeColor, showSeconds = showSeconds, onStart = { onRequestPermission(); viewModel.startTimer(context, task.id, index, it) }, onPause = { viewModel.pauseTimer(context) }, onStop = { viewModel.stopTimer(context) }) {
-                                viewModel.updateTask(task.copy(sets = task.sets.toMutableList().apply { removeAt(index) }))
+                                viewModel.editWorkout(task, "removeSet", index)
                             }
                             if (index < task.sets.size - 1) HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
                         }
                     }
 
                     GlassControlSurface(onClick = {
-                        val lastSet = task.sets.lastOrNull()
-                        val newSet = WorkoutSet(setNumber = task.sets.size + 1, weightOrDuration = lastSet?.weightOrDuration ?: "", reps = lastSet?.reps ?: "", rightWeight = lastSet?.rightWeight, rightReps = lastSet?.rightReps)
-                        viewModel.updateTask(task.copy(sets = task.sets + newSet))
+                        viewModel.editWorkout(task, "addSet")
                     }, modifier = Modifier.align(Alignment.CenterHorizontally)) {
                         Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(4.dp))
@@ -455,7 +458,7 @@ fun TimerSetRow(index: Int, set: WorkoutSet, defaultDuration: String, taskId: Lo
 @Composable
 fun HeaderSection(date: LocalDate, dayType: DayType, progress: Float, color: Color, showWeightAlert: Boolean, onWeightClick: () -> Unit, onTypeClick: () -> Unit) {
     Column {
-        Text(text = date.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.FULL)), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f))
+        Text(text = date.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.FULL).withLocale(LocalConfiguration.current.locales[0])), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f))
         Spacer(modifier = Modifier.height(4.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(text = stringResource(dayType.labelResId), color = color, style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.ExtraBold, modifier = Modifier.clickable { onTypeClick() })

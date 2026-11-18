@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'main.dart'
     show Json, bridge, object, objects, ExerciseImage, Failure, MediaCache;
 import 'glass.dart';
+import 'exercise_editor.dart';
 import 'glass_frame_probe.dart';
 
 import 'dart:async';
@@ -285,11 +286,12 @@ class _EmbeddedCatalogState extends State<EmbeddedCatalog> {
                 l['btn_cancel'] ?? '',
                 () => Navigator.pop(dialogContext),
               ),
-              glassAction(
-                l['catalog_use_exercise'] ?? '',
-                () => Navigator.pop(dialogContext, 'use'),
-                icon: Icons.add,
-              ),
+              if (widget.config['previewReadOnly'] != true)
+                glassAction(
+                  l['catalog_use_exercise'] ?? '',
+                  () => Navigator.pop(dialogContext, 'use'),
+                  icon: Icons.add,
+                ),
             ],
           );
         },
@@ -327,10 +329,27 @@ class _EmbeddedCatalogState extends State<EmbeddedCatalog> {
         );
       if (action == 'use') {
         try {
-          await bridge.invokeMethod('useExercise', {
-            'id': entry['id'],
-            'language': language,
-          });
+          if (widget.config['primaryHost'] == true) {
+            final draft = object(
+              await bridge.invokeMethod('exerciseEditor', {
+                'operation': 'catalogDraft',
+                'sourceId': entry['id'],
+                'language': language,
+              }),
+            );
+            if (mounted)
+              await showExerciseEditor(
+                context,
+                widget.config,
+                widget.labels,
+                initial: draft,
+              );
+          } else {
+            await bridge.invokeMethod('useExercise', {
+              'id': entry['id'],
+              'language': language,
+            });
+          }
         } catch (_) {
           if (mounted)
             ScaffoldMessenger.of(context).showSnackBar(
@@ -397,11 +416,13 @@ class _EmbeddedCatalogState extends State<EmbeddedCatalog> {
                   load();
                 },
               ),
-              const SizedBox(height: 10),
-              Text(
-                l['catalog_setup_hint'] ?? '',
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
+              if (widget.config['previewReadOnly'] != true) ...[
+                const SizedBox(height: 10),
+                Text(
+                  l['catalog_setup_hint'] ?? '',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ],
               const SizedBox(height: 12),
             ],
           ),

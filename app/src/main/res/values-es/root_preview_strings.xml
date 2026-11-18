@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="root_preview_title">Vista previa de Flutter</string>
+    <string name="preview_daily_read_only">Vista previa del entrenamiento en modo de solo lectura</string>
+    <string name="preview_daily_empty">No hay ejercicios previstos para hoy</string>
+    <string name="preview_open_settings">Abrir los ajustes habituales</string>
+    <string name="preview_workout_title">Vista previa de entrenamiento</string>
+</resources>

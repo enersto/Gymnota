@@ -4,7 +4,6 @@ import android.content.Context
 import android.content.ContextWrapper
 import android.content.res.Configuration
 import android.os.Bundle
-import androidx.core.view.doOnPreDraw
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
@@ -12,27 +11,22 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
-import com.example.myfit.ui.MainScreen
 import com.example.myfit.ui.theme.MyFitTheme
 import com.example.myfit.util.LocaleHelper
 import com.example.myfit.viewmodel.MainViewModel
 
 class MainActivity : ComponentActivity() {
     // 使用 viewModels() 委托获取 ViewModel 实例
-    private val viewModel: MainViewModel by viewModels()
+    private val ownedViewModel: MainViewModel by viewModels()
+    private val viewModel get() = com.example.myfit.flutter.RootPreviewHost.borrow(intent) ?: ownedViewModel
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Queue initialization after the native first frame, rather than inside manager composition.
-        window.decorView.doOnPreDraw {
-            window.decorView.post {
-                if (!isFinishing && !isDestroyed) {
-                    com.example.myfit.flutter.HistoryRepository.start(applicationContext)
-                    com.example.myfit.flutter.HistoryEnginePool.warm(this@MainActivity)
-                    window.decorView.postDelayed({ if (!isFinishing && !isDestroyed) com.example.myfit.flutter.CatalogEnginePool.warm(this@MainActivity) }, 1500)
-                }
-            }
+        if (intent.getStringExtra("nativeTool") == null) {
+            startActivity(android.content.Intent(this, com.example.myfit.flutter.FlutterLibraryActivity::class.java))
+            finish()
+            return
         }
         setContent {
             // 监听 ViewModel 中的主题和语言设置
@@ -63,7 +57,13 @@ class MainActivity : ComponentActivity() {
                 LocalConfiguration provides localizedConfig,
                 LocalResources provides localized.resources
             ) {
-                MyFitTheme(appTheme = currentTheme) { MainScreen(viewModel = viewModel) }
+                MyFitTheme(appTheme = currentTheme) {
+                    val tool = intent.getStringExtra("nativeTool")
+                    if (tool != null) com.example.myfit.flutter.NativeToolScreen(
+                        tool, intent.getLongExtra("templateId", -1), intent.getStringExtra("sourceId"),
+                        viewModel, onFinish = ::finish
+                    )
+                }
             }
         }
     }
@@ -71,6 +71,7 @@ class MainActivity : ComponentActivity() {
     override fun onDestroy() {
         com.example.myfit.flutter.CatalogEnginePool.releaseWarmup(this)
         com.example.myfit.flutter.HistoryEnginePool.releaseWarmup(this)
+        if (isFinishing) com.example.myfit.flutter.RootPreviewHost.release(intent)
         super.onDestroy()
     }
 

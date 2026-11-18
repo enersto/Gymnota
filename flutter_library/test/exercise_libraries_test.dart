@@ -1,3 +1,4 @@
+import 'package:gymnota_library/exercise_editor.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gymnota_library/glass.dart';
 import 'package:gymnota_library/main.dart';
@@ -73,11 +74,14 @@ void main() {
       await tester.tap(find.text('我的卧推'));
       await tester.tap(find.byTooltip('Delete'));
       await tester.tap(find.byTooltip('Add').hitTestable());
-      expect(actions.take(3), [
+      await tester.pumpAndSettle();
+      expect(actions, [
         {'action': 'view', 'id': 42},
         {'action': 'delete', 'id': 42},
-        {'action': 'add', 'id': null},
       ]);
+      expect(find.byType(ExerciseEditor), findsOneWidget);
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
 
       await tester.tap(find.text('Cardio'));
       await tester.pumpAndSettle();

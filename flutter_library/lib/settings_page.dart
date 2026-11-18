@@ -3,6 +3,7 @@ import 'package:liquid_glass_widgets/liquid_glass_widgets.dart' as lg;
 
 import 'glass.dart';
 import 'model_settings_page.dart';
+import 'training_forms.dart';
 import 'main.dart' show Json, bridge, object, objects;
 
 class SettingsPage extends StatefulWidget {
@@ -53,6 +54,33 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Future<void> action(String name, [Object? value]) async {
+    if (widget.config['primaryHost'] == true) {
+      switch (name) {
+        case 'import':
+          final csv = await editImportCsv(context, widget.labels);
+          if (csv != null && mounted) await action('importCsv', csv);
+          return;
+        case 'profile':
+          final data = await editBodyMetrics(
+            context,
+            widget.labels,
+            object(widget.config['bodyProfile']),
+            recordWeight: false,
+          );
+          if (data != null && mounted) await action('saveProfile', data);
+          return;
+        case 'weekly':
+          await showWeeklyRoutine(
+            context,
+            widget.labels,
+            objects(widget.config['personalRows']),
+          );
+          return;
+        case 'help':
+          await showKeyReference(context, widget.labels);
+          return;
+      }
+    }
     try {
       await bridge.invokeMethod('settingsAction', {
         'action': name,
@@ -279,7 +307,8 @@ class _SettingsPageState extends State<SettingsPage> {
   @override
   Widget build(BuildContext context) {
     final config = widget.config;
-    if (showModel) {
+    final preview = config['previewReadOnly'] == true;
+    if (showModel && !preview) {
       return PopScope(
         canPop: false,
         onPopInvokedWithResult: (popped, _) {
@@ -322,7 +351,6 @@ class _SettingsPageState extends State<SettingsPage> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               spacing: 24,
               children: [
-                shortcut('settings_old_title', Icons.history, 'old'),
                 section(
                   'settings_language',
                   GlassSegments<String>(
@@ -332,33 +360,45 @@ class _SettingsPageState extends State<SettingsPage> {
                     onChanged: (value) => action('language', value),
                   ),
                 ),
-                section(
-                  'settings_data_management',
-                  Column(
-                    spacing: 12,
-                    children: [
-                      dataRow(
-                        ('export_csv_btn', Icons.share_outlined, 'export'),
-                        ('import_csv_btn', Icons.upload_outlined, 'import'),
-                      ),
-                      dataRow(
-                        ('settings_help_reference', Icons.help_outline, 'help'),
-                        ('settings_profile', Icons.person_outline, 'profile'),
-                      ),
-                      dataRow(
-                        ('btn_backup_db', Icons.backup_outlined, 'backup'),
-                        ('btn_restore_db', Icons.restore, 'restore'),
-                      ),
-                    ],
+                if (!preview)
+                  section(
+                    'settings_data_management',
+                    Column(
+                      spacing: 12,
+                      children: [
+                        dataRow(
+                          ('export_csv_btn', Icons.share_outlined, 'export'),
+                          ('import_csv_btn', Icons.upload_outlined, 'import'),
+                        ),
+                        dataRow(
+                          (
+                            'settings_help_reference',
+                            Icons.help_outline,
+                            'help',
+                          ),
+                          ('settings_profile', Icons.person_outline, 'profile'),
+                        ),
+                        dataRow(
+                          ('btn_backup_db', Icons.backup_outlined, 'backup'),
+                          ('btn_restore_db', Icons.restore, 'restore'),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                shortcut('weekly_plan', Icons.edit_calendar_outlined, 'weekly'),
+                if (!preview)
+                  shortcut(
+                    'weekly_plan',
+                    Icons.edit_calendar_outlined,
+                    'weekly',
+                  ),
                 shortcut(
                   'ai_config_title',
                   Icons.smart_toy_outlined,
                   'ai',
                   subtitle: model,
-                  onTap: () => setState(() => showModel = true),
+                  onTap: preview
+                      ? () => action('ai')
+                      : () => setState(() => showModel = true),
                 ),
                 section(
                   'settings_timer_title',

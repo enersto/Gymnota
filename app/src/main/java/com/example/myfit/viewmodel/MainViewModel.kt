@@ -7,16 +7,22 @@ import android.net.Uri
 import android.os.Build
 import android.widget.Toast
 import androidx.room.withTransaction
+import com.example.myfit.data.RustTimer
+import com.example.myfit.data.RustWeeklyRoutine
+import com.example.myfit.data.RustWorkoutStorage
+import com.example.myfit.data.RustLiveQueries
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.myfit.R
 import com.example.myfit.data.AppDatabase
+import com.example.myfit.data.DatabaseBackups
 import com.example.myfit.data.WorkoutDao
 import com.example.myfit.model.*
 import com.example.myfit.ui.ChartDataPoint
 import com.example.myfit.ui.ChartGranularity
 import com.example.myfit.util.NotificationHelper
 import com.example.myfit.util.TimerService
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -68,8 +74,8 @@ data class HeatmapPoint(val intensity: Float, val volume: Float)
 @OptIn(ExperimentalCoroutinesApi::class)
 class MainViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val database = AppDatabase.getDatabase(application)
-    private val dao: WorkoutDao = database.workoutDao()
+    private val database by lazy { AppDatabase.getDatabase(application) }
+    private val dao: WorkoutDao by lazy { database.workoutDao() }
 
     companion object {
         const val KEY_TIMER_PREP_ENABLED = "timer_prep_enabled"
@@ -110,7 +116,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     )
 
     suspend fun getSavedProviderConfig(providerName: String): Triple<String, String, String> {
-        val savedConfig = dao.getAiProviderConfig(providerName)
+        val savedConfig = if (com.example.myfit.BuildConfig.RUST_HISTORY_ENABLED)
+            RustLiveQueries.read<AiProviderConfig>(getApplication<Application>(), "providerConfigs")
+                .firstOrNull { it.providerName == providerName }
+            else dao.getAiProviderConfig(providerName)
         if (savedConfig != null) {
             return Triple(savedConfig.apiKey, savedConfig.model, savedConfig.baseUrl)
         }
@@ -141,7 +150,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val selectedDate: StateFlow<LocalDate> = _selectedDate.asStateFlow()
 
     private val initialLanguage = com.example.myfit.util.LocaleHelper.cachedLanguage(application)
-    val userProfile = dao.getAppSettings()
+    private val profileData: Flow<AppSetting?> = if (com.example.myfit.BuildConfig.RUST_HISTORY_ENABLED)
+        RustLiveQueries.observe<AppSetting>(getApplication<Application>(), "app_settings",
+            RustWorkoutStorage.profileRevision, "profile").map { it.firstOrNull() }
+        else RustWorkoutStorage.profileRevision.flatMapLatest { dao.getAppSettings() }
+    val userProfile = profileData
         .map { it ?: AppSetting(themeId = 1) }
         .stateIn(viewModelScope, SharingStarted.Lazily, AppSetting(themeId = 1, languageCode = initialLanguage))
 
@@ -153,7 +166,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         .map { it.languageCode }
         .stateIn(viewModelScope, SharingStarted.Lazily, initialLanguage)
 
-    val allSchedules: Flow<List<ScheduleConfig>> = dao.getAllSchedules()
+    val allSchedules: Flow<List<ScheduleConfig>> = if (com.example.myfit.BuildConfig.RUST_HISTORY_ENABLED)
+        RustLiveQueries.observe<ScheduleConfig>(getApplication<Application>(), "schedule_config",
+            RustWorkoutStorage.scheduleRevision, "schedules")
+        else dao.getAllSchedules()
 
     private val _todayScheduleType = MutableStateFlow(DayType.CORE)
     val todayScheduleType = combine(_selectedDate, allSchedules) { date, schedules ->
@@ -163,20 +179,38 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         type
     }.stateIn(viewModelScope, SharingStarted.Lazily, DayType.CORE)
 
-    val showWeightAlert = dao.getLatestWeight().map { record ->
+    private val latestWeight = if (com.example.myfit.BuildConfig.RUST_HISTORY_ENABLED)
+        RustLiveQueries.observe<WeightRecord>(getApplication<Application>(), "weight_records",
+            RustWorkoutStorage.weightRevision, "latestWeight").map { it.firstOrNull() }
+        else RustWorkoutStorage.weightRevision.flatMapLatest { dao.getLatestWeight() }
+    val showWeightAlert = latestWeight.map { record ->
         if (record == null) true else ChronoUnit.DAYS.between(
             LocalDate.parse(record.date),
             LocalDate.now()
         ) > 7
     }.stateIn(viewModelScope, SharingStarted.Lazily, false)
 
-    val todayTasks: Flow<List<WorkoutTask>> = _selectedDate.flatMapLatest { date ->
-        dao.getTasksForDate(date.toString())
+    internal val dailyPlanTasks = _selectedDate.flatMapLatest { date ->
+        val tasks = if (com.example.myfit.BuildConfig.RUST_HISTORY_ENABLED)
+            RustLiveQueries.observe<WorkoutTask>(getApplication<Application>(), "workout_tasks",
+                RustWorkoutStorage.workoutRevision, "daily", date.toString())
+        else RustWorkoutStorage.workoutRevision.flatMapLatest { dao.getTasksForDate(date.toString()) }
+        tasks.map { date to it }
     }
+    val todayTasks: Flow<List<WorkoutTask>> = dailyPlanTasks.map { it.second }
 
-    val allTemplates: Flow<List<ExerciseTemplate>> = dao.getAllTemplates()
-    val historyRecords: Flow<List<WorkoutTask>> = dao.getAllHistoryTasks()
-    val weightHistory: Flow<List<WeightRecord>> = dao.getAllWeightRecords()
+    val allTemplates: Flow<List<ExerciseTemplate>> = if (com.example.myfit.BuildConfig.RUST_HISTORY_ENABLED)
+        RustLiveQueries.observe<ExerciseTemplate>(getApplication<Application>(), "exercise_templates",
+            RustWorkoutStorage.templateRevision, "templates")
+        else RustWorkoutStorage.templateRevision.flatMapLatest { dao.getAllTemplates() }
+    val historyRecords: Flow<List<WorkoutTask>> = if (com.example.myfit.BuildConfig.RUST_HISTORY_ENABLED)
+        RustLiveQueries.observe<WorkoutTask>(getApplication<Application>(), "workout_tasks",
+            RustWorkoutStorage.workoutRevision, "completed")
+        else RustWorkoutStorage.workoutRevision.flatMapLatest { dao.getAllHistoryTasks() }
+    val weightHistory: Flow<List<WeightRecord>> = if (com.example.myfit.BuildConfig.RUST_HISTORY_ENABLED)
+        RustLiveQueries.observe<WeightRecord>(getApplication<Application>(), "weight_records",
+            RustWorkoutStorage.weightRevision, "weights")
+        else RustWorkoutStorage.weightRevision.flatMapLatest { dao.getAllWeightRecords() }
 
     private val _hasShownLockScreenGuide =
         MutableStateFlow(prefs.getBoolean("key_lockscreen_guide_shown", false))
@@ -261,7 +295,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val prepSeconds = getTimerPrepSeconds()
         val now = SystemClock.elapsedRealtime()
         val endTime = now + (prepSeconds * 1000L)
-        _timerState.value = TimerState(
+        _timerState.value = if (com.example.myfit.BuildConfig.RUST_HISTORY_ENABLED)
+            RustTimer.transition("prep", TimerState(taskId = taskId, setIndex = setIndex), now,
+                mapOf("prepSeconds" to prepSeconds)).state
+        else TimerState(
             taskId,
             setIndex,
             prepSeconds,
@@ -290,25 +327,23 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val current = _timerState.value
         val now = SystemClock.elapsedRealtime()
         val durationMillis = (durationMinutes * 60 * 1000).toLong()
-        val endTimeMillis =
-            if (current.taskId == taskId && current.setIndex == setIndex && current.isPaused && current.phase == TimerPhase.WORK) {
-                now + (current.remainingSeconds * 1000L)
-            } else {
-                now + durationMillis
-            }
-        val initialRemSeconds = ((endTimeMillis - now) / 1000).toInt()
-        _timerState.value = TimerState(
-            taskId,
-            setIndex,
-            (durationMinutes * 60).toInt(),
-            initialRemSeconds,
-            endTimeMillis,
-            isRunning = true,
-            phase = TimerPhase.WORK
-        )
+        val next = if (com.example.myfit.BuildConfig.RUST_HISTORY_ENABLED) {
+            RustTimer.transition("work", current, now, mapOf(
+                "taskId" to taskId, "setIndex" to setIndex, "durationMillis" to durationMillis,
+                "totalSeconds" to (durationMinutes * 60).toInt()
+            )).state
+        } else {
+            val end = if (current.taskId == taskId && current.setIndex == setIndex &&
+                current.isPaused && current.phase == TimerPhase.WORK)
+                now + current.remainingSeconds * 1000L else now + durationMillis
+            TimerState(taskId, setIndex, (durationMinutes * 60).toInt(),
+                ((end - now) / 1000).toInt(), end, isRunning = true, phase = TimerPhase.WORK)
+        }
+        _timerState.value = next
+        val endTimeMillis = next.endTimeMillis
 
         viewModelScope.launch(Dispatchers.IO) {
-            val task = dao.getTaskById(taskId)
+            val task = readTask(taskId)
             val taskName = task?.name ?: "Training"
             val wallClockEndTime = System.currentTimeMillis() + (endTimeMillis - now)
             val intent = Intent(context, TimerService::class.java).apply {
@@ -332,6 +367,30 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val soundEnabled = getTimerSoundEnabled()
 
             while (_timerState.value.isRunning) {
+                if (com.example.myfit.BuildConfig.RUST_HISTORY_ENABLED) {
+                    val observed = _timerState.value
+                    val result = RustTimer.transition("tick", observed, SystemClock.elapsedRealtime(), mapOf(
+                        "finalSeconds" to finalSeconds, "finalEnabled" to finalEnabled,
+                        "soundEnabled" to soundEnabled, "lastBeepSecond" to lastBeepSecond
+                    ))
+                    if (!_timerState.compareAndSet(observed, result.state)) continue
+                    if (result.beep) {
+                        try { toneGenerator.startTone(ToneGenerator.TONE_CDMA_PIP, 150) } catch (_: Exception) {}
+                        lastBeepSecond = result.state.remainingSeconds
+                    }
+                    if (result.finished) {
+                        if (soundEnabled) try {
+                            toneGenerator.startTone(ToneGenerator.TONE_CDMA_ALERT_CALL_GUARD, 400)
+                        } catch (_: Exception) {}
+                        withContext(Dispatchers.Main) {
+                            if (!isPrep) stopService(context)
+                            onFinish()
+                        }
+                        break
+                    }
+                    delay(100)
+                    continue
+                }
                 val currentNow = SystemClock.elapsedRealtime()
                 val targetEnd = _timerState.value.endTimeMillis
                 val remSeconds = ((targetEnd - currentNow) / 1000).toInt() + 1
@@ -378,7 +437,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun pauseTimer(context: Context) {
-        _timerState.update { it.copy(isRunning = false, isPaused = true) }
+        _timerState.update {
+            if (com.example.myfit.BuildConfig.RUST_HISTORY_ENABLED)
+                RustTimer.transition("pause", it, SystemClock.elapsedRealtime()).state
+            else it.copy(isRunning = false, isPaused = true)
+        }
         timerJob?.cancel()
         try {
             NotificationHelper.updateTimerNotification(context, null, null)
@@ -410,7 +473,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private suspend fun onTimerFinished(taskId: Long, setIndex: Int, durationMinutes: Float) {
         _timerState.value = TimerState()
-        val task = dao.getTaskById(taskId) ?: return
+        val task = readTask(taskId) ?: return
+        if (com.example.myfit.BuildConfig.RUST_HISTORY_ENABLED) {
+            val timeStr = if (durationMinutes % 1.0f == 0f) "${durationMinutes.toInt()}min" else "${durationMinutes}min"
+            RustWorkoutStorage.mutate(getApplication<Application>(), task.date,
+                listOf(mapOf("action" to "timerFinished", "id" to taskId, "index" to setIndex, "value" to timeStr)))
+            val complete = readTask(taskId)?.isCompleted == true
+            withContext(Dispatchers.Main) {
+                val app = getApplication<Application>()
+                Toast.makeText(app, app.getString(if (complete) R.string.toast_task_auto_completed
+                    else R.string.toast_set_completed), Toast.LENGTH_SHORT).show()
+            }
+            return
+        }
         val newSets = task.sets.toMutableList()
         if (setIndex < newSets.size) {
             val timeStr =
@@ -503,11 +578,28 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }.sortedBy { it.date }
     }
 
-    fun switchTheme(theme: AppTheme) =
-        viewModelScope.launch { dao.saveAppSettings(userProfile.value.copy(themeId = theme.id)) }
+    internal suspend fun persistSetting(field: String, value: Any) {
+        if (com.example.myfit.BuildConfig.RUST_HISTORY_ENABLED) {
+            RustWorkoutStorage.mutate(getApplication<Application>(), LocalDate.now().toString(),
+                listOf(mapOf("action" to "patchSettings", "field" to field, "value" to value)))
+            return
+        }
+        database.withTransaction {
+            val current = dao.getAppSettings().first() ?: AppSetting()
+            val next = when (field) {
+                "themeId" -> current.copy(themeId = value as Int)
+                "languageCode" -> current.copy(languageCode = value as String)
+                "useLocalAiCache" -> current.copy(useLocalAiCache = value as Boolean)
+                "maxHistoryLimit" -> current.copy(maxHistoryLimit = value as Int)
+                else -> error("Unknown setting")
+            }
+            dao.saveAppSettings(next)
+        }
+    }
 
-    fun switchLanguage(lang: String) =
-        viewModelScope.launch { dao.saveAppSettings(userProfile.value.copy(languageCode = lang)) }
+    fun switchTheme(theme: AppTheme) = viewModelScope.launch { persistSetting("themeId", theme.id) }
+
+    fun switchLanguage(lang: String) = viewModelScope.launch { persistSetting("languageCode", lang) }
 
     fun logWeightAndProfile(
         weight: Float,
@@ -520,6 +612,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         waist: Float?,
         hip: Float?
     ) = viewModelScope.launch {
+        if (com.example.myfit.BuildConfig.RUST_HISTORY_ENABLED) {
+            val fields = mutableMapOf<String, Any?>("weight" to weight, "fat" to bodyFat,
+                "muscle" to muscle, "water" to water, "waist" to waist, "hip" to hip)
+            if (age != null && height != null) fields["profile"] = mapOf(
+                "age" to age, "height" to height, "gender" to (gender ?: 0))
+            RustWorkoutStorage.mutate(getApplication<Application>(), LocalDate.now().toString(),
+                listOf(mapOf("action" to "saveWeight", "fields" to fields)))
+            return@launch
+        }
         if (age != null && height != null) updateProfile(age, height, gender ?: 0)
         dao.insertWeight(
             WeightRecord(
@@ -535,6 +636,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun updateProfile(age: Int, height: Float, gender: Int) = viewModelScope.launch {
+        if (com.example.myfit.BuildConfig.RUST_HISTORY_ENABLED) {
+            RustWorkoutStorage.mutate(getApplication<Application>(), LocalDate.now().toString(),
+                listOf(mapOf("action" to "saveProfile", "fields" to mapOf("age" to age, "height" to height, "gender" to gender))))
+            return@launch
+        }
         dao.saveAppSettings(
             userProfile.value.copy(
                 age = age,
@@ -544,10 +650,31 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         )
     }
 
-    fun deleteTemplate(id: Long) =
-        viewModelScope.launch { dao.getTemplateById(id)?.let { dao.deleteTemplate(it) } }
+    fun deleteTemplate(id: Long) = viewModelScope.launch { deletePersonalTemplate(id) }
 
-    fun saveTemplate(t: ExerciseTemplate) = viewModelScope.launch {
+    internal suspend fun deletePersonalTemplate(id: Long) {
+        if (com.example.myfit.BuildConfig.RUST_HISTORY_ENABLED) {
+            RustWorkoutStorage.mutate(getApplication<Application>(), LocalDate.now().toString(),
+                listOf(mapOf("action" to "deleteTemplate", "id" to id)))
+        } else {
+            dao.getTemplateById(id)?.let { dao.deleteTemplate(it) }
+        }
+    }
+
+    fun saveTemplate(t: ExerciseTemplate) = viewModelScope.launch { savePersonalTemplate(t) }
+
+    internal suspend fun savePersonalTemplate(t: ExerciseTemplate) {
+        if (com.example.myfit.BuildConfig.RUST_HISTORY_ENABLED) {
+            val fields = mapOf(
+                "name" to t.name, "target" to t.defaultTarget, "category" to t.category,
+                "bodyPart" to t.bodyPart, "equipment" to t.equipment, "instruction" to t.instruction,
+                "isUnilateral" to t.isUnilateral, "logType" to t.logType, "imageUri" to t.imageUri,
+                "animationUri" to t.animationUri
+            )
+            RustWorkoutStorage.mutate(getApplication<Application>(), LocalDate.now().toString(),
+                listOf(mapOf("action" to "saveTemplate", "id" to t.id, "fields" to fields)))
+            return
+        }
         if (t.id == 0L) {
             dao.insertTemplate(t)
         } else {
@@ -564,6 +691,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun addTaskFromTemplate(t: ExerciseTemplate) = viewModelScope.launch {
+        if (com.example.myfit.BuildConfig.RUST_HISTORY_ENABLED) {
+            RustWorkoutStorage.mutate(getApplication<Application>(), selectedDate.value.toString(),
+                listOf(mapOf("action" to "addExercise", "id" to t.id)))
+            return@launch
+        }
         dao.insertTask(
             WorkoutTask(
                 date = _selectedDate.value.toString(),
@@ -580,15 +712,90 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         )
     }
 
-    fun updateTask(t: WorkoutTask) = viewModelScope.launch { dao.updateTask(t) }
-    fun removeTask(t: WorkoutTask) = viewModelScope.launch { dao.deleteTask(t) }
+    private suspend fun readTask(id: Long): WorkoutTask? =
+        if (com.example.myfit.BuildConfig.RUST_HISTORY_ENABLED)
+            RustLiveQueries.read<WorkoutTask>(getApplication<Application>(), "task", id = id).firstOrNull()
+        else dao.getTaskById(id)
+
+    internal suspend fun dailyTask(id: Long) =
+        readTask(id)?.takeIf { it.date == selectedDate.value.toString() }
+
+    internal suspend fun mutateDailyTask(id: Long, delete: Boolean = false, transform: (WorkoutTask) -> WorkoutTask) =
+        database.withTransaction {
+            val task = dao.getTaskById(id)?.takeIf { it.date == selectedDate.value.toString() } ?: return@withTransaction
+            if (delete) dao.deleteTask(task) else dao.updateTask(transform(task))
+        }
+
+    internal suspend fun <T> updateDailyTasks(
+        changes: Map<Long, T>,
+        transform: (WorkoutTask, T) -> WorkoutTask
+    ) = database.withTransaction {
+        val date = selectedDate.value.toString()
+        for ((id, change) in changes) {
+            val task = dao.getTaskById(id)?.takeIf { it.date == date } ?: continue
+            val updated = transform(task, change)
+            if (updated != task) dao.updateTask(updated)
+        }
+    }
+
+    // The archived Compose page uses the same field-level transactions as Flutter.
+    fun editWorkout(task: WorkoutTask, action: String, index: Int = -1, set: WorkoutSet? = null) = viewModelScope.launch {
+        if (action == "removeSet" && timerState.value.taskId == task.id) stopTimer(getApplication<Application>())
+        if (com.example.myfit.BuildConfig.RUST_HISTORY_ENABLED) {
+            val edits = set?.let { value ->
+                listOf("value" to value.weightOrDuration, "reps" to value.reps,
+                    "rightWeight" to value.rightWeight, "rightReps" to value.rightReps).map { (field, text) ->
+                    mapOf("index" to index, "field" to field, "text" to text.orEmpty())
+                }
+            }
+            RustWorkoutStorage.mutate(getApplication<Application>(), task.date,
+                listOf(mapOf("action" to action, "id" to task.id, "index" to index, "edits" to edits)))
+        } else {
+            val current = dao.getTaskById(task.id) ?: return@launch
+            // The non-Rust build retains the original Kotlin interaction rules.
+            val next = when (action) {
+                "check" -> {
+                    val done = !current.isCompleted
+                    val auto = current.logType in listOf(1, 2) || current.category.contains("有氧") || current.category.contains("核心")
+                    val target = current.target.replace(" ", "")
+                    current.copy(isCompleted = done, sets = current.sets.map {
+                        if (done && auto && it.weightOrDuration.isBlank() && it.reps.isBlank())
+                            it.copy(weightOrDuration = target, reps = if (current.logType == 1) "Done" else target) else it
+                    })
+                }
+                "addSet" -> current.copy(sets = current.sets + (current.sets.lastOrNull()
+                    ?.copy(setNumber = current.sets.size + 1) ?: WorkoutSet(1, "", "")))
+                "removeSet" -> current.copy(sets = current.sets.filterIndexed { i, _ -> i != index })
+                "setFields" -> current.copy(sets = current.sets.mapIndexed { i, item -> if (i == index) set ?: item else item })
+                else -> error("Unknown workout edit")
+            }
+            dao.updateTask(next)
+        }
+    }
+
+    fun removeTask(t: WorkoutTask) = viewModelScope.launch {
+        if (timerState.value.taskId == t.id) stopTimer(getApplication<Application>())
+        if (com.example.myfit.BuildConfig.RUST_HISTORY_ENABLED)
+            RustWorkoutStorage.mutate(getApplication<Application>(), t.date,
+                listOf(mapOf("action" to "removeTask", "id" to t.id)))
+        else dao.deleteTask(t)
+    }
 
     fun applyWeeklyRoutineToToday() = viewModelScope.launch(Dispatchers.IO) {
-        val dateStr = _selectedDate.value.toString()
-        dao.getRoutineForDaySync(_selectedDate.value.dayOfWeek.value).forEach { item ->
-            dao.insertTask(
+        applyWeeklyRoutine()
+    }
+
+    internal suspend fun applyWeeklyRoutine() {
+        val date = _selectedDate.value
+        if (com.example.myfit.BuildConfig.RUST_HISTORY_ENABLED) {
+            RustWorkoutStorage.mutate(getApplication<Application>(), date.toString(), listOf(mapOf("action" to "routine")))
+            return
+        }
+        database.withTransaction {
+            val rows = dao.getRoutineForDay(date.dayOfWeek.value)
+            val tasks = RustWeeklyRoutine.plan(date.toString(), rows) ?: rows.map { item ->
                 WorkoutTask(
-                    date = dateStr,
+                    date = date.toString(),
                     templateId = item.templateId,
                     name = item.name,
                     category = item.category,
@@ -599,39 +806,74 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     logType = item.logType,
                     sets = listOf(WorkoutSet(setNumber = 1, weightOrDuration = "", reps = ""))
                 )
-            )
+            }
+            tasks.forEach { dao.insertTask(it) }
         }
     }
 
+    internal suspend fun weeklyRoutineSummary(day: Int): List<Map<String, Any?>> =
+        withContext(Dispatchers.IO) {
+            val native = if (com.example.myfit.BuildConfig.RUST_HISTORY_ENABLED)
+                RustWorkoutStorage.weekly(getApplication<Application>(), day) else null
+            native ?: dao.getRoutineForDay(day).sortedBy { it.id }.map {
+                mapOf("id" to it.id, "name" to it.name, "target" to it.target)
+            }
+        }
+
+    internal suspend fun editWeeklyRoutine(action: String, day: Int, id: Long): List<Map<String, Any?>> =
+        if (com.example.myfit.BuildConfig.RUST_HISTORY_ENABLED) {
+            checkNotNull(RustWorkoutStorage.weekly(getApplication<Application>(), day, action, id))
+        } else database.withTransaction {
+            require(day in 1..7 && id > 0 && (action == "add" || action == "delete"))
+            if (action == "add") {
+                val template = checkNotNull(dao.getTemplateById(id)?.takeUnless { it.isDeleted })
+                dao.insertRoutineItem(
+                    WeeklyRoutineItem(
+                        dayOfWeek = day, templateId = template.id, name = template.name,
+                        target = template.defaultTarget, category = template.category,
+                        bodyPart = template.bodyPart, equipment = template.equipment,
+                        isUnilateral = template.isUnilateral, logType = template.logType
+                    )
+                )
+            } else {
+                dao.getRoutineForDay(day).firstOrNull { it.id == id }?.let { dao.deleteRoutineItem(it) }
+            }
+            dao.getRoutineForDay(day).sortedBy { it.id }.map {
+                mapOf("id" to it.id, "name" to it.name, "target" to it.target)
+            }
+        }
+
     fun addRoutineItem(day: Int, template: ExerciseTemplate) = viewModelScope.launch {
-        dao.insertRoutineItem(
-            WeeklyRoutineItem(
-                dayOfWeek = day,
-                templateId = template.id,
-                name = template.name,
-                target = template.defaultTarget,
-                category = template.category,
-                bodyPart = template.bodyPart,
-                equipment = template.equipment,
-                isUnilateral = template.isUnilateral,
-                logType = template.logType
-            )
-        )
+        editWeeklyRoutine("add", day, template.id)
     }
 
-    fun removeRoutineItem(item: WeeklyRoutineItem) =
-        viewModelScope.launch { dao.deleteRoutineItem(item) }
+    fun removeRoutineItem(item: WeeklyRoutineItem) = viewModelScope.launch {
+        // Legacy editor can carry a placeholder id until the page is reloaded.
+        if (item.id > 0) editWeeklyRoutine("delete", item.dayOfWeek, item.id)
+    }
 
     fun updateScheduleConfig(day: Int, type: DayType) = viewModelScope.launch {
-        dao.insertSchedule(ScheduleConfig(dayOfWeek = day, dayType = type))
+        persistSchedule(day, type)
+    }
+
+    internal suspend fun persistSchedule(day: Int, type: DayType) {
+        if (com.example.myfit.BuildConfig.RUST_HISTORY_ENABLED) {
+            RustWorkoutStorage.mutate(getApplication<Application>(), LocalDate.now().toString(),
+                listOf(mapOf("action" to "saveSchedule", "day" to day, "type" to type.name)))
+        } else dao.insertSchedule(ScheduleConfig(dayOfWeek = day, dayType = type))
         if (day == _selectedDate.value.dayOfWeek.value) _todayScheduleType.value = type
     }
 
-    suspend fun getRoutineForDay(day: Int): List<WeeklyRoutineItem> = dao.getRoutineForDay(day)
+    suspend fun getRoutineForDay(day: Int): List<WeeklyRoutineItem> =
+        if (com.example.myfit.BuildConfig.RUST_HISTORY_ENABLED)
+            RustLiveQueries.read<WeeklyRoutineItem>(getApplication<Application>(), "routines").filter { it.dayOfWeek == day }
+        else dao.getRoutineForDay(day)
 
     fun exportHistoryToCsv(uri: Uri, context: Context) = viewModelScope.launch(Dispatchers.IO) {
         try {
-            val records = dao.getHistoryRecordsSync()
+            val records = if (com.example.myfit.BuildConfig.RUST_HISTORY_ENABLED)
+                RustLiveQueries.read<WorkoutTask>(getApplication<Application>(), "completed")
+            else dao.getHistoryRecordsSync()
             val csv = com.example.myfit.data.RustSettingsCsv.encode(records) ?: buildString {
                 append("Date,Name,Category,Target,IsUnilateral,LogType,Sets_Detail\n")
                 records.forEach { task ->
@@ -663,24 +905,26 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun backupDatabase(uri: Uri, context: Context) = viewModelScope.launch(Dispatchers.IO) {
         try {
-            if (database.isOpen) {
-                val db = database.openHelper.writableDatabase
-                db.query("PRAGMA wal_checkpoint(TRUNCATE)").use { it.moveToFirst() }
-                db.query("PRAGMA wal_checkpoint(FULL)").use { it.moveToFirst() }
-            }
-            delay(1000)
-            val dbPath = context.getDatabasePath("myfit_v7.db")
-            if (dbPath.exists()) {
-                context.contentResolver.openOutputStream(uri)
-                    ?.use { out -> FileInputStream(dbPath).use { it.copyTo(out); out.flush() } }
-                withContext(Dispatchers.Main) {
-                    Toast.makeText(
-                        context,
-                        context.getString(R.string.msg_backup_success),
-                        Toast.LENGTH_SHORT
-                    ).show()
+            RustWorkoutStorage.withDatabaseFile {
+                if (com.example.myfit.BuildConfig.RUST_HISTORY_ENABLED) {
+                    RustWorkoutStorage.initialize(context)
+                    RustWorkoutStorage.snapshot(context) { input ->
+                        checkNotNull(context.contentResolver.openOutputStream(uri))
+                            .use { output -> input.copyTo(output); output.flush() }
+                    }
+                } else {
+                    val db = database.openHelper.writableDatabase
+                    db.query("PRAGMA wal_checkpoint(TRUNCATE)").use { cursor ->
+                        check(cursor.moveToFirst() && cursor.getInt(0) == 0) { "Database checkpoint busy" }
+                    }
+                    val dbPath = context.getDatabasePath(AppDatabase.FILE_NAME)
+                    checkNotNull(context.contentResolver.openOutputStream(uri))
+                        .use { output -> FileInputStream(dbPath).use { it.copyTo(output); output.flush() } }
                 }
-            } else throw Exception("DB not found")
+            }
+            withContext(Dispatchers.Main) {
+                Toast.makeText(context, context.getString(R.string.msg_backup_success), Toast.LENGTH_SHORT).show()
+            }
         } catch (e: Exception) {
             withContext(Dispatchers.Main) {
                 Toast.makeText(
@@ -692,40 +936,58 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun restoreDatabase(uri: Uri, context: Context) = viewModelScope.launch(Dispatchers.IO) {
+    fun restoreDatabase(uri: Uri, context: Context, launchOptions: Intent? = null) = viewModelScope.launch(Dispatchers.IO) {
+        var liveClosed = false
         try {
-            val dbPath = context.getDatabasePath("myfit_v7.db")
-            if (database.isOpen) database.close()
-            context.contentResolver.openInputStream(uri)
-                ?.use { input -> FileOutputStream(dbPath).use { input.copyTo(it); it.fd.sync() } }
-            listOf(
-                "-wal",
-                "-shm"
-            ).forEach { File(dbPath.path + it).let { if (it.exists()) it.delete() } }
-            delay(1000)
-            if (!dbPath.exists() || dbPath.length() < 1024) throw Exception("Restore failed")
-            withContext(Dispatchers.Main) {
-                Toast.makeText(
-                    context,
-                    context.getString(R.string.msg_restore_success),
-                    Toast.LENGTH_SHORT
-                ).show(); triggerRestart(context)
+            RustWorkoutStorage.withDatabaseFile {
+                val prepared = DatabaseBackups.prepareRestore(context, uri)
+                try {
+                    currentCoroutineContext().ensureActive()
+                    val path = context.getDatabasePath(AppDatabase.FILE_NAME)
+                    if (com.example.myfit.BuildConfig.RUST_HISTORY_ENABLED) {
+                        RustWorkoutStorage.checkpoint(context)
+                    } else database.openHelper.writableDatabase.query("PRAGMA wal_checkpoint(TRUNCATE)").use { cursor ->
+                        check(cursor.moveToFirst() && cursor.getInt(0) == 0) { "Database checkpoint busy" }
+                    }
+                    withContext(NonCancellable) {
+                        stopTimer(context)
+                        if (!com.example.myfit.BuildConfig.RUST_HISTORY_ENABLED) database.close()
+                        liveClosed = true
+                        val wal = File(path.path + "-wal")
+                        check(!wal.exists() || wal.length() == 0L) { "Database still has pending writes" }
+                        for (suffix in listOf("-wal", "-shm")) {
+                            val sidecar = File(path.path + suffix)
+                            check(!sidecar.exists() || sidecar.delete()) { "Could not remove database sidecar" }
+                        }
+                        DatabaseBackups.install(prepared, path)
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(context, context.getString(R.string.msg_restore_success), Toast.LENGTH_SHORT).show()
+                            triggerRestart(context, launchOptions)
+                        }
+                    }
+                } finally { prepared.delete() }
             }
-        } catch (e: Exception) {
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (error: Exception) {
             withContext(Dispatchers.Main) {
-                Toast.makeText(
-                    context,
-                    context.getString(R.string.msg_restore_failed, e.message),
-                    Toast.LENGTH_LONG
-                ).show()
+                Toast.makeText(context, context.getString(R.string.msg_restore_failed, error.message), Toast.LENGTH_LONG).show()
+                // A failed atomic rename leaves the original file in place. Reopen it in a fresh process.
+                if (liveClosed) triggerRestart(context, launchOptions)
             }
         }
     }
 
-    private fun triggerRestart(context: Context) {
-        context.packageManager.getLaunchIntentForPackage(context.packageName)?.let {
-            context.startActivity(Intent.makeRestartActivityTask(it.component)); exitProcess(0)
+    private fun triggerRestart(context: Context, launchOptions: Intent? = null) {
+        val launch = checkNotNull(context.packageManager.getLaunchIntentForPackage(context.packageName))
+        val restart = Intent.makeRestartActivityTask(checkNotNull(launch.component))
+        // Retain renderer options explicitly supplied when this Flutter host was launched.
+        for (key in listOf("enable-software-rendering", "enable-impeller")) {
+            if (launchOptions?.hasExtra(key) == true)
+                restart.putExtra(key, launchOptions.getBooleanExtra(key, false))
         }
+        context.startActivity(restart)
+        exitProcess(0)
     }
 
     fun getWeightChartData(granularity: ChartGranularity): Flow<List<ChartDataPoint>> =
@@ -795,6 +1057,26 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun importWeeklyRoutine(context: Context, csv: String) = viewModelScope.launch(Dispatchers.IO) {
+        try {
+            importWeeklyRoutineNow(context, csv)
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (_: Exception) {
+            withContext(Dispatchers.Main) {
+                Toast.makeText(context, context.getString(R.string.import_error), Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    internal suspend fun importWeeklyRoutineNow(context: Context, csv: String) {
+        if (com.example.myfit.BuildConfig.RUST_HISTORY_ENABLED) {
+            RustWorkoutStorage.mutate(context, LocalDate.now().toString(),
+                listOf(mapOf("action" to "importRoutine", "csv" to csv)))
+            withContext(Dispatchers.Main) {
+                Toast.makeText(context, context.getString(R.string.import_success), Toast.LENGTH_SHORT).show()
+            }
+            return
+        }
         try {
             data class PendingItem(
                 val day: Int,
@@ -879,6 +1161,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     Toast.LENGTH_SHORT
                 ).show()
             }
+        } catch (cancelled: CancellationException) {
+            throw cancelled
         } catch (e: Exception) {
             withContext(Dispatchers.Main) {
                 Toast.makeText(
@@ -887,6 +1171,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     Toast.LENGTH_LONG
                 ).show()
             }
+            throw e
         }
     }
 
@@ -904,8 +1189,20 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 }
                 val raw: List<ExerciseTemplate> =
                     Gson().fromJson(json, object : TypeToken<List<ExerciseTemplate>>() {}.type)
-                val nameIdMap = dao.getAllTemplatesSync().associate { it.name to it.id }
-                dao.insertTemplates(raw.map { it.copy(id = nameIdMap[it.name] ?: 0L) })
+                if (com.example.myfit.BuildConfig.RUST_HISTORY_ENABLED) {
+                    val active = RustLiveQueries.read<ExerciseTemplate>(context, "templates").associateBy { it.name }
+                    val changes = raw.map { t ->
+                        mapOf("action" to "saveTemplate", "id" to (active[t.name]?.id ?: 0L), "fields" to mapOf(
+                            "name" to t.name, "target" to t.defaultTarget, "category" to t.category,
+                            "bodyPart" to t.bodyPart, "equipment" to t.equipment, "instruction" to t.instruction,
+                            "isUnilateral" to t.isUnilateral, "logType" to t.logType,
+                            "imageUri" to t.imageUri, "animationUri" to t.animationUri))
+                    }
+                    RustWorkoutStorage.mutate(context, LocalDate.now().toString(), changes)
+                } else {
+                    val nameIdMap = dao.getAllTemplatesSync().associate { it.name to it.id }
+                    dao.insertTemplates(raw.map { it.copy(id = nameIdMap[it.name] ?: 0L) })
+                }
                 withContext(Dispatchers.Main) {
                     Toast.makeText(
                         context,
@@ -986,7 +1283,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             AiStreamCapabilities(AiStreamProtocol.CHAT_COMPLETIONS, streaming = true), requestId = requestId, onUpdate = onUpdate)
     }
 
-    /** Existing prompts and final Room writes stay here; Rust sees response bytes only. */
+    /** Coordinates prompts, generation state and final persistence. */
     @Synchronized private fun launchCoachRequest(settings: AppSetting, goal: String, buildMessages: suspend () -> List<ChatMessage>) {
         if (_aiIsLoading.value) return
         val generation = aiRequestGeneration.incrementAndGet()
@@ -1010,7 +1307,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     _aiStreamState.value = _aiStreamState.value.copy(status = "completed", answer = content)
                     _aiCanImport.value = true
                 }
-                dao.insertAiChatRecord(AiChatRecord(timestamp = System.currentTimeMillis(), role = "assistant",
+                persistAiRecord(AiChatRecord(timestamp = System.currentTimeMillis(), role = "assistant",
                     content = content, userGoal = goal, modelUsed = settings.aiModel))
             } catch (e: CancellationException) {
                 throw e
@@ -1040,7 +1337,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _connectionState = MutableStateFlow<ConnectionState>(ConnectionState.Idle)
     val connectionState = _connectionState.asStateFlow()
-    val aiChatHistory: Flow<List<AiChatRecord>> = dao.getAllAiChatRecords()
+    val aiChatHistory: Flow<List<AiChatRecord>> = if (com.example.myfit.BuildConfig.RUST_HISTORY_ENABLED)
+        RustLiveQueries.observe<AiChatRecord>(getApplication<Application>(), "ai_chat_history",
+            RustWorkoutStorage.aiRevision, "aiHistory")
+        else dao.getAllAiChatRecords()
 
     private fun getAiApi(settings: AppSetting): AiService {
         val client = OkHttpClient.Builder().retryOnConnectionFailure(false).connectTimeout(30, TimeUnit.SECONDS)
@@ -1100,6 +1400,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     internal suspend fun persistAiConfig(provider: String, apiKey: String, model: String, baseUrl: String) {
+        if (com.example.myfit.BuildConfig.RUST_HISTORY_ENABLED) {
+            val fields = mapOf("provider" to provider, "apiKey" to apiKey, "model" to model, "baseUrl" to baseUrl)
+            RustWorkoutStorage.mutate(getApplication<Application>(), LocalDate.now().toString(),
+                listOf(mapOf("action" to "saveModel", "fields" to fields)))
+            return
+        }
         val clean = baseUrl.trim().replace(Regex("v1/?$", RegexOption.IGNORE_CASE), "").trimEnd('/')
         database.withTransaction {
             val settings = dao.getAppSettings().first() ?: AppSetting()
@@ -1109,13 +1415,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun toggleAiCache(enabled: Boolean) = viewModelScope.launch {
-        val current = dao.getAppSettings().first() ?: AppSetting()
-        dao.saveAppSettings(current.copy(useLocalAiCache = enabled))
+        persistSetting("useLocalAiCache", enabled)
     }
 
     fun updateMaxHistoryLimit(limit: Int) = viewModelScope.launch {
-        val current = dao.getAppSettings().first() ?: AppSetting()
-        dao.saveAppSettings(current.copy(maxHistoryLimit = limit))
+        persistSetting("maxHistoryLimit", limit)
     }
 
     fun generateWeeklyPlan(context: Context) {
@@ -1128,10 +1432,49 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val focus = selectedFocus; val scene = selectedScene; val injuries = selectedInjuries
         launchCoachRequest(settings, goal) {
             val cutoff = LocalDate.now().minusWeeks(weeks.toLong()).toString()
-            PromptManager.buildWeeklyPlanPrompt(context, settings, dao.getLatestWeightSync(),
-                dao.getAiMemorySync()?.longTermContext, dao.getAllSchedulesSync(),
-                dao.getHistoryRecordsSync().filter { it.date >= cutoff }, goal, weeks, focus, scene, injuries)
+            val app = getApplication<Application>()
+            val native = com.example.myfit.BuildConfig.RUST_HISTORY_ENABLED
+            val weight = if (native) RustLiveQueries.read<WeightRecord>(app, "latestWeight").firstOrNull() else dao.getLatestWeightSync()
+            val schedule = if (native) RustLiveQueries.read<ScheduleConfig>(app, "schedules") else dao.getAllSchedulesSync()
+            val history = if (native) RustLiveQueries.read<WorkoutTask>(app, "completed") else dao.getHistoryRecordsSync()
+            PromptManager.buildWeeklyPlanPrompt(context, settings, weight,
+                readAiMemory()?.longTermContext, schedule,
+                history.filter { it.date >= cutoff }, goal, weeks, focus, scene, injuries)
         }
+    }
+
+    private suspend fun persistAiRecord(record: AiChatRecord) {
+        if (com.example.myfit.BuildConfig.RUST_HISTORY_ENABLED) {
+            val fields = mapOf("timestamp" to record.timestamp, "role" to record.role,
+                "content" to record.content, "userGoal" to record.userGoal, "modelUsed" to record.modelUsed)
+            RustWorkoutStorage.mutate(getApplication<Application>(), LocalDate.now().toString(),
+                listOf(mapOf("action" to "saveAiRecord", "fields" to fields)))
+        } else dao.insertAiChatRecord(record)
+    }
+
+    private suspend fun removeAiRecord(id: Long) {
+        if (com.example.myfit.BuildConfig.RUST_HISTORY_ENABLED) {
+            RustWorkoutStorage.mutate(getApplication<Application>(), LocalDate.now().toString(),
+                listOf(mapOf("action" to "deleteAiRecord", "id" to id)))
+        } else dao.deleteAiChatRecord(id)
+    }
+
+    private suspend fun recentAiHistory(limit: Int): List<AiChatRecord> =
+        if (com.example.myfit.BuildConfig.RUST_HISTORY_ENABLED)
+            RustLiveQueries.read<AiChatRecord>(getApplication<Application>(), "aiRecent", limit)
+        else dao.getRecentAiChatRecords(limit)
+
+    private suspend fun readAiMemory(): AiMemory? =
+        if (com.example.myfit.BuildConfig.RUST_HISTORY_ENABLED)
+            RustLiveQueries.read<AiMemory>(getApplication<Application>(), "aiMemory").firstOrNull()
+        else dao.getAiMemorySync()
+
+    private suspend fun persistAiMemory(memory: AiMemory) {
+        if (com.example.myfit.BuildConfig.RUST_HISTORY_ENABLED) {
+            val fields = mapOf("longTermContext" to memory.longTermContext, "lastSyncTime" to memory.lastSyncTime)
+            RustWorkoutStorage.mutate(getApplication<Application>(), LocalDate.now().toString(),
+                listOf(mapOf("action" to "saveAiMemory", "fields" to fields)))
+        } else dao.saveAiMemory(memory)
     }
 
     fun saveAiChatRecord(
@@ -1141,7 +1484,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         model: String? = null
     ) {
         viewModelScope.launch(Dispatchers.IO) {
-            dao.insertAiChatRecord(
+            persistAiRecord(
                 AiChatRecord(
                     timestamp = System.currentTimeMillis(),
                     role = role,
@@ -1154,10 +1497,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun deleteAiChatRecord(id: Long) =
-        viewModelScope.launch(Dispatchers.IO) { dao.deleteAiChatRecord(id) }
+        viewModelScope.launch(Dispatchers.IO) { removeAiRecord(id) }
 
     internal fun requestAiHistoryDeletion(id: Long) =
-        viewModelScope.async(Dispatchers.IO) { dao.deleteAiChatRecord(id) }
+        viewModelScope.async(Dispatchers.IO) { removeAiRecord(id) }
 
     @Synchronized fun loadAiResponseFromHistory(content: String) {
         cancelAiGeneration()
@@ -1182,8 +1525,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             Toast.makeText(context, context.getString(R.string.msg_config_missing), Toast.LENGTH_SHORT).show(); return
         }
         launchCoachRequest(settings, "Free Chat: $query") {
-            val history = if (settings.useLocalAiCache) dao.getRecentAiChatRecords(settings.maxHistoryLimit) else emptyList()
-            val memory = if (settings.useLocalAiCache) dao.getAiMemorySync()?.longTermContext else null
+            val history = if (settings.useLocalAiCache) recentAiHistory(settings.maxHistoryLimit) else emptyList()
+            val memory = if (settings.useLocalAiCache) readAiMemory()?.longTermContext else null
             if (imageUri != null) {
                 val b64 = compressImageToBase64(context, imageUri) ?: throw AiStreamFailure("image_error")
                 PromptManager.buildMultimodalChatPrompt(context, query, b64)
@@ -1196,11 +1539,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         if (!settings.useLocalAiCache || settings.aiApiKey.isBlank()) return
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val history = dao.getRecentAiChatRecords(20)
+                val history = recentAiHistory(20)
                 if (history.isEmpty()) return@launch
                 val messages = PromptManager.buildMemorySummaryPrompt(context, history)
                 val summary = runAiCompletion(settings, messages)
-                if (!summary.isNullOrBlank()) dao.saveAiMemory(
+                if (!summary.isNullOrBlank()) persistAiMemory(
                     AiMemory(
                         0,
                         summary,

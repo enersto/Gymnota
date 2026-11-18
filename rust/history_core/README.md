@@ -1,14 +1,12 @@
-# 隔离的训练历史核心
+# Gymnota Rust 数据与业务核心
 
-默认 feature 仅处理显式字段白名单的历史 JSON 快照，不访问数据库。`catalog-sqlite` feature 另行启用只读内置动作库模块（rusqlite + bundled SQLite）；`android-jni` 同时启用目录模块和 JNI 入口。历史模块本身仍不访问文件或数据库，个人 Room 不由 Rust 打开。
+默认 feature 保留纯 JSON 的历史、图表、训练组和计时状态计算，便于无 SQLite 工具链时运行单元测试。`catalog-sqlite` 启用 rusqlite / bundled SQLite 数据模块；`android-jni` 同时提供 Android JNI 入口。
 
-## 接入边界
+Rust 管理独立目录的只读查询和个人数据库的初始化、v7–v19 迁移、读写事务、备份快照、周计划、个人模板、档案、设置及 AI 历史。计时状态使用 Android 传入的单调时钟，通知/音效等平台行为仍由 Android 执行。
 
-Android 继续负责 Room 事务快照、备份副本的只读打开和字段白名单。Rust 负责组 JSON 解析、兼容字段规范化、数值校验和统计。结果通过原有 MethodChannel 返回 Flutter。原生图表、写入、通知、相机、语言设置和备份恢复均保留原实现。
+正常 Rust 模式下禁止打开现用 Room 数据库。提交通过 Android 私有 provider 返回修订通知，Flow 只是订阅桥；Flutter 经 MethodChannel 消费数据。Room 仅保留临时备份副本的恢复结构校验，以及 `-PrustHistory=false` 时的旧实现回退。详见 [运行链路说明](../../docs/rust-runtime.md)。
 
-`RustHistoryCore` 加载或处理失败时，回退到旧的 Kotlin 解码；Flutter 显示记录并提示统计暂不可用。也可使用 `-PrustHistory=false` 完全禁用本模块，构建无需 Rust 且 APK 不含 Rust 库。`tools/build_flutter.ps1 -WithoutRust` 提供相同选项。
-
-目录模块使用短生命周期只读连接，只访问独立内置动作 SQLite；不连接个人数据库。未增加异步运行时或 Flutter FFI 插件。
+历史和目录采用短生命周期连接；个人写入使用显式事务，数据库快照通过文件描述符传递，避免 Binder 消息大小限制。未引入异步 Rust runtime 或额外 Flutter FFI 插件。
 
 ## JSON 合约（schemaVersion 1）
 

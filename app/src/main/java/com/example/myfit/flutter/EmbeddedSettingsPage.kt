@@ -32,7 +32,6 @@ internal fun EmbeddedSettingsPage(
     aiRequest: String?,
     scheduleRequest: Boolean,
     modifier: Modifier = Modifier,
-    onOpenOld: () -> Unit,
     onBack: () -> Unit,
     fallback: @Composable () -> Unit
 ) {
@@ -103,7 +102,6 @@ internal fun EmbeddedSettingsPage(
             "export" -> export.launch("history_${LocalDate.now()}.csv")
             "backup" -> backup.launch("backup.db")
             "restore" -> restore.launch(arrayOf("*/*"))
-            "old" -> onOpenOld()
             "aiCache" -> (value as? Boolean)?.let(viewModel::toggleAiCache)
             "aiHistoryLimit" -> (value as? Int)?.takeIf { it in 1..20 }?.let(viewModel::updateMaxHistoryLimit)
             "import", "help", "profile", "weekly" -> dialog = action
@@ -170,7 +168,7 @@ internal fun EmbeddedSettingsPage(
     }
 }
 
-private suspend fun modelSettings(
+internal suspend fun modelSettings(
     viewModel: MainViewModel,
     operation: String,
     fields: Map<String, String>

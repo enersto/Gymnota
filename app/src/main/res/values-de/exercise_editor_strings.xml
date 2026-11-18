@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="exercise_name_required">Übungsnamen eingeben</string>
+    <string name="exercise_media_separate">Eigene Fotos und Übungsanimationen werden getrennt gespeichert. Das Entfernen eines Elements erhält das andere.</string>
+    <string name="exercise_remove_animation">Animation entfernen</string>
+    <string name="exercise_photo_title">Eigenes Foto</string>
+</resources>

@@ -143,12 +143,14 @@ class Glass extends StatelessWidget {
   final bool blur;
   final double radius;
   final bool definedEdge;
+  final bool translucent;
   const Glass({
     super.key,
     required this.child,
     this.blur = false,
     this.radius = 24,
     this.definedEdge = false,
+    this.translucent = false,
   });
   @override
   Widget build(BuildContext context) {
@@ -165,10 +167,17 @@ class Glass extends StatelessWidget {
       surfaceStyle: lg.GlassSurfaceStyle.solid,
       padding: EdgeInsets.zero,
       shape: lg.LiquidRoundedSuperellipse(borderRadius: radius),
-      color: Color.alphaBlend(
-        Colors.black.withValues(alpha: .06),
-        Theme.of(context).colorScheme.surface,
-      ).withValues(alpha: definedEdge ? .32 : .46),
+      color:
+          Color.alphaBlend(
+            Colors.black.withValues(alpha: .06),
+            Theme.of(context).colorScheme.surface,
+          ).withValues(
+            alpha: translucent
+                ? .16
+                : definedEdge
+                ? .32
+                : .46,
+          ),
       child: Material(type: MaterialType.transparency, child: child),
     );
     if (!definedEdge) return surface;
@@ -196,13 +205,14 @@ class GlassCommand extends StatelessWidget {
     this.primary = false,
     this.fullWidth = false,
     this.minHeight = 48,
+    this.minWidth = 0,
   });
 
   final String label;
   final VoidCallback? onPressed;
   final IconData? icon;
   final bool primary, fullWidth;
-  final double minHeight;
+  final double minHeight, minWidth;
 
   static Size measureLabel(
     BuildContext context,
@@ -243,7 +253,7 @@ class GlassCommand extends StatelessWidget {
       );
       final width = fullWidth || constraints.hasTightWidth
           ? limit
-          : measured.width.clamp(0.0, limit);
+          : measured.width.clamp(minWidth.clamp(0.0, limit), limit);
       final height = measured.height.clamp(minHeight, double.infinity);
 
       return lg.GlassButton.custom(
@@ -572,6 +582,12 @@ class _GlassScrollableSegmentsState<T>
     return _NavigationGlass(
       radius: height / 2,
       child: lg.GlassSegmentedControl.scrollable(
+        key: ValueKey((
+          Localizations.maybeLocaleOf(context),
+          widget.labels.join("\u0000"),
+          MediaQuery.textScalerOf(context).scale(14),
+          MediaQuery.sizeOf(context).width,
+        )),
         segments: [
           for (final label in widget.labels) lg.GlassSegment(label: label),
         ],
@@ -826,7 +842,10 @@ class _ScenePainter extends CustomPainter {
         height = (state['sceneHeight'] as num? ?? size.height).toDouble();
     final shader = ui.Gradient.linear(
       Offset(-x, -y),
-      Offset(width - x, height - y),
+      Offset(
+        (state['primaryHost'] == true ? width * .38 : width) - x,
+        height - y,
+      ),
       [
         Color.alphaBlend(primary.withValues(alpha: .18), base),
         Color.alphaBlend(secondary.withValues(alpha: .10), base),
@@ -972,16 +991,45 @@ class GlassSearchPicker extends StatelessWidget {
   );
 }
 
+Future<String?> showExercisePicker(
+  BuildContext context, {
+  required Map<String, String> options,
+  required String label,
+  required String cancelLabel,
+  Map<String, String> groups = const {},
+  Map<String, String> groupLabels = const {},
+  Map<String, String> details = const {},
+  Future<Set<String>> Function(String)? search,
+}) => showDialog<String>(
+  context: context,
+  builder: (_) => _ExercisePickerDialog(
+    options: options,
+    label: label,
+    cancelLabel: cancelLabel,
+    value: '',
+    groups: groups,
+    groupLabels: groupLabels,
+    details: details,
+    search: search,
+  ),
+);
+
 class _ExercisePickerDialog extends StatefulWidget {
   const _ExercisePickerDialog({
     required this.options,
     required this.value,
     required this.label,
     required this.cancelLabel,
+    this.groups = const {},
+    this.groupLabels = const {},
+    this.details = const {},
+    this.search,
   });
 
   final Map<String, String> options;
   final String value, label, cancelLabel;
+  final Map<String, String> groups, groupLabels, details;
+  final Future<Set<String>> Function(String)? search;
 
   @override
   State<_ExercisePickerDialog> createState() => _ExercisePickerDialogState();
@@ -993,12 +1041,38 @@ class _ExercisePickerDialogState extends State<_ExercisePickerDialog> {
       (option, option.value.toLowerCase()),
   ];
   String query = '';
+  String? category;
+  Set<String> rustMatches = const {};
+  int searchVersion = 0;
+
+  void updateSearch(String text) async {
+    final normalized = text.trim().toLowerCase();
+    final version = ++searchVersion;
+    setState(() {
+      query = normalized;
+      rustMatches = const {};
+    });
+    final search = widget.search;
+    if (search == null || normalized.isEmpty) return;
+    try {
+      final matches = await search(normalized);
+      if (mounted && version == searchVersion)
+        setState(() => rustMatches = matches);
+    } catch (_) {
+      // Local matches stay available when the bridge is unavailable.
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final matches = query.isEmpty
-        ? tokens
-        : tokens.where((entry) => entry.$2.contains(query)).toList();
+    final matches = tokens.where((entry) {
+      final id = entry.$1.key;
+      if (query.isEmpty)
+        return category == null || widget.groups[id] == category;
+      return rustMatches.contains(id) ||
+          entry.$2.contains(query) ||
+          (widget.details[id]?.toLowerCase().contains(query) ?? false);
+    }).toList();
     final theme = Theme.of(context);
     final background = Color.alphaBlend(
       theme.colorScheme.primary.withValues(alpha: .08),
@@ -1021,8 +1095,7 @@ class _ExercisePickerDialogState extends State<_ExercisePickerDialog> {
                 Text(widget.label, style: theme.textTheme.titleLarge),
                 const SizedBox(height: 8),
                 TextField(
-                  onChanged: (text) =>
-                      setState(() => query = text.trim().toLowerCase()),
+                  onChanged: updateSearch,
                   decoration: InputDecoration(
                     prefixIcon: const Icon(Icons.search),
                     hintText: widget.label,
@@ -1035,6 +1108,25 @@ class _ExercisePickerDialogState extends State<_ExercisePickerDialog> {
                     isDense: true,
                   ),
                 ),
+                if (widget.groupLabels.isNotEmpty && query.isEmpty)
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        for (final entry in widget.groupLabels.entries)
+                          Padding(
+                            padding: const EdgeInsetsDirectional.only(end: 6),
+                            child: ChoiceChip(
+                              label: Text(entry.value),
+                              selected: category == entry.key,
+                              onSelected: (selected) => setState(
+                                () => category = selected ? entry.key : null,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
                 const SizedBox(height: 6),
                 Expanded(
                   child: ListView.builder(
@@ -1051,6 +1143,9 @@ class _ExercisePickerDialogState extends State<_ExercisePickerDialog> {
                               ? const TextStyle(fontWeight: FontWeight.bold)
                               : null,
                         ),
+                        subtitle: widget.details[option.key] == null
+                            ? null
+                            : Text(widget.details[option.key]!),
                         selected: selected,
                         selectedColor: theme.colorScheme.onSurface,
                         onTap: () => Navigator.pop(context, option.key),

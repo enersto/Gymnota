@@ -412,4 +412,5 @@
     <string name="remove_exercise_photo">移除图片</string>
     <string name="catalog_personal_title">我的动作</string>
     <string name="catalog_use_exercise">使用此动作</string>
+    <string name="msg_save_failed">保存动作失败，请重试。</string>
 </resources>

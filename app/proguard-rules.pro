@@ -26,3 +26,21 @@
 -keep class com.example.myfit.data.ai.RustAiStream$Companion { native <methods>; }
 
 -keep class com.example.myfit.data.RustSettingsCsv { native <methods>; }
+-keep class com.example.myfit.data.RustWeeklyRoutine { native <methods>; }
+-keep class com.example.myfit.data.RustWorkout { native <methods>; }
+
+-keep class com.example.myfit.data.RustTimer { native <methods>; }
+
+# Gson fields are the stable SQLite/backup/JNI JSON contract (not Java identifiers).
+-keep class com.example.myfit.model.** { *; }
+-keep class com.example.myfit.data.api.** { *; }
+-keep class com.example.myfit.viewmodel.MainViewModel$TimerState { *; }
+-keep class com.example.myfit.viewmodel.TimerPhase { *; }
+-keep class com.example.myfit.data.RustTimer$Result { *; }
+-keepattributes Signature,InnerClasses,EnclosingMethod,RuntimeVisibleAnnotations,AnnotationDefault
+-keep,allowobfuscation,allowoptimization class com.google.gson.reflect.TypeToken { *; }
+-keep,allowobfuscation,allowoptimization class * extends com.google.gson.reflect.TypeToken { *; }
+-keep class com.example.myfit.data.RustCatalog { native <methods>; }
+
+# Flutter locates this entry point with reflection.
+-keep class io.flutter.plugins.GeneratedPluginRegistrant { *; }

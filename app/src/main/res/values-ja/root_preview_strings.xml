@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="root_preview_title">Flutter プレビュー</string>
+    <string name="preview_daily_read_only">トレーニングの閲覧専用プレビュー</string>
+    <string name="preview_daily_empty">今日の予定に種目はありません</string>
+    <string name="preview_open_settings">通常の設定を開く</string>
+    <string name="preview_workout_title">トレーニングプレビュー</string>
+</resources>
